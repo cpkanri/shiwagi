@@ -8,6 +8,9 @@
 <title>柴木浄化センター 週報入力</title>
 <link rel="manifest" href="manifest.json">
 <style>
+/* ============================================================
+   CSS Variables
+   ============================================================ */
 :root {
   --primary: #1a6b4e;
   --primary-light: #e8f5ef;
@@ -22,658 +25,2082 @@
   --success: #16a34a;
   --radius: 10px;
 }
-* { margin:0; padding:0; box-sizing:border-box; }
+
+/* ============================================================
+   Reset & Base
+   ============================================================ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
-  background: var(--bg); color: var(--text);
-  min-height: 100vh; padding-bottom: 80px;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding-bottom: 80px;
   -webkit-text-size-adjust: 100%;
 }
 
-/* ヘッダー */
+/* ============================================================
+   Header
+   ============================================================ */
 .header {
   background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color: #fff; padding: 14px 16px; position: sticky; top: 0; z-index: 100;
+  color: #fff;
+  padding: 14px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
   box-shadow: 0 2px 8px rgba(0,0,0,.15);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
 }
-.header h1 { font-size: 15px; font-weight: 600; }
-.header .sub { font-size: 11px; opacity: .8; margin-top: 2px; }
+.header-left h1 {
+  font-size: 15px;
+  font-weight: 600;
+}
+.header-left .sub {
+  font-size: 11px;
+  opacity: .8;
+  margin-top: 2px;
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 2px;
+}
+.online-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+  border: 2px solid rgba(255,255,255,.5);
+  transition: background .3s;
+}
+.online-dot.online {
+  background: #22c55e;
+}
+.online-label {
+  font-size: 10px;
+  opacity: .8;
+}
 
-/* 日付選択 */
+/* ============================================================
+   Date Bar
+   ============================================================ */
 .date-bar {
-  background: var(--card); padding: 12px 16px;
+  background: var(--card);
+  padding: 10px 16px;
   border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
-.date-bar label { font-size: 13px; font-weight: 600; white-space: nowrap; }
+.date-bar label {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.date-bar select,
 .date-bar input[type="date"] {
-  flex: 1; padding: 8px 10px; border: 1.5px solid var(--border);
-  border-radius: var(--radius); font-size: 15px; background: #fff;
+  padding: 7px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 14px;
+  background: #fff;
 }
 .date-bar .week-label {
-  font-size: 12px; color: var(--primary); font-weight: 600;
-  background: var(--primary-light); padding: 4px 10px;
-  border-radius: 20px; white-space: nowrap;
+  font-size: 12px;
+  color: var(--primary);
+  font-weight: 600;
+  background: var(--primary-light);
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
 }
 
-/* タブ */
+/* ============================================================
+   Main Tabs
+   ============================================================ */
 .tabs {
-  display: flex; background: var(--card);
+  display: flex;
+  background: var(--card);
   border-bottom: 2px solid var(--border);
-  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 .tab {
-  flex: none; padding: 10px 14px; font-size: 12px; font-weight: 600;
-  color: var(--text2); border: none; background: none;
+  flex: none;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+  border: none;
+  background: none;
   border-bottom: 3px solid transparent;
-  white-space: nowrap; cursor: pointer;
+  white-space: nowrap;
+  cursor: pointer;
   transition: all .2s;
 }
-.tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+.tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
 
-/* コンテンツ */
-.content { padding: 12px; }
-.section-title {
-  font-size: 13px; font-weight: 700; color: var(--primary);
-  margin: 16px 0 8px; padding: 6px 10px;
-  background: var(--primary-light); border-radius: 6px;
+/* ============================================================
+   Week Tabs
+   ============================================================ */
+.week-tabs {
+  display: flex;
+  background: #fafaf8;
+  padding: 4px 12px;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.week-tab {
+  flex: 1;
+  padding: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--text2);
+  cursor: pointer;
+  text-align: center;
+  transition: all .15s;
+}
+.week-tab.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+/* ============================================================
+   Day Tabs (for Water Quality)
+   ============================================================ */
+.day-tabs {
+  display: flex;
+  background: #fafaf8;
+  padding: 4px 12px;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.day-tab {
+  flex: 1;
+  padding: 6px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--text2);
+  cursor: pointer;
+  text-align: center;
+  transition: all .15s;
+}
+.day-tab.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+.day-tab .date-sub {
+  font-size: 9px;
+  display: block;
+  margin-top: 1px;
+}
+
+/* ============================================================
+   Content Area
+   ============================================================ */
+.content {
+  padding: 12px;
+}
+
+/* ============================================================
+   Section Headers
+   ============================================================ */
+.section-title,
+.section-header {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+  margin: 16px 0 8px;
+  padding: 6px 10px;
+  background: var(--primary-light);
+  border-radius: 6px;
   border-left: 3px solid var(--primary);
 }
-.section-title:first-child { margin-top: 4px; }
+.section-title:first-child,
+.section-header:first-child {
+  margin-top: 4px;
+}
 
-/* 入力カード */
-.input-group {
-  background: var(--card); border-radius: var(--radius);
-  margin-bottom: 8px; overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+/* ============================================================
+   Form Layout (Water Quality - single day form)
+   ============================================================ */
+.form-wrap {
+  /* container for form-based input */
 }
-.input-row {
-  display: flex; align-items: center;
-  padding: 10px 12px; border-bottom: 1px solid #f0f0f0;
-  gap: 8px;
+.form-wrap .section {
+  margin-bottom: 8px;
 }
-.input-row:last-child { border-bottom: none; }
-.input-row .label {
-  flex: 1; font-size: 13px; min-width: 0;
+.form-wrap .section-header {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+  margin: 12px 0 6px;
+  padding: 6px 10px;
+  background: var(--primary-light);
+  border-radius: 6px;
+  border-left: 3px solid var(--primary);
 }
-.input-row .label .sub { font-size: 10px; color: var(--text2); }
-.input-row .unit { font-size: 11px; color: var(--text2); min-width: 30px; text-align: right; }
-
-/* 曜日ヘッダ */
-.day-header {
-  display: grid; grid-template-columns: 1fr repeat(5, 52px);
-  padding: 6px 12px; font-size: 11px; font-weight: 600;
-  color: var(--text2); background: #fafaf8;
-  border-bottom: 1px solid var(--border);
-}
-.day-header span { text-align: center; }
-
-/* 曜日入力行 */
-.day-inputs {
-  display: grid; grid-template-columns: 1fr repeat(5, 52px);
-  padding: 8px 12px; align-items: center; gap: 4px;
+.form-wrap .field {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
   border-bottom: 1px solid #f0f0f0;
+  gap: 8px;
+  background: var(--card);
 }
-.day-inputs:last-child { border-bottom: none; }
-.day-inputs .label { font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
-.day-inputs .label .sub { font-size: 10px; color: var(--text2); display: block; }
-
-.day-inputs input, .day-inputs select {
-  width: 100%; padding: 5px 2px; border: 1.5px solid var(--border);
-  border-radius: 6px; font-size: 13px; text-align: center;
-  background: #fff; -webkit-appearance: none;
+.form-wrap .field:last-child {
+  border-bottom: none;
 }
-.day-inputs input:focus, .day-inputs select:focus {
-  border-color: var(--primary); outline: none;
+.form-wrap .field .label {
+  flex: 1;
+  font-size: 13px;
+  min-width: 0;
+}
+.form-wrap .field .unit {
+  font-size: 11px;
+  color: var(--text2);
+  min-width: 30px;
+  text-align: right;
+}
+.form-wrap .field input[type="number"],
+.form-wrap .field input[type="text"] {
+  width: 120px;
+  padding: 8px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 15px;
+  text-align: right;
+  background: #fff;
+  -webkit-appearance: none;
+}
+.form-wrap .field input:focus {
+  border-color: var(--primary);
+  outline: none;
   box-shadow: 0 0 0 2px rgba(26,107,78,.15);
 }
-.day-inputs select { font-size: 11px; padding: 5px 1px; }
 
-/* 点検者入力 */
-.inspector-row {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 12px; background: #fafaf8;
+/* ============================================================
+   Inspector Field
+   ============================================================ */
+.inspector-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #fafaf8;
   border-bottom: 1px solid var(--border);
 }
-.inspector-row label { font-size: 13px; font-weight: 600; white-space: nowrap; }
-.inspector-row input {
-  flex: 1; padding: 8px 10px; border: 1.5px solid var(--border);
-  border-radius: var(--radius); font-size: 14px;
+.inspector-field .label {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.inspector-field input {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 14px;
 }
 
-/* ボトムバー */
+/* ============================================================
+   Toggle Button
+   ============================================================ */
+.toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 14px;
+  min-width: 64px;
+  min-height: 36px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  background: #fff;
+  color: var(--text2);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: all .15s;
+}
+.toggle-btn.has-value {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* ============================================================
+   Table Layout (Equipment, Electrical, Mechanical)
+   ============================================================ */
+.input-group {
+  background: var(--card);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+
+.day-header {
+  display: grid;
+  grid-template-columns: 1fr repeat(5, 52px) 28px 28px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text2);
+  background: #fafaf8;
+  border-bottom: 1px solid var(--border);
+}
+.day-header span {
+  text-align: center;
+}
+
+.day-inputs {
+  display: grid;
+  grid-template-columns: 1fr repeat(5, 52px) 28px 28px;
+  padding: 8px 12px;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.day-inputs:last-child {
+  border-bottom: none;
+}
+.day-inputs .label {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.day-inputs .label .sub {
+  font-size: 10px;
+  color: var(--text2);
+  display: block;
+}
+.day-inputs input {
+  width: 100%;
+  padding: 5px 2px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  text-align: center;
+  background: #fff;
+  -webkit-appearance: none;
+}
+.day-inputs input:focus {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(26,107,78,.15);
+}
+
+/* Toggle Cell (table) */
+.day-inputs .toggle-cell {
+  width: 100%;
+  padding: 4px 1px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  font-size: 10px;
+  text-align: center;
+  background: #fff;
+  cursor: pointer;
+  user-select: none;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: all .15s;
+}
+.day-inputs .toggle-cell.has-value {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* ============================================================
+   Copy / Clear Column Buttons
+   ============================================================ */
+.col-action {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  color: var(--text2);
+  transition: background .15s;
+}
+.col-action.copy-btn {
+  color: var(--primary);
+}
+.col-action.copy-btn:active {
+  background: var(--primary-light);
+}
+.col-action.clear-btn {
+  color: var(--danger);
+}
+.col-action.clear-btn:active {
+  background: #fee2e2;
+}
+
+/* ============================================================
+   Copied Highlight Animation
+   ============================================================ */
+.copied {
+  animation: copiedFlash .5s;
+}
+@keyframes copiedFlash {
+  0% { background: var(--primary-light); }
+  100% { background: transparent; }
+}
+
+/* ============================================================
+   Water Actions Bar
+   ============================================================ */
+.water-actions {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #fafaf8;
+  border-bottom: 1px solid var(--border);
+}
+.water-actions .btn {
+  flex: none;
+  padding: 8px 16px;
+  font-size: 12px;
+}
+
+/* ============================================================
+   Bottom Bar
+   ============================================================ */
 .bottom-bar {
-  position: fixed; bottom: 0; left: 0; right: 0;
-  background: var(--card); border-top: 1px solid var(--border);
-  padding: 10px 16px; display: flex; gap: 10px;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  padding: 10px 16px;
+  display: flex;
+  gap: 8px;
   box-shadow: 0 -2px 8px rgba(0,0,0,.08);
   z-index: 100;
 }
+
+/* ============================================================
+   Buttons
+   ============================================================ */
 .btn {
-  flex: 1; padding: 12px; border: none; border-radius: var(--radius);
-  font-size: 14px; font-weight: 600; cursor: pointer;
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
   transition: all .15s;
 }
-.btn-primary { background: var(--primary); color: #fff; }
-.btn-primary:active { background: var(--primary-dark); }
-.btn-secondary { background: #f0f0f0; color: var(--text); }
-.btn-secondary:active { background: #e0e0e0; }
-.btn-excel { background: var(--success); color: #fff; }
-.btn-excel:active { background: #15803d; }
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+.btn-primary:active {
+  background: var(--primary-dark);
+}
+.btn-secondary {
+  background: #f0f0f0;
+  color: var(--text);
+}
+.btn-secondary:active {
+  background: #e0e0e0;
+}
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+}
+.btn-danger:active {
+  background: #b91c1c;
+}
+.btn-excel {
+  background: var(--success);
+  color: #fff;
+}
+.btn-excel:active {
+  background: #15803d;
+}
+.btn-sync {
+  background: var(--accent);
+  color: #fff;
+}
+.btn-sync:active {
+  background: #d97706;
+}
+.btn-load {
+  background: #6366f1;
+  color: #fff;
+}
+.btn-load:active {
+  background: #4f46e5;
+}
 
-/* トースト */
+/* ============================================================
+   Toast Notification
+   ============================================================ */
 .toast {
-  position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
-  padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600;
-  z-index: 200; opacity: 0; transition: opacity .3s;
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 200;
+  opacity: 0;
+  transition: opacity .3s;
   box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  pointer-events: none;
 }
-.toast.show { opacity: 1; }
-.toast.success { background: var(--success); color: #fff; }
-.toast.error { background: var(--danger); color: #fff; }
-.toast.info { background: var(--primary); color: #fff; }
+.toast.show {
+  opacity: 1;
+}
+.toast.success {
+  background: var(--success);
+  color: #fff;
+}
+.toast.error {
+  background: var(--danger);
+  color: #fff;
+}
+.toast.info {
+  background: var(--primary);
+  color: #fff;
+}
 
-/* ローディング */
+/* ============================================================
+   Loading Overlay
+   ============================================================ */
 .loading {
-  display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,.3); z-index: 300;
-  align-items: center; justify-content: center;
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.3);
+  z-index: 300;
+  align-items: center;
+  justify-content: center;
 }
-.loading.show { display: flex; }
+.loading.show {
+  display: flex;
+}
 .spinner {
-  width: 40px; height: 40px; border: 4px solid #fff;
-  border-top-color: var(--primary); border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  border: 4px solid #fff;
+  border-top-color: var(--primary);
+  border-radius: 50%;
   animation: spin .8s linear infinite;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* 空状態 */
-.empty-state {
-  text-align: center; padding: 40px 20px; color: var(--text2);
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
-.empty-state .icon { font-size: 40px; margin-bottom: 12px; }
-.empty-state p { font-size: 13px; }
+
+/* ============================================================
+   Tab Content Panels (hidden by default)
+   ============================================================ */
+.tab-panel {
+  display: none;
+}
+.tab-panel.active {
+  display: block;
+}
+
+/* ============================================================
+   Print Styles
+   ============================================================ */
+@media print {
+  body {
+    padding-bottom: 0;
+    background: #fff;
+    font-size: 10px;
+  }
+  .header {
+    position: static;
+    background: none;
+    color: #000;
+    box-shadow: none;
+    padding: 8px 0;
+    border-bottom: 2px solid #000;
+  }
+  .header-left h1 {
+    font-size: 16px;
+    color: #000;
+  }
+  .header-left .sub {
+    color: #333;
+  }
+  .header-right {
+    display: none;
+  }
+  .date-bar {
+    border-bottom: 1px solid #999;
+    padding: 6px 0;
+  }
+  .tabs,
+  .week-tabs,
+  .day-tabs,
+  .water-actions,
+  .bottom-bar,
+  .loading,
+  .toast {
+    display: none !important;
+  }
+  .content {
+    padding: 0;
+  }
+  .tab-panel {
+    display: block !important;
+    page-break-after: always;
+  }
+  .tab-panel:last-child {
+    page-break-after: auto;
+  }
+  .input-group {
+    box-shadow: none;
+    border: 1px solid #999;
+  }
+  .section-title,
+  .section-header {
+    background: none;
+    border-left: 2px solid #000;
+    color: #000;
+    padding: 3px 8px;
+    margin: 8px 0 4px;
+    font-size: 11px;
+  }
+  .form-wrap .field {
+    padding: 4px 8px;
+    border-bottom: 1px solid #ccc;
+  }
+  .form-wrap .field input,
+  .form-wrap .field .toggle-btn {
+    border: 1px solid #999;
+    font-size: 11px;
+    padding: 2px 4px;
+  }
+  .day-header {
+    background: #eee;
+    border-bottom: 1px solid #999;
+    font-size: 10px;
+  }
+  .day-inputs {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-bottom: 1px solid #ddd;
+  }
+  .day-inputs input,
+  .day-inputs .toggle-cell {
+    border: 1px solid #999;
+    font-size: 10px;
+    padding: 1px 2px;
+  }
+  .col-action {
+    display: none;
+  }
+  .inspector-field {
+    padding: 4px 8px;
+    border-bottom: 1px solid #999;
+  }
+  .inspector-field input {
+    border: 1px solid #999;
+    font-size: 11px;
+  }
+  /* print: show inspector name on every sheet */
+  .print-inspector {
+    display: block;
+    font-size: 11px;
+    padding: 4px 0;
+    border-bottom: 1px solid #999;
+  }
+}
+.print-inspector {
+  display: none;
+}
 </style>
 </head>
 <body>
 
+<!-- ============================================================
+     Header
+     ============================================================ -->
 <div class="header">
-  <h1>柴木浄化センター 週報入力</h1>
-  <div class="sub">維持管理週報データ入力システム</div>
+  <div class="header-left">
+    <h1>柴木浄化センター 週報入力</h1>
+    <div class="sub">維持管理週報データ入力システム</div>
+  </div>
+  <div class="header-right">
+    <span class="online-label" id="onlineLabel">offline</span>
+    <span class="online-dot" id="onlineDot"></span>
+  </div>
 </div>
 
+<!-- ============================================================
+     Date Bar
+     ============================================================ -->
 <div class="date-bar">
-  <label>週の開始日:</label>
+  <label>対象月:</label>
+  <select id="monthSelect" onchange="onMonthChange()"></select>
+  <label>開始日:</label>
   <input type="date" id="startDate" onchange="onDateChange()">
   <span class="week-label" id="weekLabel">-</span>
 </div>
 
-<div class="tabs" id="tabs">
+<!-- ============================================================
+     Main Tabs
+     ============================================================ -->
+<div class="tabs" id="mainTabs">
   <button class="tab active" data-tab="water" onclick="switchTab('water')">日常水質</button>
   <button class="tab" data-tab="hours" onclick="switchTab('hours')">機器運転時間</button>
-  <button class="tab" data-tab="mechanical" onclick="switchTab('mechanical')">機械設備</button>
-  <button class="tab" data-tab="electrical" onclick="switchTab('electrical')">電気設備</button>
+  <button class="tab" data-tab="electrical" onclick="switchTab('electrical')">日常電気設備</button>
+  <button class="tab" data-tab="mechanical" onclick="switchTab('mechanical')">日常機械設備</button>
 </div>
 
+<!-- ============================================================
+     Week Tabs
+     ============================================================ -->
+<div class="week-tabs" id="weekTabs"></div>
+
+<!-- ============================================================
+     Day Tabs (Water Quality)
+     ============================================================ -->
+<div class="day-tabs" id="dayTabs" style="display:none;"></div>
+
+<!-- ============================================================
+     Content Area
+     ============================================================ -->
 <div class="content" id="content"></div>
 
+<!-- ============================================================
+     Bottom Bar
+     ============================================================ -->
 <div class="bottom-bar">
-  <button class="btn btn-secondary" onclick="loadFromServer()">読込</button>
-  <button class="btn btn-primary" onclick="saveToServer()">保存</button>
-  <button class="btn btn-excel" onclick="exportExcel()">Excel出力</button>
+  <button class="btn btn-secondary" onclick="undoAction()">戻す</button>
+  <button class="btn btn-load" onclick="loadFromServer()">読込</button>
+  <button class="btn btn-primary" onclick="saveCurrentTab()">保存</button>
+  <button class="btn btn-sync" onclick="syncAll()">全同期</button>
+  <button class="btn btn-excel" onclick="exportExcel()">Excel</button>
 </div>
 
-<div class="loading" id="loading"><div class="spinner"></div></div>
+<!-- ============================================================
+     Loading Overlay
+     ============================================================ -->
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+</div>
+
+<!-- ============================================================
+     Toast
+     ============================================================ -->
 <div class="toast" id="toast"></div>
 
+<!-- ============================================================
+     SheetJS (Excel export library)
+     ============================================================ -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 <script>
-// === 設定 ===
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbyS-QpumW9SIKuXvS4qJZzQ8SuODUY1Qj-hAjDosBbcyog8dWgT64JaMnvo0e58Oxun/exec';
+/* ============================================================
+   Configuration
+   ============================================================ */
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbyS-QpumW9SIKuXvS4qJZzQ8SuODUY1Qj-hAjDosBbcyog8dWgT64JaMnvo0e58Oxun/exec';
+var STORAGE_PREFIX = 'shibaki_weekly_';
+var DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
+var DAY_LABELS = ['月', '火', '水', '木', '金'];
 
-let currentTab = 'water';
-let appData = { water: [], hours: [], mechanical: [], electrical: [] };
-let inspectorName = '';
+var currentTab = 'water';
+var currentWeek = 1;
+var currentDay = 'mon';
+var currentMonth = '';
+var undoStack = [];
+var tabIdx = 1;
 
-// === 項目定義 ===
-
-const WATER_ITEMS_UPPER = [
-  { id:'denryoku200v', name:'普通電力量(200V)', unit:'Kwh' },
-  { id:'denryoku100v', name:'普通電力量(100V)', unit:'Kwh' },
-  { id:'keiyu', name:'軽油(残量)', unit:'ℓ' },
-  { id:'hensou_odei', name:'返送汚泥流量', unit:'㎥' },
-  { id:'yojou_odei', name:'余剰汚泥流量', unit:'㎥' },
-  { id:'houryuu', name:'放流流量', unit:'㎥' },
+/* ============================================================
+   Water Quality Field Definitions
+   ============================================================ */
+var ALL_FIELDS = [
+  "denryoku200v", "denryoku100v", "keiyu",
+  "hensouOdei", "yojouOdei", "houryuuRyuuryou",
+  "tempRyunyu", "tempDitch", "tempHouryuu",
+  "gaikanRyunyu", "gaikanDitch", "gaikanHouryuu",
+  "toushidoRyunyu", "toushidoHouryuu",
+  "shukiRyunyu", "shukiDitch", "shukiHouryuu",
+  "phRyunyu", "phDitch", "phHouryuu",
+  "sv10", "sv20", "sv30", "sv24h",
+  "mlss", "odeiKaimen", "zanryuuEnso", "ensoTounyuu",
+  "bikou", "inspector"
 ];
 
-const WATER_ITEMS_LOWER = [
-  { id:'suion_ryunyu', name:'水温', loc:'流入', unit:'℃', type:'number' },
-  { id:'suion_ditch', name:'水温', loc:'ディッチ', unit:'℃', type:'number' },
-  { id:'suion_houryuu', name:'水温', loc:'放流水', unit:'℃', type:'number' },
-  { id:'gaikan_ryunyu', name:'外観(油膜・色合)', loc:'流入', unit:'', type:'text' },
-  { id:'gaikan_ditch', name:'外観(油膜・色合)', loc:'ディッチ', unit:'', type:'text' },
-  { id:'gaikan_houryuu', name:'外観(油膜・色合)', loc:'放流水', unit:'', type:'text' },
-  { id:'toushido_ryunyu', name:'透視度', loc:'流入水', unit:'cm', type:'number' },
-  { id:'toushido_houryuu', name:'透視度', loc:'放流水', unit:'cm', type:'number' },
-  { id:'shuki_ryunyu', name:'臭気(腐敗臭)', loc:'流入', unit:'', type:'text' },
-  { id:'shuki_ditch', name:'臭気(腐敗臭)', loc:'ディッチ', unit:'', type:'text' },
-  { id:'shuki_houryuu', name:'臭気(腐敗臭)', loc:'放流水', unit:'', type:'text' },
-  { id:'ph_ryunyu', name:'pH', loc:'流入', unit:'', type:'number' },
-  { id:'ph_ditch', name:'pH', loc:'ディッチ', unit:'', type:'number' },
-  { id:'ph_houryuu', name:'pH', loc:'放流水', unit:'', type:'number' },
-  { id:'sv10', name:'SV・10', loc:'ディッチ', unit:'%', type:'number' },
-  { id:'sv20', name:'SV・20', loc:'', unit:'%', type:'number' },
-  { id:'sv30', name:'SV・30', loc:'', unit:'%', type:'number' },
-  { id:'sv24h', name:'SV・24h', loc:'', unit:'%', type:'number' },
-  { id:'mlss', name:'MLSS', loc:'ディッチ', unit:'mg/L', type:'number' },
-  { id:'odei_kaimen', name:'汚泥界面', loc:'終沈', unit:'cm', type:'text' },
-  { id:'zanryuu_enso', name:'残留塩素', loc:'放流水', unit:'mg/L', type:'number' },
-  { id:'enso_tounyuu', name:'塩素投入量', loc:'塩素混和池', unit:'kg', type:'number' },
+var COPY_FIELDS = [
+  "denryoku200v", "denryoku100v", "keiyu",
+  "hensouOdei", "yojouOdei", "houryuuRyuuryou",
+  "tempRyunyu", "tempDitch", "tempHouryuu",
+  "gaikanRyunyu", "gaikanDitch", "gaikanHouryuu",
+  "toushidoRyunyu", "toushidoHouryuu",
+  "shukiRyunyu", "shukiDitch", "shukiHouryuu",
+  "phRyunyu", "phDitch", "phHouryuu",
+  "sv10", "sv20", "sv30", "sv24h",
+  "mlss", "odeiKaimen", "zanryuuEnso", "ensoTounyuu"
 ];
 
-const EQUIPMENT_LIST = [
-  'スクリーンユニット','濃縮汚泥ポンプ','汚泥攪拌機','余剰汚泥ポンプ',
-  '吸引ファン','No1主ポンプ','No2主ポンプ','No1返送汚泥ポンプ',
-  'No2返送汚泥ポンプ','No1エアレーション装置','No2エアレーション装置','床排水ポンプ'
+/* ============================================================
+   Equipment (Runtime Hours)
+   ============================================================ */
+var EQUIP_KEYS = [
+  "screenUnit", "thickSludgePump", "sludgeMixer", "excessPump",
+  "suctionFan", "mainPump1", "mainPump2",
+  "returnSludgePump1", "returnSludgePump2",
+  "aeration1", "aeration2", "floorDrainPump"
 ];
 
-const MECH_ITEMS_P1 = [
-  { eq:'ポンプ井', no:'-', insp:'内部状況確認', unit:'', type:'ok' },
-  { eq:'主ポンプ', no:'1', insp:'電流値', unit:'A', type:'num' },
-  { eq:'主ポンプ', no:'1', insp:'吐出圧力', unit:'Mpa', type:'num' },
-  { eq:'主ポンプ', no:'1', insp:'異音・振動', unit:'', type:'ok' },
-  { eq:'主ポンプ', no:'2', insp:'電流値', unit:'A', type:'num' },
-  { eq:'主ポンプ', no:'2', insp:'吐出圧力', unit:'Mpa', type:'num' },
-  { eq:'主ポンプ', no:'2', insp:'異音・振動', unit:'', type:'ok' },
-  { eq:'主ポンプ', no:'-', insp:'モード確認', unit:'', type:'mode' },
-  { eq:'主ポンプ', no:'-', insp:'優先機選択', unit:'', type:'select', opts:['交互','No.1','No.2'] },
-  { eq:'スクリーンユニット', no:'-', insp:'異音・振動', unit:'', type:'ok' },
-  { eq:'スクリーンユニット', no:'-', insp:'し渣量の確認', unit:'', type:'ok' },
-  { eq:'スクリーンユニット', no:'-', insp:'運転動作', unit:'', type:'ok' },
-  { eq:'エアレーション装置', no:'1', insp:'電流値', unit:'A', type:'num' },
-  { eq:'エアレーション装置', no:'1', insp:'異音・振動', unit:'', type:'ok' },
-  { eq:'エアレーション装置', no:'1', insp:'モード確認', unit:'', type:'mode' },
-  { eq:'エアレーション装置', no:'2', insp:'電流値', unit:'A', type:'num' },
-  { eq:'エアレーション装置', no:'2', insp:'異音・振動', unit:'', type:'ok' },
-  { eq:'エアレーション装置', no:'2', insp:'モード確認', unit:'', type:'mode' },
-  { eq:'消泡装置', no:'-', insp:'消泡ノズル', unit:'', type:'ok' },
-  { eq:'消泡装置', no:'-', insp:'消泡状態', unit:'', type:'ok' },
-  { eq:'終沈汚泥掻寄機', no:'-', insp:'電流値', unit:'A', type:'num' },
-  { eq:'終沈汚泥掻寄機', no:'-', insp:'異音・振動等', unit:'', type:'ok' },
-  { eq:'終沈汚泥掻寄機', no:'-', insp:'モード確認', unit:'', type:'select', opts:['運転','停止'] },
-  { eq:'スカムスキマー', no:'-', insp:'動作状況', unit:'', type:'ok' },
-  { eq:'スカムスキマー', no:'-', insp:'スカムの状況', unit:'', type:'ok' },
-  { eq:'返送汚泥ポンプ', no:'1', insp:'電流値', unit:'A', type:'num' },
-  { eq:'返送汚泥ポンプ', no:'1', insp:'吐出圧力', unit:'Mpa', type:'num' },
-  { eq:'返送汚泥ポンプ', no:'1', insp:'異音・振動', unit:'', type:'ok' },
-  { eq:'返送汚泥ポンプ', no:'2', insp:'電流値', unit:'A', type:'num' },
-  { eq:'返送汚泥ポンプ', no:'2', insp:'吐出圧力', unit:'Mpa', type:'num' },
-  { eq:'返送汚泥ポンプ', no:'2', insp:'異音・振動', unit:'', type:'ok' },
-  { eq:'返送汚泥ポンプ', no:'-', insp:'モード確認', unit:'', type:'mode' },
-  { eq:'返送汚泥ポンプ', no:'-', insp:'常用機選択', unit:'', type:'select', opts:['No.1','No.2','交互'] },
-  { eq:'余剰ポンプ', no:'-', insp:'電流値', unit:'A', type:'num' },
-  { eq:'余剰ポンプ', no:'-', insp:'吐出圧力', unit:'Mpa', type:'num' },
-  { eq:'余剰ポンプ', no:'-', insp:'異音・振動', unit:'', type:'ok' },
-  { eq:'余剰ポンプ', no:'-', insp:'モード確認', unit:'', type:'mode' },
-  { eq:'濃縮汚泥ポンプ', no:'-', insp:'電流値', unit:'A', type:'num' },
-  { eq:'濃縮汚泥ポンプ', no:'-', insp:'吐出圧力', unit:'Mpa', type:'num' },
-  { eq:'濃縮汚泥ポンプ', no:'-', insp:'異音・振動', unit:'', type:'ok' },
-  { eq:'濃縮汚泥ポンプ', no:'-', insp:'モード確認', unit:'', type:'mode' },
-  { eq:'床排水ポンプ', no:'-', insp:'電流値', unit:'A', type:'num' },
-  { eq:'床排水ポンプ', no:'-', insp:'吐出圧力', unit:'Mpa', type:'num' },
-  { eq:'床排水ポンプ', no:'-', insp:'異音・振動', unit:'', type:'ok' },
-  { eq:'床排水ポンプ', no:'-', insp:'モード確認', unit:'', type:'mode' },
-  { eq:'濃縮汚泥掻寄機', no:'-', insp:'電流値', unit:'A', type:'num' },
-  { eq:'濃縮汚泥掻寄機', no:'-', insp:'異音・振動', unit:'', type:'ok' },
-  { eq:'濃縮汚泥掻寄機', no:'-', insp:'モード確認', unit:'', type:'select', opts:['運転','停止'] },
-  { eq:'スカムスキマー(濃縮)', no:'-', insp:'動作状況', unit:'', type:'ok' },
-  { eq:'汚泥貯留槽攪拌機', no:'-', insp:'電流値', unit:'A', type:'num' },
-  { eq:'汚泥貯留槽攪拌機', no:'-', insp:'異音・振動', unit:'', type:'ok' },
-  { eq:'汚泥貯留槽攪拌機', no:'-', insp:'モード確認', unit:'', type:'mode' },
+var EQUIP_LABELS = {
+  screenUnit: "スクリーンユニット",
+  thickSludgePump: "濃縮汚泥ポンプ",
+  sludgeMixer: "汚泥攪拌機",
+  excessPump: "余剰汚泥ポンプ",
+  suctionFan: "吸引ファン",
+  mainPump1: "№1主ポンプ",
+  mainPump2: "№2主ポンプ",
+  returnSludgePump1: "№1返送汚泥ポンプ",
+  returnSludgePump2: "№2返送汚泥ポンプ",
+  aeration1: "№1エアレーション装置",
+  aeration2: "№2エアレーション装置",
+  floorDrainPump: "床排水ポンプ"
+};
+
+var EQUIP_NAME_TO_KEY = {
+  "スクリーンユニット": "screenUnit",
+  "濃縮汚泥ポンプ": "thickSludgePump",
+  "汚泥攪拌機": "sludgeMixer",
+  "余剰汚泥ポンプ": "excessPump",
+  "吸引ファン": "suctionFan",
+  "№1主ポンプ": "mainPump1",
+  "№2主ポンプ": "mainPump2",
+  "№1返送汚泥ポンプ": "returnSludgePump1",
+  "№2返送汚泥ポンプ": "returnSludgePump2",
+  "№1エアレーション装置": "aeration1",
+  "№2エアレーション装置": "aeration2",
+  "床排水ポンプ": "floorDrainPump"
+};
+
+/* ============================================================
+   Electrical Equipment Sections
+   ============================================================ */
+var ELEC_SECTIONS = [
+  { title: "受電設備", fields: [
+    { key: "recv1phV", label: "受電電圧(1φ)", type: "number", step: "1", unit: "V" },
+    { key: "recv1phMode", label: "モード", type: "toggle", options: ["1-N","1-2","2-3","3-1"] },
+    { key: "recv1phSwitch", label: "受電切替", type: "toggle", options: ["自動","手動"] },
+    { key: "recv1phSource", label: "買電/自家発", type: "toggle", options: ["買電","自家発"] },
+    { key: "recv3phV", label: "受電電圧(3φ)", type: "number", step: "1", unit: "V" },
+    { key: "recv3phMode", label: "モード(3φ)", type: "toggle", options: ["1-2","2-3","3-1"] },
+    { key: "recv3phSwitch", label: "受電切替(3φ)", type: "toggle", options: ["自動","手動"] },
+    { key: "recv3phSource", label: "買電/自家発(3φ)", type: "toggle", options: ["買電","自家発"] },
+  ]},
+  { title: "ポンプ井水位計", fields: [
+    { key: "pumpWellLook", label: "外観の確認", type: "toggle", options: ["○","△","×"] },
+    { key: "pumpWellIndication", label: "指示状況の確認", type: "toggle", options: ["○","△","×"] },
+    { key: "pumpWellLevel", label: "計器読み", type: "number", step: "0.01", unit: "m" },
+  ]},
+  { title: "放流流量計", fields: [
+    { key: "dischargeLook", label: "外観の確認", type: "toggle", options: ["○","△","×"] },
+    { key: "dischargeIndication", label: "指示状況の確認", type: "toggle", options: ["○","△","×"] },
+    { key: "dischargeFlow", label: "流量計の読み", type: "number", step: "0.01", unit: "㎥/h" },
+    { key: "dischargeTotal", label: "流量計積算の読み", type: "number", step: "1", unit: "㎥" },
+  ]},
+  { title: "汚濁負荷量計(放流水UV)", fields: [
+    { key: "uvLook", label: "外観の確認", type: "toggle", options: ["○","△","×"] },
+    { key: "uvIndication", label: "指示状況の確認", type: "toggle", options: ["○","△","×"] },
+    { key: "uvValue", label: "UV値", type: "number", step: "0.01", unit: "Abs" },
+    { key: "codValue", label: "COD値", type: "number", step: "0.01", unit: "mg/L" },
+  ]},
+  { title: "返送汚泥ポンプ", fields: [
+    { key: "returnSludgeLook", label: "外観の確認", type: "toggle", options: ["○","△","×"] },
+    { key: "returnSludgeIndication", label: "指示状況の確認", type: "toggle", options: ["○","△","×"] },
+    { key: "returnSludgeFlow", label: "流量計の読み", type: "number", step: "0.01", unit: "㎥/h" },
+    { key: "returnSludgeTotal", label: "流量計積算の読み", type: "number", step: "1", unit: "㎥" },
+  ]},
+  { title: "余剰汚泥ポンプ", fields: [
+    { key: "excessSludgeLook", label: "外観の確認", type: "toggle", options: ["○","△","×"] },
+    { key: "excessSludgeIndication", label: "指示状況の確認", type: "toggle", options: ["○","△","×"] },
+    { key: "excessSludgeFlow", label: "流量計の読み", type: "number", step: "0.01", unit: "㎥/h" },
+    { key: "excessSludgeTotal", label: "流量計積算の読み", type: "number", step: "1", unit: "㎥" },
+  ]},
+  { title: "圧力式液位計", fields: [
+    { key: "pressureLevelLook", label: "外観の確認", type: "toggle", options: ["○","△","×"] },
+    { key: "pressureLevelIndication", label: "指示状況の確認", type: "toggle", options: ["○","△","×"] },
+    { key: "pressureLevelValue", label: "機器指示値の記録", type: "number", step: "0.1", unit: "m" },
+  ]},
+  { title: "発電機設備", fields: [
+    { key: "genPanelLook", label: "発電機盤 外観", type: "toggle", options: ["○","△","×"] },
+    { key: "engineLook", label: "エンジン 外観", type: "toggle", options: ["○","△","×"] },
+    { key: "fuelTankLook", label: "燃料タンク 外観", type: "toggle", options: ["○","△","×"] },
+    { key: "fuelRemain", label: "残量の値", type: "number", step: "1", unit: "ℓ" },
+    { key: "genRunTime", label: "積算運転時間", type: "number", step: "0.1", unit: "" },
+  ]},
+  { title: "その他", fields: [
+    { key: "alarmStatus", label: "通報装置 通報状態", type: "toggle", options: ["○","△","×"] },
+  ]},
 ];
 
-const MECH_ITEMS_P2 = [
-  { eq:'処理水給水装置', no:'1', insp:'電流値', unit:'A', type:'num' },
-  { eq:'処理水給水装置', no:'1', insp:'吐出圧力', unit:'Mpa', type:'num' },
-  { eq:'処理水給水装置', no:'1', insp:'異音・振動等', unit:'', type:'ok' },
-  { eq:'処理水給水装置', no:'2', insp:'電流値', unit:'A', type:'num' },
-  { eq:'処理水給水装置', no:'2', insp:'吐出圧力', unit:'Mpa', type:'num' },
-  { eq:'処理水給水装置', no:'2', insp:'異音・振動等', unit:'', type:'ok' },
-  { eq:'処理水給水装置', no:'-', insp:'モード確認', unit:'', type:'mode' },
-  { eq:'加圧タンク', no:'-', insp:'水漏れ', unit:'', type:'select', opts:['無','有'] },
-  { eq:'加圧タンク', no:'-', insp:'吐出圧力', unit:'Mpa', type:'num' },
-  { eq:'塩素接触装置', no:'-', insp:'薬剤残量確認', unit:'', type:'ok' },
-  { eq:'オートストレーナー型', no:'-', insp:'原水側圧力', unit:'Mpa', type:'num' },
-  { eq:'オートストレーナー型', no:'-', insp:'処理水側圧力', unit:'Mpa', type:'num' },
-  { eq:'自家発室給気ファン', no:'-', insp:'異音・振動', unit:'', type:'ok' },
-  { eq:'自家発室給気ファン', no:'-', insp:'モード確認', unit:'', type:'select', opts:['連動','切'] },
-  { eq:'脱水機室給気ファン', no:'-', insp:'電流値', unit:'A', type:'num' },
-  { eq:'脱水機室給気ファン', no:'-', insp:'異音・振動', unit:'', type:'ok' },
-  { eq:'脱水機室給気ファン', no:'-', insp:'モード確認', unit:'', type:'mode' },
-  { eq:'脱水機室排気ファン', no:'-', insp:'電流値', unit:'A', type:'num' },
-  { eq:'脱水機室排気ファン', no:'-', insp:'臭気の漏れ', unit:'', type:'ok' },
-  { eq:'脱水機室排気ファン', no:'-', insp:'モード確認', unit:'', type:'mode' },
-  { eq:'汚泥ポンプ室給気ファン', no:'-', insp:'電流値', unit:'A', type:'num' },
-  { eq:'汚泥ポンプ室給気ファン', no:'-', insp:'異音・振動', unit:'', type:'ok' },
-  { eq:'汚泥ポンプ室給気ファン', no:'-', insp:'モード確認', unit:'', type:'mode' },
-  { eq:'汚泥ポンプ室排気ファン', no:'-', insp:'電流値', unit:'A', type:'num' },
-  { eq:'汚泥ポンプ室排気ファン', no:'-', insp:'臭気の漏れ', unit:'', type:'ok' },
-  { eq:'汚泥ポンプ室排気ファン', no:'-', insp:'モード確認', unit:'', type:'mode' },
+/* ============================================================
+   Mechanical Equipment Sections
+   ============================================================ */
+var MECH_SECTIONS = [
+  { title: "ポンプ井", fields: [
+    { key: "pumpWellStatus", label: "内部状況確認", type: "toggle", options: ["○","△","×"] },
+  ]},
+  { title: "主ポンプNo.1", fields: [
+    { key: "mainPump1Current", label: "電流値", type: "number", step: "0.1", unit: "A" },
+    { key: "mainPump1Pressure", label: "吐出圧力", type: "number", step: "0.01", unit: "Mpa" },
+    { key: "mainPump1Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
+  ]},
+  { title: "主ポンプNo.2", fields: [
+    { key: "mainPump2Current", label: "電流値", type: "number", step: "0.1", unit: "A" },
+    { key: "mainPump2Pressure", label: "吐出圧力", type: "number", step: "0.01", unit: "Mpa" },
+    { key: "mainPump2Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
+  ]},
+  { title: "主ポンプ共通", fields: [
+    { key: "mainPumpMode", label: "モード確認", type: "toggle", options: ["自動","手動"] },
+    { key: "mainPumpPriority", label: "優先機選択", type: "toggle", options: ["交互","No.1","No.2"] },
+  ]},
+  { title: "スクリーンユニット", fields: [
+    { key: "screenVibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
+    { key: "screenResidue", label: "し渣量の確認", type: "toggle", options: ["○","△","×"] },
+    { key: "screenOperation", label: "運転動作", type: "toggle", options: ["○","△","×"] },
+  ]},
+  { title: "エアレーション装置No.1", fields: [
+    { key: "aeration1Current", label: "電流値", type: "number", step: "0.1", unit: "A" },
+    { key: "aeration1Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
+    { key: "aeration1Mode", label: "モード確認", type: "toggle", options: ["自動","手動","切"] },
+  ]},
+  { title: "エアレーション装置No.2", fields: [
+    { key: "aeration2Current", label: "電流値", type: "number", step: "0.1", unit: "A" },
+    { key: "aeration2Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
+    { key: "aeration2Mode", label: "モード確認", type: "toggle", options: ["自動","手動","切"] },
+  ]},
+  { title: "消泡装置", fields: [
+    { key: "defoamNozzle", label: "消泡ノズル", type: "toggle", options: ["○","△","×"] },
+    { key: "defoamStatus", label: "消泡状態", type: "toggle", options: ["○","△","×"] },
+  ]},
+  { title: "終沈汚泥掻寄機", fields: [
+    { key: "finalScraperCurrent", label: "電流値", type: "number", step: "0.01", unit: "A" },
+    { key: "finalScraperVibration", label: "異音・振動等", type: "toggle", options: ["○","△","×"] },
+    { key: "finalScraperMode", label: "モード確認", type: "toggle", options: ["運転","停止"] },
+  ]},
+  { title: "スカムスキマー", fields: [
+    { key: "skimmerOperation", label: "動作状況", type: "toggle", options: ["○","△","×"] },
+    { key: "skimmerScum", label: "スカムの状況", type: "toggle", options: ["○","△","×"] },
+  ]},
+  { title: "返送汚泥ポンプNo.1", fields: [
+    { key: "retPump1Current", label: "電流値", type: "number", step: "0.1", unit: "A" },
+    { key: "retPump1Pressure", label: "吐出圧力", type: "number", step: "0.01", unit: "Mpa" },
+    { key: "retPump1Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
+  ]},
+  { title: "返送汚泥ポンプNo.2", fields: [
+    { key: "retPump2Current", label: "電流値", type: "number", step: "0.1", unit: "A" },
+    { key: "retPump2Pressure", label: "吐出圧力", type: "number", step: "0.01", unit: "Mpa" },
+    { key: "retPump2Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×","－"] },
+  ]},
+  { title: "返送汚泥ポンプ共通", fields: [
+    { key: "retPumpMode", label: "モード確認", type: "toggle", options: ["自動","手動"] },
+    { key: "retPumpSelect", label: "常用機選択", type: "toggle", options: ["No.1","No.2","交互"] },
+  ]},
+  { title: "余剰ポンプ", fields: [
+    { key: "excessPumpCurrent", label: "電流値", type: "number", step: "0.1", unit: "A" },
+    { key: "excessPumpPressure", label: "吐出圧力", type: "number", step: "0.01", unit: "Mpa" },
+    { key: "excessPumpVibration", label: "異音・振動", type: "toggle", options: ["○","△","×","－"] },
+    { key: "excessPumpMode", label: "モード確認", type: "toggle", options: ["手動","自動"] },
+  ]},
+  { title: "濃縮汚泥ポンプ", fields: [
+    { key: "thickPumpCurrent", label: "電流値", type: "number", step: "0.1", unit: "A" },
+    { key: "thickPumpPressure", label: "吐出圧力", type: "number", step: "0.01", unit: "Mpa" },
+    { key: "thickPumpVibration", label: "異音・振動", type: "toggle", options: ["○","△","×","－"] },
+    { key: "thickPumpMode", label: "モード確認", type: "toggle", options: ["手動","自動"] },
+  ]},
+  { title: "床排水ポンプ", fields: [
+    { key: "floorDrainCurrent", label: "電流値", type: "number", step: "0.1", unit: "A" },
+    { key: "floorDrainPressure", label: "吐出圧力", type: "number", step: "0.01", unit: "Mpa" },
+    { key: "floorDrainVibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
+    { key: "floorDrainMode", label: "モード確認", type: "toggle", options: ["自動","手動"] },
+  ]},
+  { title: "濃縮汚泥掻寄機", fields: [
+    { key: "thickScraperCurrent", label: "電流値", type: "number", step: "0.01", unit: "A" },
+    { key: "thickScraperVibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
+    { key: "thickScraperMode", label: "モード確認", type: "toggle", options: ["運転","停止"] },
+  ]},
+  { title: "スカムスキマー(濃縮)", fields: [
+    { key: "thickSkimmerOperation", label: "動作状況", type: "toggle", options: ["○","△","×"] },
+  ]},
+  { title: "汚泥貯留槽攪拌機", fields: [
+    { key: "sludgeMixerCurrent", label: "電流値", type: "number", step: "0.1", unit: "A" },
+    { key: "sludgeMixerVibration", label: "異音・振動", type: "toggle", options: ["○","△","×","－"] },
+    { key: "sludgeMixerMode", label: "モード確認", type: "toggle", options: ["手動","自動"] },
+  ]},
+  { title: "処理水給水装置No.1", fields: [
+    { key: "treatWater1Current", label: "電流値", type: "number", step: "0.1", unit: "A" },
+    { key: "treatWater1Pressure", label: "吐出圧力", type: "number", step: "0.01", unit: "Mpa" },
+    { key: "treatWater1Vibration", label: "異音・振動等", type: "toggle", options: ["○","△","×","－"] },
+  ]},
+  { title: "処理水給水装置No.2", fields: [
+    { key: "treatWater2Current", label: "電流値", type: "number", step: "0.1", unit: "A" },
+    { key: "treatWater2Pressure", label: "吐出圧力", type: "number", step: "0.01", unit: "Mpa" },
+    { key: "treatWater2Vibration", label: "異音・振動等", type: "toggle", options: ["○","△","×","－"] },
+  ]},
+  { title: "処理水給水装置共通", fields: [
+    { key: "treatWaterMode", label: "モード確認", type: "toggle", options: ["手動","自動"] },
+  ]},
+  { title: "加圧タンク", fields: [
+    { key: "pressureTankLeak", label: "水漏れ", type: "toggle", options: ["無","有"] },
+    { key: "pressureTankPressure", label: "吐出圧力", type: "number", step: "0.01", unit: "Mpa" },
+  ]},
+  { title: "塩素接触装置", fields: [
+    { key: "chlorineRemain", label: "薬剤残量確認", type: "toggle", options: ["○","△","×"] },
+  ]},
+  { title: "オートストレーナー型", fields: [
+    { key: "strainerRawPressure", label: "原水側圧力", type: "number", step: "0.01", unit: "Mpa" },
+    { key: "strainerTreatPressure", label: "処理水側圧力", type: "number", step: "0.01", unit: "Mpa" },
+  ]},
+  { title: "自家発室給気ファン", fields: [
+    { key: "genSupplyFanVibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
+    { key: "genSupplyFanMode", label: "モード確認", type: "toggle", options: ["連動","手動","切"] },
+  ]},
+  { title: "脱水機室給気ファン", fields: [
+    { key: "dehydSupplyFanCurrent", label: "電流値", type: "number", step: "0.1", unit: "A" },
+    { key: "dehydSupplyFanVibration", label: "異音・振動", type: "toggle", options: ["○","△","×","－"] },
+    { key: "dehydSupplyFanMode", label: "モード確認", type: "toggle", options: ["自動","手動","切"] },
+  ]},
+  { title: "脱水機室排気ファン", fields: [
+    { key: "dehydExhaustFanCurrent", label: "電流値", type: "number", step: "0.1", unit: "A" },
+    { key: "dehydExhaustFanSmell", label: "臭気の漏れ", type: "toggle", options: ["無","有","－"] },
+    { key: "dehydExhaustFanMode", label: "モード確認", type: "toggle", options: ["自動","手動","切"] },
+  ]},
+  { title: "汚泥ポンプ室給気ファン", fields: [
+    { key: "sludgeRoomSupplyFanCurrent", label: "電流値", type: "number", step: "0.1", unit: "A" },
+    { key: "sludgeRoomSupplyFanVibration", label: "異音・振動", type: "toggle", options: ["○","△","×","－"] },
+    { key: "sludgeRoomSupplyFanMode", label: "モード確認", type: "toggle", options: ["自動","手動","切"] },
+  ]},
+  { title: "汚泥ポンプ室排気ファン", fields: [
+    { key: "sludgeRoomExhaustFanCurrent", label: "電流値", type: "number", step: "0.1", unit: "A" },
+    { key: "sludgeRoomExhaustFanSmell", label: "臭気の漏れ", type: "toggle", options: ["無","有","－"] },
+    { key: "sludgeRoomExhaustFanMode", label: "モード確認", type: "toggle", options: ["自動","手動","切"] },
+  ]},
 ];
 
-const ELEC_ITEMS = [
-  { sec:'管理室', eq:'受電設備', insp:'受電電圧(1φ)', unit:'V', type:'num' },
-  { sec:'管理室', eq:'受電設備', insp:'モード', unit:'', type:'select', opts:['1-N','1-2','2-3','3-1'] },
-  { sec:'管理室', eq:'受電設備', insp:'受電切替', unit:'', type:'select', opts:['自動','手動'] },
-  { sec:'管理室', eq:'受電設備', insp:'買電/自家発', unit:'', type:'select', opts:['買電','自家発'] },
-  { sec:'管理室', eq:'受電設備', insp:'受電電圧(3φ)', unit:'V', type:'num' },
-  { sec:'管理室', eq:'受電設備', insp:'モード(3φ)', unit:'', type:'select', opts:['1-2','2-3','3-1'] },
-  { sec:'管理室', eq:'受電設備', insp:'受電切替(3φ)', unit:'', type:'select', opts:['自動','手動'] },
-  { sec:'管理室', eq:'受電設備', insp:'買電/自家発(3φ)', unit:'', type:'select', opts:['買電','自家発'] },
-  { sec:'計装設備', eq:'ポンプ井水位計', insp:'外観の確認', unit:'', type:'ok' },
-  { sec:'計装設備', eq:'ポンプ井水位計', insp:'指示状況の確認', unit:'', type:'ok' },
-  { sec:'計装設備', eq:'ポンプ井水位計', insp:'計器読み', unit:'m', type:'num' },
-  { sec:'計装設備', eq:'放流流量計', insp:'外観の確認', unit:'', type:'ok' },
-  { sec:'計装設備', eq:'放流流量計', insp:'指示状況の確認', unit:'', type:'ok' },
-  { sec:'計装設備', eq:'放流流量計', insp:'流量計の読み', unit:'㎥/h', type:'num' },
-  { sec:'計装設備', eq:'放流流量計', insp:'流量計積算の読み', unit:'㎥', type:'num' },
-  { sec:'計装設備', eq:'汚濁負荷量計(UV)', insp:'外観の確認', unit:'', type:'ok' },
-  { sec:'計装設備', eq:'汚濁負荷量計(UV)', insp:'指示状況の確認', unit:'', type:'ok' },
-  { sec:'計装設備', eq:'汚濁負荷量計(UV)', insp:'UV値', unit:'Abs', type:'num' },
-  { sec:'計装設備', eq:'汚濁負荷量計(UV)', insp:'COD値', unit:'mg/L', type:'num' },
-  { sec:'計装設備', eq:'返送汚泥ポンプ', insp:'外観の確認', unit:'', type:'ok' },
-  { sec:'計装設備', eq:'返送汚泥ポンプ', insp:'指示状況の確認', unit:'', type:'ok' },
-  { sec:'計装設備', eq:'返送汚泥ポンプ', insp:'流量計の読み', unit:'㎥/h', type:'num' },
-  { sec:'計装設備', eq:'返送汚泥ポンプ', insp:'流量計積算の読み', unit:'㎥', type:'num' },
-  { sec:'計装設備', eq:'余剰汚泥ポンプ', insp:'外観の確認', unit:'', type:'ok' },
-  { sec:'計装設備', eq:'余剰汚泥ポンプ', insp:'指示状況の確認', unit:'', type:'ok' },
-  { sec:'計装設備', eq:'余剰汚泥ポンプ', insp:'流量計の読み', unit:'㎥/h', type:'num' },
-  { sec:'計装設備', eq:'余剰汚泥ポンプ', insp:'流量計積算の読み', unit:'㎥', type:'num' },
-  { sec:'計装設備', eq:'圧力式液位計', insp:'外観の確認', unit:'', type:'ok' },
-  { sec:'計装設備', eq:'圧力式液位計', insp:'指示状況の確認', unit:'', type:'ok' },
-  { sec:'計装設備', eq:'圧力式液位計', insp:'機器指示値の記録', unit:'m', type:'num' },
-  { sec:'発電機設備', eq:'発電機盤', insp:'外観の確認', unit:'', type:'ok' },
-  { sec:'発電機設備', eq:'エンジン', insp:'外観の確認', unit:'', type:'ok' },
-  { sec:'発電機設備', eq:'燃料タンク', insp:'外観の確認', unit:'', type:'ok' },
-  { sec:'発電機設備', eq:'燃料タンク', insp:'残量の値', unit:'ℓ', type:'num' },
-  { sec:'発電機設備', eq:'燃料タンク', insp:'積算運転時間', unit:'', type:'num' },
-  { sec:'他', eq:'通報装置', insp:'通報状態の確認', unit:'', type:'ok' },
-];
+/* ============================================================
+   Utility Functions
+   ============================================================ */
+function skey(tab, week) {
+  return STORAGE_PREFIX + currentMonth + '_' + tab + '_w' + week;
+}
 
-const DAYS = ['mon','tue','wed','thu','fri'];
-const DAY_LABELS = ['月','火','水','木','金'];
+function showLoading(v) {
+  document.getElementById('loading').classList.toggle('show', v);
+}
 
-// === 初期化 ===
+function showToast(msg, type) {
+  type = type || 'success';
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type + ' show';
+  setTimeout(function() {
+    t.classList.remove('show');
+  }, 3000);
+}
+
+function formatDate(d) {
+  var y = d.getFullYear();
+  var m = String(d.getMonth() + 1).padStart(2, '0');
+  var dd = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + dd;
+}
+
+function computeDayDate(dayIdx) {
+  var sd = document.getElementById('startDate').value;
+  if (!sd) return null;
+  var d = new Date(sd);
+  d.setDate(d.getDate() + (currentWeek - 1) * 7 + dayIdx);
+  return d;
+}
+
+function dayDateStr(dayIdx) {
+  var d = computeDayDate(dayIdx);
+  if (!d) return '';
+  return (d.getMonth() + 1) + '/' + d.getDate();
+}
+
+function updateOnlineStatus() {
+  var on = navigator.onLine;
+  document.getElementById('onlineDot').classList.toggle('online', on);
+  document.getElementById('onlineLabel').textContent = on ? 'online' : 'offline';
+}
+
+/* ============================================================
+   Initialization
+   ============================================================ */
 function init() {
-  const today = new Date();
-  const day = today.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  const monday = new Date(today);
+  var today = new Date();
+
+  // Month select
+  var sel = document.getElementById('monthSelect');
+  for (var i = -2; i <= 3; i++) {
+    var d = new Date(today.getFullYear(), today.getMonth() + i, 1);
+    var val = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    var opt = document.createElement('option');
+    opt.value = val;
+    opt.textContent = d.getFullYear() + '年' + (d.getMonth() + 1) + '月';
+    if (i === 0) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  var savedMonth = localStorage.getItem(STORAGE_PREFIX + 'current_month');
+  if (savedMonth) {
+    sel.value = savedMonth;
+  }
+  currentMonth = sel.value;
+
+  // Start date (this week's Monday)
+  var day = today.getDay();
+  var diff = day === 0 ? -6 : 1 - day;
+  var monday = new Date(today);
   monday.setDate(today.getDate() + diff);
-  document.getElementById('startDate').value = formatDateStr(monday);
+  document.getElementById('startDate').value = formatDate(monday);
   onDateChange();
+
+  // Online status
+  updateOnlineStatus();
+  window.addEventListener('online', updateOnlineStatus);
+  window.addEventListener('offline', updateOnlineStatus);
+
+  // Render
+  renderWeekTabs();
+  renderDayTabs();
   renderTab();
 }
 
-function formatDateStr(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,'0');
-  const dd = String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${dd}`;
+/* ============================================================
+   Date Change Handlers
+   ============================================================ */
+function onMonthChange() {
+  currentMonth = document.getElementById('monthSelect').value;
+  localStorage.setItem(STORAGE_PREFIX + 'current_month', currentMonth);
+  renderTab();
 }
 
 function onDateChange() {
-  const val = document.getElementById('startDate').value;
+  var val = document.getElementById('startDate').value;
   if (!val) return;
-  const d = new Date(val);
-  const m = d.getMonth()+1;
-  const dd = d.getDate();
-  const endD = new Date(d); endD.setDate(d.getDate()+4);
-  const em = endD.getMonth()+1;
-  const edd = endD.getDate();
-  document.getElementById('weekLabel').textContent = `${m}/${dd}〜${em}/${edd}`;
-}
-
-function switchTab(tab) {
-  currentTab = tab;
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  var d = new Date(val);
+  var endD = new Date(d);
+  endD.setDate(d.getDate() + 4);
+  document.getElementById('weekLabel').textContent =
+    (d.getMonth() + 1) + '/' + d.getDate() + '〜' +
+    (endD.getMonth() + 1) + '/' + endD.getDate();
+  renderDayTabs();
   renderTab();
 }
 
-// === レンダリング ===
+/* ============================================================
+   Week Tabs
+   ============================================================ */
+function renderWeekTabs() {
+  var c = document.getElementById('weekTabs');
+  var html = '';
+  for (var w = 1; w <= 5; w++) {
+    html += '<button class="week-tab' +
+      (w === currentWeek ? ' active' : '') +
+      '" onclick="switchWeek(' + w + ')">第' + w + '週</button>';
+  }
+  c.innerHTML = html;
+}
+
+function switchWeek(w) {
+  saveToLocal();
+  currentWeek = w;
+  renderWeekTabs();
+  renderDayTabs();
+  renderTab();
+}
+
+/* ============================================================
+   Day Tabs (Water Quality only)
+   ============================================================ */
+function renderDayTabs() {
+  var c = document.getElementById('dayTabs');
+  var html = '';
+  for (var i = 0; i < DAYS.length; i++) {
+    var ds = dayDateStr(i);
+    html += '<button class="day-tab' +
+      (DAYS[i] === currentDay ? ' active' : '') +
+      '" onclick="switchDay(\'' + DAYS[i] + '\')">' +
+      DAY_LABELS[i] +
+      '<span class="date-sub">' + ds + '</span></button>';
+  }
+  c.innerHTML = html;
+  c.style.display = (currentTab === 'water') ? 'flex' : 'none';
+}
+
+function switchDay(d) {
+  saveToLocal();
+  currentDay = d;
+  renderDayTabs();
+  renderTab();
+}
+
+/* ============================================================
+   Main Tab Switch
+   ============================================================ */
+function switchTab(tab) {
+  saveToLocal();
+  currentTab = tab;
+  var tabs = document.querySelectorAll('#mainTabs .tab');
+  for (var i = 0; i < tabs.length; i++) {
+    tabs[i].classList.toggle('active', tabs[i].dataset.tab === tab);
+  }
+  document.getElementById('dayTabs').style.display =
+    (tab === 'water') ? 'flex' : 'none';
+  renderTab();
+}
+
+/* ============================================================
+   Render Tab Content
+   ============================================================ */
 function renderTab() {
-  const c = document.getElementById('content');
-  switch(currentTab) {
-    case 'water': c.innerHTML = renderWater(); break;
-    case 'hours': c.innerHTML = renderHours(); break;
-    case 'mechanical': c.innerHTML = renderMechanical(); break;
-    case 'electrical': c.innerHTML = renderElectrical(); break;
+  var c = document.getElementById('content');
+  tabIdx = 1;
+  switch (currentTab) {
+    case 'water':
+      c.innerHTML = renderWater();
+      break;
+    case 'hours':
+      c.innerHTML = renderHours();
+      break;
+    case 'electrical':
+      c.innerHTML = renderElectrical();
+      break;
+    case 'mechanical':
+      c.innerHTML = renderMechanical();
+      break;
   }
+  restoreFromLocal();
+  setupInputHandlers();
 }
 
-function makeInput(id, day, type, opts) {
-  const dataKey = `data-id="${id}" data-day="${day}"`;
-  if (type === 'ok') {
-    return `<select ${dataKey}><option value="">-</option><option>○</option><option>△</option><option>×</option><option>－</option></select>`;
-  }
-  if (type === 'mode') {
-    return `<select ${dataKey}><option value="">-</option><option>自動</option><option>手動</option><option>切</option><option>連動</option><option>単独</option></select>`;
-  }
-  if (type === 'select') {
-    const options = (opts||[]).map(o => `<option>${o}</option>`).join('');
-    return `<select ${dataKey}><option value="">-</option>${options}</select>`;
-  }
-  if (type === 'text') {
-    return `<input type="text" ${dataKey} placeholder="-">`;
-  }
-  return `<input type="number" step="any" ${dataKey} inputmode="decimal" placeholder="-">`;
-}
-
-function dayHeader() {
-  return `<div class="day-header"><span></span>${DAY_LABELS.map(d=>`<span>${d}</span>`).join('')}</div>`;
-}
-
+/* ============================================================
+   Render: Water Quality (form-based, one day at a time)
+   ============================================================ */
 function renderWater() {
-  let html = '<div class="section-title">積算値（メーター読み値）</div>';
-  html += '<div class="input-group">' + dayHeader();
-  WATER_ITEMS_UPPER.forEach(item => {
-    html += `<div class="day-inputs"><div class="label">${item.name}<span class="sub">${item.unit}</span></div>`;
-    DAYS.forEach(d => { html += makeInput('upper_'+item.id, d, 'num'); });
-    html += '</div>';
-  });
+  var html = '';
+
+  // Action bar
+  html += '<div class="water-actions">';
+  html += '<button class="btn btn-secondary" onclick="copyPrevDay()">前日コピー</button>';
+  html += '<button class="btn btn-danger" onclick="clearCurrentDay()">クリア</button>';
   html += '</div>';
 
-  html += '<div class="section-title">水質測定結果</div>';
-  html += '<div class="input-group">' + dayHeader();
-  WATER_ITEMS_LOWER.forEach(item => {
-    const loc = item.loc ? `[${item.loc}]` : '';
-    html += `<div class="day-inputs"><div class="label">${item.name}${loc}<span class="sub">${item.unit}</span></div>`;
-    DAYS.forEach(d => { html += makeInput('lower_'+item.id, d, item.type); });
-    html += '</div>';
-  });
+  // Form
+  html += '<div class="form-wrap">';
+
+  // Inspector
+  html += '<div class="inspector-field">';
+  html += '<span class="label">点検者</span>';
+  html += '<input type="text" data-field="inspector" placeholder="氏名" tabindex="' + (tabIdx++) + '">';
   html += '</div>';
 
-  html += '<div class="section-title">備考</div>';
-  html += '<div class="input-group"><div class="input-row">';
-  html += '<textarea data-id="water_bikou" rows="3" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;" placeholder="備考を入力"></textarea>';
-  html += '</div></div>';
+  // Section: 積算値・流量
+  html += '<div class="section">';
+  html += '<div class="section-header">積算値・流量</div>';
+  html += nf('普通電力量(200V)', 'Kwh', '0.01', 'denryoku200v');
+  html += nf('普通電力量(100V)', 'Kwh', '0.1', 'denryoku100v');
+  html += nf('軽油(残量)', 'ℓ', '1', 'keiyu');
+  html += nf('返送汚泥流量', '㎥', '1', 'hensouOdei');
+  html += nf('余剰汚泥流量', '㎥', '1', 'yojouOdei');
+  html += nf('放流流量', '㎥', '1', 'houryuuRyuuryou');
+  html += '</div>';
+
+  // Section: 水温
+  html += '<div class="section">';
+  html += '<div class="section-header">水温 (℃)</div>';
+  html += nf('流入', '℃', '0.1', 'tempRyunyu');
+  html += nf('ディッチ', '℃', '0.1', 'tempDitch');
+  html += nf('放流水', '℃', '0.1', 'tempHouryuu');
+  html += '</div>';
+
+  // Section: 外観
+  html += '<div class="section">';
+  html += '<div class="section-header">外観 (油膜・色合)</div>';
+  html += tf('流入', 'gaikanRyunyu', ['無','黄色','茶色','灰色']);
+  html += tf('ディッチ', 'gaikanDitch', ['無','茶色','黄色','灰色']);
+  html += tf('放流水', 'gaikanHouryuu', ['無','透明','半透明','灰色']);
+  html += '</div>';
+
+  // Section: 透視度
+  html += '<div class="section">';
+  html += '<div class="section-header">透視度 (cm)</div>';
+  html += nf('流入水', 'cm', '1', 'toushidoRyunyu');
+  html += nf('放流水', 'cm', '1', 'toushidoHouryuu');
+  html += '</div>';
+
+  // Section: 臭気
+  html += '<div class="section">';
+  html += '<div class="section-header">臭気 (腐敗臭)</div>';
+  html += tf('流入', 'shukiRyunyu', ['無','下水臭','腐敗臭']);
+  html += tf('ディッチ', 'shukiDitch', ['無','活性汚泥臭']);
+  html += tf('放流水', 'shukiHouryuu', ['無','塩素臭']);
+  html += '</div>';
+
+  // Section: pH
+  html += '<div class="section">';
+  html += '<div class="section-header">pH</div>';
+  html += nf('流入', '', '0.01', 'phRyunyu');
+  html += nf('ディッチ', '', '0.01', 'phDitch');
+  html += nf('放流水', '', '0.01', 'phHouryuu');
+  html += '</div>';
+
+  // Section: SV
+  html += '<div class="section">';
+  html += '<div class="section-header">SV (%) ディッチ</div>';
+  html += nf('SV・10', '%', '1', 'sv10');
+  html += nf('SV・20', '%', '1', 'sv20');
+  html += nf('SV・30', '%', '1', 'sv30');
+  html += nf('SV・24h', '%', '1', 'sv24h');
+  html += '</div>';
+
+  // Section: その他
+  html += '<div class="section">';
+  html += '<div class="section-header">その他</div>';
+  html += nf('MLSS', 'mg/L', '10', 'mlss');
+  html += tf('汚泥界面', 'odeiKaimen', ['-','－'], 'cm');
+  html += nf('残留塩素', 'mg/L', '0.01', 'zanryuuEnso');
+  html += nf('塩素投入量', 'kg', '0.1', 'ensoTounyuu');
+  html += '<div class="field">' +
+    '<span class="label">備考</span>' +
+    '<span class="unit"></span>' +
+    '<input type="text" data-field="bikou" placeholder="備考" tabindex="' + (tabIdx++) + '">' +
+    '</div>';
+  html += '</div>';
+
+  html += '</div>'; // form-wrap end
   return html;
 }
 
+// Number field helper
+function nf(label, unit, step, key) {
+  return '<div class="field">' +
+    '<span class="label">' + label + '</span>' +
+    '<span class="unit">' + (unit || '') + '</span>' +
+    '<input type="number" inputmode="decimal" step="' + step + '" data-field="' + key + '" tabindex="' + (tabIdx++) + '">' +
+    '</div>';
+}
+
+// Toggle field helper
+function tf(label, key, opts, unit) {
+  return '<div class="field">' +
+    '<span class="label">' + label + '</span>' +
+    '<span class="unit">' + (unit || '') + '</span>' +
+    '<button type="button" class="toggle-btn" data-field="' + key + '" ' +
+    'data-options=\'' + JSON.stringify(opts) + '\' ' +
+    'onclick="cycleToggle(this)" tabindex="' + (tabIdx++) + '"></button>' +
+    '</div>';
+}
+
+/* ============================================================
+   Render: Equipment Runtime Hours (table)
+   ============================================================ */
 function renderHours() {
-  let html = '<div class="section-title">機器運転時間（hr）</div>';
-  html += '<div class="input-group">' + dayHeader();
-  EQUIPMENT_LIST.forEach((eq, i) => {
-    html += `<div class="day-inputs"><div class="label">${eq}</div>`;
-    DAYS.forEach(d => { html += makeInput('eq_'+i, d, 'num'); });
+  var html = '';
+  html += '<div class="section-title">機器運転時間 (hr)</div>';
+  html += '<div class="input-group">';
+  html += dayHeaderHtml();
+  for (var i = 0; i < EQUIP_KEYS.length; i++) {
+    var k = EQUIP_KEYS[i];
+    html += '<div class="day-inputs">';
+    html += '<div class="label">' + EQUIP_LABELS[k] + '</div>';
+    for (var j = 0; j < DAYS.length; j++) {
+      html += '<input type="number" step="any" ' +
+        'data-key="' + k + '" data-day="' + DAYS[j] + '" ' +
+        'inputmode="decimal" placeholder="-" tabindex="' + (tabIdx++) + '">';
+    }
+    html += copyColBtn();
+    html += clearColBtn();
     html += '</div>';
-  });
+  }
   html += '</div>';
   return html;
 }
 
-function renderMechanical() {
-  let html = '';
-  html += '<div class="inspector-row"><label>点検者:</label>';
-  html += `<input type="text" id="inspectorName" value="${inspectorName}" onchange="inspectorName=this.value" placeholder="氏名を入力">`;
-  html += '</div>';
-
-  html += '<div class="section-title">機械設備点検表（1/2）</div>';
-  html += '<div class="input-group">' + dayHeader();
-  let prevEq = '';
-  MECH_ITEMS_P1.forEach((item, i) => {
-    const eqLabel = item.eq !== prevEq ? item.eq : '';
-    const noLabel = item.no !== '-' ? `No.${item.no}` : '';
-    prevEq = item.eq;
-    const label = eqLabel ? `${eqLabel} ${noLabel}` : `　${noLabel}`;
-    html += `<div class="day-inputs"><div class="label">${label.trim()}<span class="sub">${item.insp} ${item.unit}</span></div>`;
-    DAYS.forEach(d => { html += makeInput('m1_'+i, d, item.type, item.opts); });
-    html += '</div>';
-  });
-  html += '</div>';
-
-  html += '<div class="section-title">機械設備点検表（2/2）</div>';
-  html += '<div class="input-group">' + dayHeader();
-  prevEq = '';
-  MECH_ITEMS_P2.forEach((item, i) => {
-    const eqLabel = item.eq !== prevEq ? item.eq : '';
-    const noLabel = item.no !== '-' ? `No.${item.no}` : '';
-    prevEq = item.eq;
-    const label = eqLabel ? `${eqLabel} ${noLabel}` : `　${noLabel}`;
-    html += `<div class="day-inputs"><div class="label">${label.trim()}<span class="sub">${item.insp} ${item.unit}</span></div>`;
-    DAYS.forEach(d => { html += makeInput('m2_'+i, d, item.type, item.opts); });
-    html += '</div>';
-  });
-  html += '</div>';
-  return html;
-}
-
+/* ============================================================
+   Render: Electrical Equipment (table with sections)
+   ============================================================ */
 function renderElectrical() {
-  let html = '';
-  let prevSec = '';
-
-  html += '<div class="input-group">' + dayHeader();
-  ELEC_ITEMS.forEach((item, i) => {
-    if (item.sec !== prevSec) {
-      if (prevSec) html += '</div>';
-      html += `<div class="section-title">${item.sec}</div><div class="input-group">` + dayHeader();
-      prevSec = item.sec;
+  var html = '';
+  for (var s = 0; s < ELEC_SECTIONS.length; s++) {
+    var sec = ELEC_SECTIONS[s];
+    html += '<div class="section-title">' + sec.title + '</div>';
+    html += '<div class="input-group">';
+    html += dayHeaderHtml();
+    for (var f = 0; f < sec.fields.length; f++) {
+      var fld = sec.fields[f];
+      html += '<div class="day-inputs">';
+      html += '<div class="label">' + fld.label +
+        '<span class="sub">' + (fld.unit || '') + '</span></div>';
+      for (var d = 0; d < DAYS.length; d++) {
+        if (fld.type === 'toggle') {
+          html += '<div class="toggle-cell" ' +
+            'data-key="' + fld.key + '" data-day="' + DAYS[d] + '" ' +
+            'data-options=\'' + JSON.stringify(fld.options) + '\' ' +
+            'onclick="cycleToggleCell(this)" tabindex="' + (tabIdx++) + '">-</div>';
+        } else {
+          html += '<input type="number" step="' + (fld.step || 'any') + '" ' +
+            'data-key="' + fld.key + '" data-day="' + DAYS[d] + '" ' +
+            'inputmode="decimal" placeholder="-" tabindex="' + (tabIdx++) + '">';
+        }
+      }
+      html += copyColBtn();
+      html += clearColBtn();
+      html += '</div>';
     }
-    html += `<div class="day-inputs"><div class="label">${item.eq}<span class="sub">${item.insp} ${item.unit}</span></div>`;
-    DAYS.forEach(d => { html += makeInput('e_'+i, d, item.type, item.opts); });
     html += '</div>';
-  });
-  html += '</div>';
+  }
   return html;
 }
 
-// === データ収集・復元 ===
-function collectData() {
-  const data = {};
-  document.querySelectorAll('[data-id]').forEach(el => {
-    const id = el.dataset.id;
-    const day = el.dataset.day;
-    if (day) {
-      if (!data[id]) data[id] = {};
-      data[id][day] = el.value;
-    } else {
-      data[id] = el.value;
+/* ============================================================
+   Render: Mechanical Equipment (table with sections)
+   ============================================================ */
+function renderMechanical() {
+  var html = '';
+  for (var s = 0; s < MECH_SECTIONS.length; s++) {
+    var sec = MECH_SECTIONS[s];
+    html += '<div class="section-title">' + sec.title + '</div>';
+    html += '<div class="input-group">';
+    html += dayHeaderHtml();
+    for (var f = 0; f < sec.fields.length; f++) {
+      var fld = sec.fields[f];
+      html += '<div class="day-inputs">';
+      html += '<div class="label">' + fld.label +
+        '<span class="sub">' + (fld.unit || '') + '</span></div>';
+      for (var d = 0; d < DAYS.length; d++) {
+        if (fld.type === 'toggle') {
+          html += '<div class="toggle-cell" ' +
+            'data-key="' + fld.key + '" data-day="' + DAYS[d] + '" ' +
+            'data-options=\'' + JSON.stringify(fld.options) + '\' ' +
+            'onclick="cycleToggleCell(this)" tabindex="' + (tabIdx++) + '">-</div>';
+        } else {
+          html += '<input type="number" step="' + (fld.step || 'any') + '" ' +
+            'data-key="' + fld.key + '" data-day="' + DAYS[d] + '" ' +
+            'inputmode="decimal" placeholder="-" tabindex="' + (tabIdx++) + '">';
+        }
+      }
+      html += copyColBtn();
+      html += clearColBtn();
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+  return html;
+}
+
+/* ============================================================
+   Render Helpers
+   ============================================================ */
+function dayHeaderHtml() {
+  var h = '<div class="day-header"><span></span>';
+  for (var i = 0; i < DAY_LABELS.length; i++) {
+    h += '<span>' + DAY_LABELS[i] + '</span>';
+  }
+  h += '<span>←</span><span>×</span></div>';
+  return h;
+}
+
+function copyColBtn() {
+  return '<button class="col-action copy-btn" onclick="copyPrevCol(this)" title="前日コピー">←</button>';
+}
+
+function clearColBtn() {
+  return '<button class="col-action clear-btn" onclick="clearRow(this)" title="クリア">×</button>';
+}
+
+/* ============================================================
+   Toggle Operations
+   ============================================================ */
+function cycleToggle(btn) {
+  var opts = JSON.parse(btn.dataset.options);
+  var cur = btn.textContent.trim();
+  var idx = opts.indexOf(cur);
+  idx = (idx + 1) % (opts.length + 1);
+  if (idx === opts.length) {
+    btn.textContent = '';
+    btn.dataset.value = '';
+    btn.classList.remove('has-value');
+  } else {
+    btn.textContent = opts[idx];
+    btn.dataset.value = opts[idx];
+    btn.classList.add('has-value');
+  }
+  pushUndo();
+  autoSave();
+}
+
+function cycleToggleCell(cell) {
+  var opts = JSON.parse(cell.dataset.options);
+  var cur = cell.textContent.trim();
+  var idx = opts.indexOf(cur);
+  idx = (idx + 1) % (opts.length + 1);
+  if (idx === opts.length) {
+    cell.textContent = '-';
+    cell.dataset.value = '';
+    cell.classList.remove('has-value');
+  } else {
+    cell.textContent = opts[idx];
+    cell.dataset.value = opts[idx];
+    cell.classList.add('has-value');
+  }
+  pushUndo();
+  autoSave();
+}
+
+/* ============================================================
+   Copy Previous Day (Water Quality form)
+   ============================================================ */
+function copyPrevDay() {
+  var dayIdx = DAYS.indexOf(currentDay);
+  if (dayIdx <= 0) {
+    showToast('月曜日は前日コピーできません', 'info');
+    return;
+  }
+  var prevDay = DAYS[dayIdx - 1];
+  var weekData = getLocalWater();
+  if (!weekData[prevDay]) {
+    showToast('前日データがありません', 'info');
+    return;
+  }
+  pushUndo();
+  var pd = weekData[prevDay];
+  COPY_FIELDS.forEach(function(key) {
+    if (pd[key] !== undefined && pd[key] !== '') {
+      var el = document.querySelector('[data-field="' + key + '"]');
+      if (!el) return;
+      if (el.classList.contains('toggle-btn')) {
+        el.textContent = pd[key];
+        el.dataset.value = pd[key];
+        el.classList.toggle('has-value', !!pd[key]);
+      } else {
+        el.value = pd[key];
+      }
+      el.classList.add('copied');
+      setTimeout(function() { el.classList.remove('copied'); }, 500);
     }
   });
+  autoSave();
+  showToast('前日データをコピーしました');
+}
+
+/* ============================================================
+   Clear Current Day (Water Quality form)
+   ============================================================ */
+function clearCurrentDay() {
+  pushUndo();
+  var elems = document.querySelectorAll('#content [data-field]');
+  for (var i = 0; i < elems.length; i++) {
+    var el = elems[i];
+    if (el.dataset.field === 'inspector') continue;
+    if (el.classList.contains('toggle-btn')) {
+      el.textContent = '';
+      el.dataset.value = '';
+      el.classList.remove('has-value');
+    } else {
+      el.value = '';
+    }
+  }
+  autoSave();
+  showToast('クリアしました');
+}
+
+/* ============================================================
+   Table Column Copy / Clear
+   ============================================================ */
+function copyPrevCol(btn) {
+  var row = btn.closest('.day-inputs');
+  var cells = row.querySelectorAll('[data-day]');
+  pushUndo();
+  var byCols = {};
+  cells.forEach(function(c) { byCols[c.dataset.day] = c; });
+  for (var i = 1; i < DAYS.length; i++) {
+    var prev = byCols[DAYS[i - 1]];
+    var cur = byCols[DAYS[i]];
+    if (prev && cur && getCellVal(cur) === '') {
+      setCellVal(cur, getCellVal(prev));
+      cur.classList.add('copied');
+      (function(el) {
+        setTimeout(function() { el.classList.remove('copied'); }, 500);
+      })(cur);
+    }
+  }
+  autoSave();
+}
+
+function clearRow(btn) {
+  var row = btn.closest('.day-inputs');
+  pushUndo();
+  var cells = row.querySelectorAll('[data-day]');
+  for (var i = 0; i < cells.length; i++) {
+    setCellVal(cells[i], '');
+  }
+  autoSave();
+}
+
+function getCellVal(el) {
+  if (el.classList.contains('toggle-cell')) {
+    return el.dataset.value || '';
+  }
+  return el.value || '';
+}
+
+function setCellVal(el, val) {
+  if (el.classList.contains('toggle-cell')) {
+    el.textContent = val || '-';
+    el.dataset.value = val || '';
+    el.classList.toggle('has-value', val !== '' && val !== '-');
+  } else {
+    el.value = val;
+  }
+}
+
+/* ============================================================
+   Auto-Focus Navigation
+   ============================================================ */
+function setupInputHandlers() {
+  if (currentTab === 'water') {
+    // Form: vertical focus movement on Enter
+    var inputs = document.querySelectorAll(
+      '#content input[type="number"], #content input[type="text"]'
+    );
+    for (var i = 0; i < inputs.length; i++) {
+      (function(idx) {
+        inputs[idx].addEventListener('focus', function() {
+          this.select();
+        });
+        inputs[idx].addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            var next = inputs[idx + 1];
+            if (next) next.focus();
+          }
+        });
+        inputs[idx].addEventListener('change', function() {
+          pushUndo();
+          autoSave();
+        });
+      })(i);
+    }
+  } else {
+    // Table: vertical focus movement on Enter (same column)
+    var allInputs = Array.from(
+      document.querySelectorAll('#content input[type="number"]')
+    );
+    for (var j = 0; j < allInputs.length; j++) {
+      (function(inp) {
+        inp.addEventListener('focus', function() {
+          this.select();
+        });
+        inp.addEventListener('change', function() {
+          pushUndo();
+          autoSave();
+        });
+        inp.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            var day = this.dataset.day;
+            var row = this.closest('.day-inputs');
+            var nextRow = row.nextElementSibling;
+            if (nextRow && nextRow.classList.contains('day-inputs')) {
+              var next = nextRow.querySelector('[data-day="' + day + '"]');
+              if (next) {
+                if (next.tagName === 'INPUT') {
+                  next.focus();
+                } else {
+                  next.click();
+                }
+              }
+            }
+          }
+        });
+      })(allInputs[j]);
+    }
+  }
+}
+
+/* ============================================================
+   Undo
+   ============================================================ */
+function pushUndo() {
+  var snap = collectData();
+  undoStack.push(JSON.stringify(snap));
+  if (undoStack.length > 30) {
+    undoStack.shift();
+  }
+}
+
+function undoAction() {
+  if (undoStack.length === 0) {
+    showToast('元に戻せません', 'info');
+    return;
+  }
+  var prev = JSON.parse(undoStack.pop());
+  restoreData(prev);
+  autoSave();
+  showToast('元に戻しました');
+}
+
+/* ============================================================
+   Data Collection & Restoration
+   ============================================================ */
+function collectData() {
+  var data = {};
+  if (currentTab === 'water') {
+    var elems = document.querySelectorAll('#content [data-field]');
+    for (var i = 0; i < elems.length; i++) {
+      var el = elems[i];
+      var key = el.dataset.field;
+      if (el.classList.contains('toggle-btn')) {
+        data[key] = el.dataset.value || '';
+      } else {
+        data[key] = el.value;
+      }
+    }
+  } else {
+    var cells = document.querySelectorAll('#content [data-key]');
+    for (var j = 0; j < cells.length; j++) {
+      var cell = cells[j];
+      var k = cell.dataset.key;
+      var d = cell.dataset.day;
+      if (!data[k]) data[k] = {};
+      data[k][d] = getCellVal(cell);
+    }
+  }
   return data;
 }
 
 function restoreData(data) {
   if (!data) return;
-  document.querySelectorAll('[data-id]').forEach(el => {
-    const id = el.dataset.id;
-    const day = el.dataset.day;
-    if (day && data[id] && data[id][day] !== undefined) {
-      el.value = data[id][day];
-    } else if (!day && data[id] !== undefined) {
-      el.value = data[id];
+  if (currentTab === 'water') {
+    var elems = document.querySelectorAll('#content [data-field]');
+    for (var i = 0; i < elems.length; i++) {
+      var el = elems[i];
+      var key = el.dataset.field;
+      if (data[key] !== undefined) {
+        if (el.classList.contains('toggle-btn')) {
+          el.textContent = data[key] || '';
+          el.dataset.value = data[key] || '';
+          el.classList.toggle('has-value', !!data[key]);
+        } else {
+          el.value = data[key];
+        }
+      }
     }
-  });
+  } else {
+    var cells = document.querySelectorAll('#content [data-key]');
+    for (var j = 0; j < cells.length; j++) {
+      var cell = cells[j];
+      var k = cell.dataset.key;
+      var d = cell.dataset.day;
+      if (data[k] && data[k][d] !== undefined) {
+        setCellVal(cell, data[k][d]);
+      }
+    }
+  }
 }
 
-// === サーバー通信 ===
-function showLoading(show) { document.getElementById('loading').classList.toggle('show', show); }
-function showToast(msg, type='success') {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.className = 'toast ' + type + ' show';
-  setTimeout(() => t.classList.remove('show'), 3000);
+/* ============================================================
+   localStorage Operations
+   ============================================================ */
+function autoSave() {
+  saveToLocal();
 }
 
-async function saveToServer() {
-  const date = document.getElementById('startDate').value;
-  if (!date) { showToast('日付を選択してください','error'); return; }
+function saveToLocal() {
+  var data = collectData();
+  if (currentTab === 'water') {
+    var sk = skey('water', currentWeek);
+    var weekData = {};
+    try {
+      weekData = JSON.parse(localStorage.getItem(sk)) || {};
+    } catch (e) { /* ignore */ }
+    weekData[currentDay] = data;
+    localStorage.setItem(sk, JSON.stringify(weekData));
+    // Persist inspector name
+    if (data.inspector) {
+      localStorage.setItem(STORAGE_PREFIX + 'last_inspector', data.inspector);
+    }
+  } else {
+    var sk2 = skey(currentTab, currentWeek);
+    localStorage.setItem(sk2, JSON.stringify(data));
+  }
+}
 
-  // 現在のタブのデータを保存
-  appData[currentTab] = collectData();
+function restoreFromLocal() {
+  if (currentTab === 'water') {
+    var weekData = getLocalWater();
+    if (weekData[currentDay]) {
+      restoreData(weekData[currentDay]);
+    }
+    // Restore inspector name
+    var savedIns = localStorage.getItem(STORAGE_PREFIX + 'last_inspector') || '';
+    var insEl = document.querySelector('[data-field="inspector"]');
+    if (insEl && !insEl.value && savedIns) {
+      insEl.value = savedIns;
+    }
+  } else {
+    var sk = skey(currentTab, currentWeek);
+    try {
+      var data = JSON.parse(localStorage.getItem(sk)) || {};
+      restoreData(data);
+    } catch (e) { /* ignore */ }
+  }
+}
+
+function getLocalWater() {
+  var sk = skey('water', currentWeek);
+  try {
+    return JSON.parse(localStorage.getItem(sk)) || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function getLocalTab(tab, week) {
+  var sk = STORAGE_PREFIX + currentMonth + '_' + tab + '_w' + week;
+  try {
+    return JSON.parse(localStorage.getItem(sk)) || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+/* ============================================================
+   GAS Server Communication: Save Current Tab
+   ============================================================ */
+async function saveCurrentTab() {
+  saveToLocal();
+  var date = document.getElementById('startDate').value;
+  if (!date) {
+    showToast('日付を選択してください', 'error');
+    return;
+  }
+  var inspector = localStorage.getItem(STORAGE_PREFIX + 'last_inspector') || '';
 
   showLoading(true);
   try {
-    const sheetMap = { water:'日常水質', hours:'機器運転時間', mechanical:'日常機械設備', electrical:'日常電気設備' };
-    const rows = [{ tab: currentTab, values: appData[currentTab], inspector: inspectorName }];
+    var payload;
+    if (currentTab === 'water') {
+      payload = {
+        action: 'saveWeek',
+        month: currentMonth,
+        week: currentWeek,
+        startDate: date,
+        days: getLocalWater(),
+        inspector: inspector
+      };
+    } else if (currentTab === 'hours') {
+      var hObj = {};
+      hObj[currentWeek] = getLocalTab('hours', currentWeek);
+      payload = {
+        action: 'saveEquipment',
+        month: currentMonth,
+        equipment: hObj,
+        inspector: inspector
+      };
+    } else if (currentTab === 'electrical') {
+      var eData = getLocalTab('electrical', currentWeek);
+      var eObj = {};
+      eObj[currentWeek] = {};
+      DAYS.forEach(function(d) {
+        eObj[currentWeek][d] = {};
+        Object.keys(eData).forEach(function(k) {
+          if (eData[k] && eData[k][d] !== undefined) {
+            eObj[currentWeek][d][k] = eData[k][d];
+          }
+        });
+      });
+      payload = {
+        action: 'saveElectrical',
+        month: currentMonth,
+        week: currentWeek,
+        electrical: eObj,
+        inspector: inspector
+      };
+    } else if (currentTab === 'mechanical') {
+      var mData = getLocalTab('mechanical', currentWeek);
+      var mObj = {};
+      mObj[currentWeek] = {};
+      DAYS.forEach(function(d) {
+        mObj[currentWeek][d] = {};
+        Object.keys(mData).forEach(function(k) {
+          if (mData[k] && mData[k][d] !== undefined) {
+            mObj[currentWeek][d][k] = mData[k][d];
+          }
+        });
+      });
+      payload = {
+        action: 'saveMechanical',
+        month: currentMonth,
+        week: currentWeek,
+        mechanical: mObj,
+        inspector: inspector
+      };
+    }
 
-    const res = await fetch(GAS_URL, {
+    var res = await fetch(GAS_URL, {
       method: 'POST',
-      body: JSON.stringify({
-        action: 'save',
-        sheet: sheetMap[currentTab],
-        date: date,
-        data: rows
-      })
+      body: JSON.stringify(payload)
     });
-    const json = await res.json();
+    var json = await res.json();
     if (json.success) {
       showToast('保存しました');
     } else {
-      showToast('保存エラー: ' + (json.error||''), 'error');
+      showToast('保存エラー: ' + (json.error || ''), 'error');
     }
-  } catch(e) {
+  } catch (e) {
     showToast('通信エラー: ' + e.message, 'error');
   }
   showLoading(false);
 }
 
-async function loadFromServer() {
-  const date = document.getElementById('startDate').value;
-  if (!date) { showToast('日付を選択してください','error'); return; }
+/* ============================================================
+   GAS Server Communication: Sync All Tabs
+   ============================================================ */
+async function syncAll() {
+  var date = document.getElementById('startDate').value;
+  if (!date) {
+    showToast('日付を選択してください', 'error');
+    return;
+  }
+  saveToLocal();
+  var inspector = localStorage.getItem(STORAGE_PREFIX + 'last_inspector') || '';
 
   showLoading(true);
   try {
-    const sheetMap = { water:'日常水質', hours:'機器運転時間', mechanical:'日常機械設備', electrical:'日常電気設備' };
-    const url = `${GAS_URL}?action=load&sheet=${encodeURIComponent(sheetMap[currentTab])}&date=${date}`;
-    const res = await fetch(url);
-    const json = await res.json();
-    if (json.success && json.rows.length > 0) {
-      const row = json.rows[0];
-      if (row.values) {
-        appData[currentTab] = row.values;
-        restoreData(row.values);
-      }
-      if (row.inspector) {
-        inspectorName = row.inspector;
-        const inp = document.getElementById('inspectorName');
-        if (inp) inp.value = inspectorName;
-      }
-      showToast(`${json.rows.length}件読み込みました`);
-    } else {
-      showToast('データがありません', 'info');
+    var allData = {};
+    for (var w = 1; w <= 5; w++) {
+      allData[w] = {
+        water: getLocalTab('water', w),
+        hours: getLocalTab('hours', w),
+        electrical: getLocalTab('electrical', w),
+        mechanical: getLocalTab('mechanical', w)
+      };
     }
-  } catch(e) {
+    var payload = {
+      action: 'saveAll',
+      month: currentMonth,
+      startDate: date,
+      allData: allData,
+      inspector: inspector
+    };
+
+    var res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    var json = await res.json();
+    if (json.success) {
+      showToast('全シート同期完了');
+    } else {
+      showToast('同期エラー: ' + (json.error || ''), 'error');
+    }
+  } catch (e) {
     showToast('通信エラー: ' + e.message, 'error');
   }
   showLoading(false);
 }
 
-// === Excel出力 ===
-function exportExcel() {
-  showToast('Excel出力機能は次のステップで実装します', 'info');
+/* ============================================================
+   GAS Server Communication: Load from Server
+   ============================================================ */
+async function loadFromServer() {
+  showLoading(true);
+  try {
+    var url = GAS_URL + '?action=getAllData&month=' + currentMonth;
+    var res = await fetch(url);
+    var json = await res.json();
+    if (json.success && json.data) {
+      for (var w = 1; w <= 5; w++) {
+        if (json.data[w]) {
+          if (json.data[w].water) {
+            localStorage.setItem(skey('water', w), JSON.stringify(json.data[w].water));
+          }
+          if (json.data[w].hours) {
+            localStorage.setItem(skey('hours', w), JSON.stringify(json.data[w].hours));
+          }
+          if (json.data[w].electrical) {
+            localStorage.setItem(skey('electrical', w), JSON.stringify(json.data[w].electrical));
+          }
+          if (json.data[w].mechanical) {
+            localStorage.setItem(skey('mechanical', w), JSON.stringify(json.data[w].mechanical));
+          }
+        }
+      }
+      restoreFromLocal();
+      showToast('サーバーから読み込みました');
+    } else {
+      showToast('データがありません', 'info');
+    }
+  } catch (e) {
+    showToast('通信エラー: ' + e.message, 'error');
+  }
+  showLoading(false);
 }
 
-// === 起動 ===
+/* ============================================================
+   Excel Export (stub)
+   ============================================================ */
+function exportExcel() {
+  showToast('Excel出力機能は後で実装します', 'info');
+}
+
+/* ============================================================
+   ServiceWorker Registration
+   ============================================================ */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(function(e) {
+    console.log('SW registration failed:', e);
+  });
+}
+
+/* ============================================================
+   Start Application
+   ============================================================ */
 init();
 </script>
 </body>
