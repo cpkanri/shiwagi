@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>柴木浄化センター 週報入力</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root {
+  --primary: #1a6b4e;
+  --primary-light: #e8f5ef;
+  --primary-dark: #0d4a34;
+  --accent: #f59e0b;
+  --bg: #f5f3ef;
+  --card: #fff;
+  --text: #1a1a1a;
+  --text2: #666;
+  --border: #ddd;
+  --danger: #dc2626;
+  --success: #16a34a;
+  --radius: 10px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+  background: var(--bg); color: var(--text);
+  min-height: 100vh; padding-bottom: 80px;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* ヘッダー */
+.header {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #fff; padding: 14px 16px; position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+}
+.header h1 { font-size: 15px; font-weight: 600; }
+.header .sub { font-size: 11px; opacity: .8; margin-top: 2px; }
+
+/* 日付選択 */
+.date-bar {
+  background: var(--card); padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+.date-bar label { font-size: 13px; font-weight: 600; white-space: nowrap; }
+.date-bar input[type="date"] {
+  flex: 1; padding: 8px 10px; border: 1.5px solid var(--border);
+  border-radius: var(--radius); font-size: 15px; background: #fff;
+}
+.date-bar .week-label {
+  font-size: 12px; color: var(--primary); font-weight: 600;
+  background: var(--primary-light); padding: 4px 10px;
+  border-radius: 20px; white-space: nowrap;
+}
+
+/* タブ */
+.tabs {
+  display: flex; background: var(--card);
+  border-bottom: 2px solid var(--border);
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+}
+.tab {
+  flex: none; padding: 10px 14px; font-size: 12px; font-weight: 600;
+  color: var(--text2); border: none; background: none;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap; cursor: pointer;
+  transition: all .2s;
+}
+.tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+/* コンテンツ */
+.content { padding: 12px; }
+.section-title {
+  font-size: 13px; font-weight: 700; color: var(--primary);
+  margin: 16px 0 8px; padding: 6px 10px;
+  background: var(--primary-light); border-radius: 6px;
+  border-left: 3px solid var(--primary);
+}
+.section-title:first-child { margin-top: 4px; }
+
+/* 入力カード */
+.input-group {
+  background: var(--card); border-radius: var(--radius);
+  margin-bottom: 8px; overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.input-row {
+  display: flex; align-items: center;
+  padding: 10px 12px; border-bottom: 1px solid #f0f0f0;
+  gap: 8px;
+}
+.input-row:last-child { border-bottom: none; }
+.input-row .label {
+  flex: 1; font-size: 13px; min-width: 0;
+}
+.input-row .label .sub { font-size: 10px; color: var(--text2); }
+.input-row .unit { font-size: 11px; color: var(--text2); min-width: 30px; text-align: right; }
+
+/* 曜日ヘッダ */
+.day-header {
+  display: grid; grid-template-columns: 1fr repeat(5, 52px);
+  padding: 6px 12px; font-size: 11px; font-weight: 600;
+  color: var(--text2); background: #fafaf8;
+  border-bottom: 1px solid var(--border);
+}
+.day-header span { text-align: center; }
+
+/* 曜日入力行 */
+.day-inputs {
+  display: grid; grid-template-columns: 1fr repeat(5, 52px);
+  padding: 8px 12px; align-items: center; gap: 4px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.day-inputs:last-child { border-bottom: none; }
+.day-inputs .label { font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+.day-inputs .label .sub { font-size: 10px; color: var(--text2); display: block; }
+
+.day-inputs input, .day-inputs select {
+  width: 100%; padding: 5px 2px; border: 1.5px solid var(--border);
+  border-radius: 6px; font-size: 13px; text-align: center;
+  background: #fff; -webkit-appearance: none;
+}
+.day-inputs input:focus, .day-inputs select:focus {
+  border-color: var(--primary); outline: none;
+  box-shadow: 0 0 0 2px rgba(26,107,78,.15);
+}
+.day-inputs select { font-size: 11px; padding: 5px 1px; }
+
+/* 点検者入力 */
+.inspector-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; background: #fafaf8;
+  border-bottom: 1px solid var(--border);
+}
+.inspector-row label { font-size: 13px; font-weight: 600; white-space: nowrap; }
+.inspector-row input {
+  flex: 1; padding: 8px 10px; border: 1.5px solid var(--border);
+  border-radius: var(--radius); font-size: 14px;
+}
+
+/* ボトムバー */
+.bottom-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--card); border-top: 1px solid var(--border);
+  padding: 10px 16px; display: flex; gap: 10px;
+  box-shadow: 0 -2px 8px rgba(0,0,0,.08);
+  z-index: 100;
+}
+.btn {
+  flex: 1; padding: 12px; border: none; border-radius: var(--radius);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: all .15s;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:active { background: var(--primary-dark); }
+.btn-secondary { background: #f0f0f0; color: var(--text); }
+.btn-secondary:active { background: #e0e0e0; }
+.btn-excel { background: var(--success); color: #fff; }
+.btn-excel:active { background: #15803d; }
+
+/* トースト */
+.toast {
+  position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+  padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  z-index: 200; opacity: 0; transition: opacity .3s;
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+}
+.toast.show { opacity: 1; }
+.toast.success { background: var(--success); color: #fff; }
+.toast.error { background: var(--danger); color: #fff; }
+.toast.info { background: var(--primary); color: #fff; }
+
+/* ローディング */
+.loading {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.3); z-index: 300;
+  align-items: center; justify-content: center;
+}
+.loading.show { display: flex; }
+.spinner {
+  width: 40px; height: 40px; border: 4px solid #fff;
+  border-top-color: var(--primary); border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* 空状態 */
+.empty-state {
+  text-align: center; padding: 40px 20px; color: var(--text2);
+}
+.empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+.empty-state p { font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>柴木浄化センター 週報入力</h1>
+  <div class="sub">維持管理週報データ入力システム</div>
+</div>
+
+<div class="date-bar">
+  <label>週の開始日:</label>
+  <input type="date" id="startDate" onchange="onDateChange()">
+  <span class="week-label" id="weekLabel">-</span>
+</div>
+
+<div class="tabs" id="tabs">
+  <button class="tab active" data-tab="water" onclick="switchTab('water')">日常水質</button>
+  <button class="tab" data-tab="hours" onclick="switchTab('hours')">機器運転時間</button>
+  <button class="tab" data-tab="mechanical" onclick="switchTab('mechanical')">機械設備</button>
+  <button class="tab" data-tab="electrical" onclick="switchTab('electrical')">電気設備</button>
+</div>
+
+<div class="content" id="content"></div>
+
+<div class="bottom-bar">
+  <button class="btn btn-secondary" onclick="loadFromServer()">読込</button>
+  <button class="btn btn-primary" onclick="saveToServer()">保存</button>
+  <button class="btn btn-excel" onclick="exportExcel()">Excel出力</button>
+</div>
+
+<div class="loading" id="loading"><div class="spinner"></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// === 設定 ===
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyS-QpumW9SIKuXvS4qJZzQ8SuODUY1Qj-hAjDosBbcyog8dWgT64JaMnvo0e58Oxun/exec';
+
+let currentTab = 'water';
+let appData = { water: [], hours: [], mechanical: [], electrical: [] };
+let inspectorName = '';
+
+// === 項目定義 ===
+
+const WATER_ITEMS_UPPER = [
+  { id:'denryoku200v', name:'普通電力量(200V)', unit:'Kwh' },
+  { id:'denryoku100v', name:'普通電力量(100V)', unit:'Kwh' },
+  { id:'keiyu', name:'軽油(残量)', unit:'ℓ' },
+  { id:'hensou_odei', name:'返送汚泥流量', unit:'㎥' },
+  { id:'yojou_odei', name:'余剰汚泥流量', unit:'㎥' },
+  { id:'houryuu', name:'放流流量', unit:'㎥' },
+];
+
+const WATER_ITEMS_LOWER = [
+  { id:'suion_ryunyu', name:'水温', loc:'流入', unit:'℃', type:'number' },
+  { id:'suion_ditch', name:'水温', loc:'ディッチ', unit:'℃', type:'number' },
+  { id:'suion_houryuu', name:'水温', loc:'放流水', unit:'℃', type:'number' },
+  { id:'gaikan_ryunyu', name:'外観(油膜・色合)', loc:'流入', unit:'', type:'text' },
+  { id:'gaikan_ditch', name:'外観(油膜・色合)', loc:'ディッチ', unit:'', type:'text' },
+  { id:'gaikan_houryuu', name:'外観(油膜・色合)', loc:'放流水', unit:'', type:'text' },
+  { id:'toushido_ryunyu', name:'透視度', loc:'流入水', unit:'cm', type:'number' },
+  { id:'toushido_houryuu', name:'透視度', loc:'放流水', unit:'cm', type:'number' },
+  { id:'shuki_ryunyu', name:'臭気(腐敗臭)', loc:'流入', unit:'', type:'text' },
+  { id:'shuki_ditch', name:'臭気(腐敗臭)', loc:'ディッチ', unit:'', type:'text' },
+  { id:'shuki_houryuu', name:'臭気(腐敗臭)', loc:'放流水', unit:'', type:'text' },
+  { id:'ph_ryunyu', name:'pH', loc:'流入', unit:'', type:'number' },
+  { id:'ph_ditch', name:'pH', loc:'ディッチ', unit:'', type:'number' },
+  { id:'ph_houryuu', name:'pH', loc:'放流水', unit:'', type:'number' },
+  { id:'sv10', name:'SV・10', loc:'ディッチ', unit:'%', type:'number' },
+  { id:'sv20', name:'SV・20', loc:'', unit:'%', type:'number' },
+  { id:'sv30', name:'SV・30', loc:'', unit:'%', type:'number' },
+  { id:'sv24h', name:'SV・24h', loc:'', unit:'%', type:'number' },
+  { id:'mlss', name:'MLSS', loc:'ディッチ', unit:'mg/L', type:'number' },
+  { id:'odei_kaimen', name:'汚泥界面', loc:'終沈', unit:'cm', type:'text' },
+  { id:'zanryuu_enso', name:'残留塩素', loc:'放流水', unit:'mg/L', type:'number' },
+  { id:'enso_tounyuu', name:'塩素投入量', loc:'塩素混和池', unit:'kg', type:'number' },
+];
+
+const EQUIPMENT_LIST = [
+  'スクリーンユニット','濃縮汚泥ポンプ','汚泥攪拌機','余剰汚泥ポンプ',
+  '吸引ファン','No1主ポンプ','No2主ポンプ','No1返送汚泥ポンプ',
+  'No2返送汚泥ポンプ','No1エアレーション装置','No2エアレーション装置','床排水ポンプ'
+];
+
+const MECH_ITEMS_P1 = [
+  { eq:'ポンプ井', no:'-', insp:'内部状況確認', unit:'', type:'ok' },
+  { eq:'主ポンプ', no:'1', insp:'電流値', unit:'A', type:'num' },
+  { eq:'主ポンプ', no:'1', insp:'吐出圧力', unit:'Mpa', type:'num' },
+  { eq:'主ポンプ', no:'1', insp:'異音・振動', unit:'', type:'ok' },
+  { eq:'主ポンプ', no:'2', insp:'電流値', unit:'A', type:'num' },
+  { eq:'主ポンプ', no:'2', insp:'吐出圧力', unit:'Mpa', type:'num' },
+  { eq:'主ポンプ', no:'2', insp:'異音・振動', unit:'', type:'ok' },
+  { eq:'主ポンプ', no:'-', insp:'モード確認', unit:'', type:'mode' },
+  { eq:'主ポンプ', no:'-', insp:'優先機選択', unit:'', type:'select', opts:['交互','No.1','No.2'] },
+  { eq:'スクリーンユニット', no:'-', insp:'異音・振動', unit:'', type:'ok' },
+  { eq:'スクリーンユニット', no:'-', insp:'し渣量の確認', unit:'', type:'ok' },
+  { eq:'スクリーンユニット', no:'-', insp:'運転動作', unit:'', type:'ok' },
+  { eq:'エアレーション装置', no:'1', insp:'電流値', unit:'A', type:'num' },
+  { eq:'エアレーション装置', no:'1', insp:'異音・振動', unit:'', type:'ok' },
+  { eq:'エアレーション装置', no:'1', insp:'モード確認', unit:'', type:'mode' },
+  { eq:'エアレーション装置', no:'2', insp:'電流値', unit:'A', type:'num' },
+  { eq:'エアレーション装置', no:'2', insp:'異音・振動', unit:'', type:'ok' },
+  { eq:'エアレーション装置', no:'2', insp:'モード確認', unit:'', type:'mode' },
+  { eq:'消泡装置', no:'-', insp:'消泡ノズル', unit:'', type:'ok' },
+  { eq:'消泡装置', no:'-', insp:'消泡状態', unit:'', type:'ok' },
+  { eq:'終沈汚泥掻寄機', no:'-', insp:'電流値', unit:'A', type:'num' },
+  { eq:'終沈汚泥掻寄機', no:'-', insp:'異音・振動等', unit:'', type:'ok' },
+  { eq:'終沈汚泥掻寄機', no:'-', insp:'モード確認', unit:'', type:'select', opts:['運転','停止'] },
+  { eq:'スカムスキマー', no:'-', insp:'動作状況', unit:'', type:'ok' },
+  { eq:'スカムスキマー', no:'-', insp:'スカムの状況', unit:'', type:'ok' },
+  { eq:'返送汚泥ポンプ', no:'1', insp:'電流値', unit:'A', type:'num' },
+  { eq:'返送汚泥ポンプ', no:'1', insp:'吐出圧力', unit:'Mpa', type:'num' },
+  { eq:'返送汚泥ポンプ', no:'1', insp:'異音・振動', unit:'', type:'ok' },
+  { eq:'返送汚泥ポンプ', no:'2', insp:'電流値', unit:'A', type:'num' },
+  { eq:'返送汚泥ポンプ', no:'2', insp:'吐出圧力', unit:'Mpa', type:'num' },
+  { eq:'返送汚泥ポンプ', no:'2', insp:'異音・振動', unit:'', type:'ok' },
+  { eq:'返送汚泥ポンプ', no:'-', insp:'モード確認', unit:'', type:'mode' },
+  { eq:'返送汚泥ポンプ', no:'-', insp:'常用機選択', unit:'', type:'select', opts:['No.1','No.2','交互'] },
+  { eq:'余剰ポンプ', no:'-', insp:'電流値', unit:'A', type:'num' },
+  { eq:'余剰ポンプ', no:'-', insp:'吐出圧力', unit:'Mpa', type:'num' },
+  { eq:'余剰ポンプ', no:'-', insp:'異音・振動', unit:'', type:'ok' },
+  { eq:'余剰ポンプ', no:'-', insp:'モード確認', unit:'', type:'mode' },
+  { eq:'濃縮汚泥ポンプ', no:'-', insp:'電流値', unit:'A', type:'num' },
+  { eq:'濃縮汚泥ポンプ', no:'-', insp:'吐出圧力', unit:'Mpa', type:'num' },
+  { eq:'濃縮汚泥ポンプ', no:'-', insp:'異音・振動', unit:'', type:'ok' },
+  { eq:'濃縮汚泥ポンプ', no:'-', insp:'モード確認', unit:'', type:'mode' },
+  { eq:'床排水ポンプ', no:'-', insp:'電流値', unit:'A', type:'num' },
+  { eq:'床排水ポンプ', no:'-', insp:'吐出圧力', unit:'Mpa', type:'num' },
+  { eq:'床排水ポンプ', no:'-', insp:'異音・振動', unit:'', type:'ok' },
+  { eq:'床排水ポンプ', no:'-', insp:'モード確認', unit:'', type:'mode' },
+  { eq:'濃縮汚泥掻寄機', no:'-', insp:'電流値', unit:'A', type:'num' },
+  { eq:'濃縮汚泥掻寄機', no:'-', insp:'異音・振動', unit:'', type:'ok' },
+  { eq:'濃縮汚泥掻寄機', no:'-', insp:'モード確認', unit:'', type:'select', opts:['運転','停止'] },
+  { eq:'スカムスキマー(濃縮)', no:'-', insp:'動作状況', unit:'', type:'ok' },
+  { eq:'汚泥貯留槽攪拌機', no:'-', insp:'電流値', unit:'A', type:'num' },
+  { eq:'汚泥貯留槽攪拌機', no:'-', insp:'異音・振動', unit:'', type:'ok' },
+  { eq:'汚泥貯留槽攪拌機', no:'-', insp:'モード確認', unit:'', type:'mode' },
+];
+
+const MECH_ITEMS_P2 = [
+  { eq:'処理水給水装置', no:'1', insp:'電流値', unit:'A', type:'num' },
+  { eq:'処理水給水装置', no:'1', insp:'吐出圧力', unit:'Mpa', type:'num' },
+  { eq:'処理水給水装置', no:'1', insp:'異音・振動等', unit:'', type:'ok' },
+  { eq:'処理水給水装置', no:'2', insp:'電流値', unit:'A', type:'num' },
+  { eq:'処理水給水装置', no:'2', insp:'吐出圧力', unit:'Mpa', type:'num' },
+  { eq:'処理水給水装置', no:'2', insp:'異音・振動等', unit:'', type:'ok' },
+  { eq:'処理水給水装置', no:'-', insp:'モード確認', unit:'', type:'mode' },
+  { eq:'加圧タンク', no:'-', insp:'水漏れ', unit:'', type:'select', opts:['無','有'] },
+  { eq:'加圧タンク', no:'-', insp:'吐出圧力', unit:'Mpa', type:'num' },
+  { eq:'塩素接触装置', no:'-', insp:'薬剤残量確認', unit:'', type:'ok' },
+  { eq:'オートストレーナー型', no:'-', insp:'原水側圧力', unit:'Mpa', type:'num' },
+  { eq:'オートストレーナー型', no:'-', insp:'処理水側圧力', unit:'Mpa', type:'num' },
+  { eq:'自家発室給気ファン', no:'-', insp:'異音・振動', unit:'', type:'ok' },
+  { eq:'自家発室給気ファン', no:'-', insp:'モード確認', unit:'', type:'select', opts:['連動','切'] },
+  { eq:'脱水機室給気ファン', no:'-', insp:'電流値', unit:'A', type:'num' },
+  { eq:'脱水機室給気ファン', no:'-', insp:'異音・振動', unit:'', type:'ok' },
+  { eq:'脱水機室給気ファン', no:'-', insp:'モード確認', unit:'', type:'mode' },
+  { eq:'脱水機室排気ファン', no:'-', insp:'電流値', unit:'A', type:'num' },
+  { eq:'脱水機室排気ファン', no:'-', insp:'臭気の漏れ', unit:'', type:'ok' },
+  { eq:'脱水機室排気ファン', no:'-', insp:'モード確認', unit:'', type:'mode' },
+  { eq:'汚泥ポンプ室給気ファン', no:'-', insp:'電流値', unit:'A', type:'num' },
+  { eq:'汚泥ポンプ室給気ファン', no:'-', insp:'異音・振動', unit:'', type:'ok' },
+  { eq:'汚泥ポンプ室給気ファン', no:'-', insp:'モード確認', unit:'', type:'mode' },
+  { eq:'汚泥ポンプ室排気ファン', no:'-', insp:'電流値', unit:'A', type:'num' },
+  { eq:'汚泥ポンプ室排気ファン', no:'-', insp:'臭気の漏れ', unit:'', type:'ok' },
+  { eq:'汚泥ポンプ室排気ファン', no:'-', insp:'モード確認', unit:'', type:'mode' },
+];
+
+const ELEC_ITEMS = [
+  { sec:'管理室', eq:'受電設備', insp:'受電電圧(1φ)', unit:'V', type:'num' },
+  { sec:'管理室', eq:'受電設備', insp:'モード', unit:'', type:'select', opts:['1-N','1-2','2-3','3-1'] },
+  { sec:'管理室', eq:'受電設備', insp:'受電切替', unit:'', type:'select', opts:['自動','手動'] },
+  { sec:'管理室', eq:'受電設備', insp:'買電/自家発', unit:'', type:'select', opts:['買電','自家発'] },
+  { sec:'管理室', eq:'受電設備', insp:'受電電圧(3φ)', unit:'V', type:'num' },
+  { sec:'管理室', eq:'受電設備', insp:'モード(3φ)', unit:'', type:'select', opts:['1-2','2-3','3-1'] },
+  { sec:'管理室', eq:'受電設備', insp:'受電切替(3φ)', unit:'', type:'select', opts:['自動','手動'] },
+  { sec:'管理室', eq:'受電設備', insp:'買電/自家発(3φ)', unit:'', type:'select', opts:['買電','自家発'] },
+  { sec:'計装設備', eq:'ポンプ井水位計', insp:'外観の確認', unit:'', type:'ok' },
+  { sec:'計装設備', eq:'ポンプ井水位計', insp:'指示状況の確認', unit:'', type:'ok' },
+  { sec:'計装設備', eq:'ポンプ井水位計', insp:'計器読み', unit:'m', type:'num' },
+  { sec:'計装設備', eq:'放流流量計', insp:'外観の確認', unit:'', type:'ok' },
+  { sec:'計装設備', eq:'放流流量計', insp:'指示状況の確認', unit:'', type:'ok' },
+  { sec:'計装設備', eq:'放流流量計', insp:'流量計の読み', unit:'㎥/h', type:'num' },
+  { sec:'計装設備', eq:'放流流量計', insp:'流量計積算の読み', unit:'㎥', type:'num' },
+  { sec:'計装設備', eq:'汚濁負荷量計(UV)', insp:'外観の確認', unit:'', type:'ok' },
+  { sec:'計装設備', eq:'汚濁負荷量計(UV)', insp:'指示状況の確認', unit:'', type:'ok' },
+  { sec:'計装設備', eq:'汚濁負荷量計(UV)', insp:'UV値', unit:'Abs', type:'num' },
+  { sec:'計装設備', eq:'汚濁負荷量計(UV)', insp:'COD値', unit:'mg/L', type:'num' },
+  { sec:'計装設備', eq:'返送汚泥ポンプ', insp:'外観の確認', unit:'', type:'ok' },
+  { sec:'計装設備', eq:'返送汚泥ポンプ', insp:'指示状況の確認', unit:'', type:'ok' },
+  { sec:'計装設備', eq:'返送汚泥ポンプ', insp:'流量計の読み', unit:'㎥/h', type:'num' },
+  { sec:'計装設備', eq:'返送汚泥ポンプ', insp:'流量計積算の読み', unit:'㎥', type:'num' },
+  { sec:'計装設備', eq:'余剰汚泥ポンプ', insp:'外観の確認', unit:'', type:'ok' },
+  { sec:'計装設備', eq:'余剰汚泥ポンプ', insp:'指示状況の確認', unit:'', type:'ok' },
+  { sec:'計装設備', eq:'余剰汚泥ポンプ', insp:'流量計の読み', unit:'㎥/h', type:'num' },
+  { sec:'計装設備', eq:'余剰汚泥ポンプ', insp:'流量計積算の読み', unit:'㎥', type:'num' },
+  { sec:'計装設備', eq:'圧力式液位計', insp:'外観の確認', unit:'', type:'ok' },
+  { sec:'計装設備', eq:'圧力式液位計', insp:'指示状況の確認', unit:'', type:'ok' },
+  { sec:'計装設備', eq:'圧力式液位計', insp:'機器指示値の記録', unit:'m', type:'num' },
+  { sec:'発電機設備', eq:'発電機盤', insp:'外観の確認', unit:'', type:'ok' },
+  { sec:'発電機設備', eq:'エンジン', insp:'外観の確認', unit:'', type:'ok' },
+  { sec:'発電機設備', eq:'燃料タンク', insp:'外観の確認', unit:'', type:'ok' },
+  { sec:'発電機設備', eq:'燃料タンク', insp:'残量の値', unit:'ℓ', type:'num' },
+  { sec:'発電機設備', eq:'燃料タンク', insp:'積算運転時間', unit:'', type:'num' },
+  { sec:'他', eq:'通報装置', insp:'通報状態の確認', unit:'', type:'ok' },
+];
+
+const DAYS = ['mon','tue','wed','thu','fri'];
+const DAY_LABELS = ['月','火','水','木','金'];
+
+// === 初期化 ===
+function init() {
+  const today = new Date();
+  const day = today.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + diff);
+  document.getElementById('startDate').value = formatDateStr(monday);
+  onDateChange();
+  renderTab();
+}
+
+function formatDateStr(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+
+function onDateChange() {
+  const val = document.getElementById('startDate').value;
+  if (!val) return;
+  const d = new Date(val);
+  const m = d.getMonth()+1;
+  const dd = d.getDate();
+  const endD = new Date(d); endD.setDate(d.getDate()+4);
+  const em = endD.getMonth()+1;
+  const edd = endD.getDate();
+  document.getElementById('weekLabel').textContent = `${m}/${dd}〜${em}/${edd}`;
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  renderTab();
+}
+
+// === レンダリング ===
+function renderTab() {
+  const c = document.getElementById('content');
+  switch(currentTab) {
+    case 'water': c.innerHTML = renderWater(); break;
+    case 'hours': c.innerHTML = renderHours(); break;
+    case 'mechanical': c.innerHTML = renderMechanical(); break;
+    case 'electrical': c.innerHTML = renderElectrical(); break;
+  }
+}
+
+function makeInput(id, day, type, opts) {
+  const dataKey = `data-id="${id}" data-day="${day}"`;
+  if (type === 'ok') {
+    return `<select ${dataKey}><option value="">-</option><option>○</option><option>△</option><option>×</option><option>－</option></select>`;
+  }
+  if (type === 'mode') {
+    return `<select ${dataKey}><option value="">-</option><option>自動</option><option>手動</option><option>切</option><option>連動</option><option>単独</option></select>`;
+  }
+  if (type === 'select') {
+    const options = (opts||[]).map(o => `<option>${o}</option>`).join('');
+    return `<select ${dataKey}><option value="">-</option>${options}</select>`;
+  }
+  if (type === 'text') {
+    return `<input type="text" ${dataKey} placeholder="-">`;
+  }
+  return `<input type="number" step="any" ${dataKey} inputmode="decimal" placeholder="-">`;
+}
+
+function dayHeader() {
+  return `<div class="day-header"><span></span>${DAY_LABELS.map(d=>`<span>${d}</span>`).join('')}</div>`;
+}
+
+function renderWater() {
+  let html = '<div class="section-title">積算値（メーター読み値）</div>';
+  html += '<div class="input-group">' + dayHeader();
+  WATER_ITEMS_UPPER.forEach(item => {
+    html += `<div class="day-inputs"><div class="label">${item.name}<span class="sub">${item.unit}</span></div>`;
+    DAYS.forEach(d => { html += makeInput('upper_'+item.id, d, 'num'); });
+    html += '</div>';
+  });
+  html += '</div>';
+
+  html += '<div class="section-title">水質測定結果</div>';
+  html += '<div class="input-group">' + dayHeader();
+  WATER_ITEMS_LOWER.forEach(item => {
+    const loc = item.loc ? `[${item.loc}]` : '';
+    html += `<div class="day-inputs"><div class="label">${item.name}${loc}<span class="sub">${item.unit}</span></div>`;
+    DAYS.forEach(d => { html += makeInput('lower_'+item.id, d, item.type); });
+    html += '</div>';
+  });
+  html += '</div>';
+
+  html += '<div class="section-title">備考</div>';
+  html += '<div class="input-group"><div class="input-row">';
+  html += '<textarea data-id="water_bikou" rows="3" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;" placeholder="備考を入力"></textarea>';
+  html += '</div></div>';
+  return html;
+}
+
+function renderHours() {
+  let html = '<div class="section-title">機器運転時間（hr）</div>';
+  html += '<div class="input-group">' + dayHeader();
+  EQUIPMENT_LIST.forEach((eq, i) => {
+    html += `<div class="day-inputs"><div class="label">${eq}</div>`;
+    DAYS.forEach(d => { html += makeInput('eq_'+i, d, 'num'); });
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function renderMechanical() {
+  let html = '';
+  html += '<div class="inspector-row"><label>点検者:</label>';
+  html += `<input type="text" id="inspectorName" value="${inspectorName}" onchange="inspectorName=this.value" placeholder="氏名を入力">`;
+  html += '</div>';
+
+  html += '<div class="section-title">機械設備点検表（1/2）</div>';
+  html += '<div class="input-group">' + dayHeader();
+  let prevEq = '';
+  MECH_ITEMS_P1.forEach((item, i) => {
+    const eqLabel = item.eq !== prevEq ? item.eq : '';
+    const noLabel = item.no !== '-' ? `No.${item.no}` : '';
+    prevEq = item.eq;
+    const label = eqLabel ? `${eqLabel} ${noLabel}` : `　${noLabel}`;
+    html += `<div class="day-inputs"><div class="label">${label.trim()}<span class="sub">${item.insp} ${item.unit}</span></div>`;
+    DAYS.forEach(d => { html += makeInput('m1_'+i, d, item.type, item.opts); });
+    html += '</div>';
+  });
+  html += '</div>';
+
+  html += '<div class="section-title">機械設備点検表（2/2）</div>';
+  html += '<div class="input-group">' + dayHeader();
+  prevEq = '';
+  MECH_ITEMS_P2.forEach((item, i) => {
+    const eqLabel = item.eq !== prevEq ? item.eq : '';
+    const noLabel = item.no !== '-' ? `No.${item.no}` : '';
+    prevEq = item.eq;
+    const label = eqLabel ? `${eqLabel} ${noLabel}` : `　${noLabel}`;
+    html += `<div class="day-inputs"><div class="label">${label.trim()}<span class="sub">${item.insp} ${item.unit}</span></div>`;
+    DAYS.forEach(d => { html += makeInput('m2_'+i, d, item.type, item.opts); });
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function renderElectrical() {
+  let html = '';
+  let prevSec = '';
+
+  html += '<div class="input-group">' + dayHeader();
+  ELEC_ITEMS.forEach((item, i) => {
+    if (item.sec !== prevSec) {
+      if (prevSec) html += '</div>';
+      html += `<div class="section-title">${item.sec}</div><div class="input-group">` + dayHeader();
+      prevSec = item.sec;
+    }
+    html += `<div class="day-inputs"><div class="label">${item.eq}<span class="sub">${item.insp} ${item.unit}</span></div>`;
+    DAYS.forEach(d => { html += makeInput('e_'+i, d, item.type, item.opts); });
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+// === データ収集・復元 ===
+function collectData() {
+  const data = {};
+  document.querySelectorAll('[data-id]').forEach(el => {
+    const id = el.dataset.id;
+    const day = el.dataset.day;
+    if (day) {
+      if (!data[id]) data[id] = {};
+      data[id][day] = el.value;
+    } else {
+      data[id] = el.value;
+    }
+  });
+  return data;
+}
+
+function restoreData(data) {
+  if (!data) return;
+  document.querySelectorAll('[data-id]').forEach(el => {
+    const id = el.dataset.id;
+    const day = el.dataset.day;
+    if (day && data[id] && data[id][day] !== undefined) {
+      el.value = data[id][day];
+    } else if (!day && data[id] !== undefined) {
+      el.value = data[id];
+    }
+  });
+}
+
+// === サーバー通信 ===
+function showLoading(show) { document.getElementById('loading').classList.toggle('show', show); }
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast ' + type + ' show';
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+async function saveToServer() {
+  const date = document.getElementById('startDate').value;
+  if (!date) { showToast('日付を選択してください','error'); return; }
+
+  // 現在のタブのデータを保存
+  appData[currentTab] = collectData();
+
+  showLoading(true);
+  try {
+    const sheetMap = { water:'日常水質', hours:'機器運転時間', mechanical:'日常機械設備', electrical:'日常電気設備' };
+    const rows = [{ tab: currentTab, values: appData[currentTab], inspector: inspectorName }];
+
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'save',
+        sheet: sheetMap[currentTab],
+        date: date,
+        data: rows
+      })
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast('保存しました');
+    } else {
+      showToast('保存エラー: ' + (json.error||''), 'error');
+    }
+  } catch(e) {
+    showToast('通信エラー: ' + e.message, 'error');
+  }
+  showLoading(false);
+}
+
+async function loadFromServer() {
+  const date = document.getElementById('startDate').value;
+  if (!date) { showToast('日付を選択してください','error'); return; }
+
+  showLoading(true);
+  try {
+    const sheetMap = { water:'日常水質', hours:'機器運転時間', mechanical:'日常機械設備', electrical:'日常電気設備' };
+    const url = `${GAS_URL}?action=load&sheet=${encodeURIComponent(sheetMap[currentTab])}&date=${date}`;
+    const res = await fetch(url);
+    const json = await res.json();
+    if (json.success && json.rows.length > 0) {
+      const row = json.rows[0];
+      if (row.values) {
+        appData[currentTab] = row.values;
+        restoreData(row.values);
+      }
+      if (row.inspector) {
+        inspectorName = row.inspector;
+        const inp = document.getElementById('inspectorName');
+        if (inp) inp.value = inspectorName;
+      }
+      showToast(`${json.rows.length}件読み込みました`);
+    } else {
+      showToast('データがありません', 'info');
+    }
+  } catch(e) {
+    showToast('通信エラー: ' + e.message, 'error');
+  }
+  showLoading(false);
+}
+
+// === Excel出力 ===
+function exportExcel() {
+  showToast('Excel出力機能は次のステップで実装します', 'info');
+}
+
+// === 起動 ===
+init();
+</script>
+</body>
+</html>
