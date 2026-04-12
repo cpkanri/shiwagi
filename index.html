@@ -2294,10 +2294,14 @@ document.addEventListener("focusin", function(e) {
   }
 });
 
-// iOS自動次移動: blur後300msで別inputにフォーカスが移っていなければ次へ
+// iOS自動次移動: blur後200msで別inputにフォーカスが移っていなければ次へ
+var isAutoFocusing = false;
+
 document.addEventListener("focusout", function(e) {
   if (e.target.tagName !== "INPUT") return;
   if (e.target.type !== "number" && e.target.type !== "text") return;
+  if (isAutoFocusing) return;
+
   var blurredInput = e.target;
   setTimeout(function() {
     var active = document.activeElement;
@@ -2309,14 +2313,20 @@ document.addEventListener("focusout", function(e) {
     if (active && (active.tagName === "BUTTON" || active.tagName === "SELECT")) {
       return;
     }
+    // bodyにフォーカスがある場合のみ次に移動（ユーザーがどこもタップしていない時だけ）
+    if (active && active !== document.body) {
+      return;
+    }
     // 次のinputにフォーカス（テーブルなら縦方向）
     var next = getNextInput(blurredInput);
     if (next) {
+      isAutoFocusing = true;
       next.focus();
       next.select();
       next.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(function() { isAutoFocusing = false; }, 300);
     }
-  }, 50);
+  }, 200);
 });
 
 // PCのEnterキーで次のinputに移動（テーブルなら縦方向）
