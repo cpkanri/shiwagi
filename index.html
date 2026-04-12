@@ -2711,10 +2711,13 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
     // 年度表示（Row1列N）
     setCell(ws, 1 + offset, 14, reiwaYear);
 
-    // 日付行（Row3のI列）= 月曜日の日付
+    // 日付行（Row3のI列）= 月曜日のExcelシリアル日付
     var startDateObj = getActualDate(w, "mon");
     if (startDateObj) {
-      setCell(ws, 3 + offset, 9, startDateObj.getDate());
+      // ExcelJSではDateオブジェクトを直接セルに設定可能
+      var cell = ws.getCell(3 + offset, 9);
+      cell.value = startDateObj;
+      cell.numFmt = 'm/d';
     }
 
     // 各曜日のデータ埋め込み
@@ -2786,13 +2789,13 @@ function fillEquipSheet(wb, yyyy, mm) {
   const ws = wb.getWorksheet(2); // 機器運転時間
   if (!ws) return;
 
-  // 日付行
-  var startDate = getActualDate(1, "mon");
+  // 日付行: A3=開始日付, F3=終了日付（現在の週）
+  var startDate = getActualDate(currentWeek, "mon");
   if (startDate) {
-    setCell(ws, 3, 4, startDate.getMonth() + 1 + "/" + startDate.getDate());
-    var endDate = getActualDate(1, "nextMon");
+    setCell(ws, 3, 1, (startDate.getMonth() + 1) + "月" + startDate.getDate() + "日");
+    var endDate = getActualDate(currentWeek, "fri");
     if (endDate) {
-      setCell(ws, 3, 6, endDate.getMonth() + 1 + "/" + endDate.getDate());
+      setCell(ws, 3, 6, (endDate.getMonth() + 1) + "月" + endDate.getDate() + "日");
     }
   }
 
@@ -2882,6 +2885,17 @@ function fillElecSheet(wb, yyyy, mm, monthLabel) {
     var offset = weekOffsets[w];
     var elecWeek = weeklyData.electrical[w];
     if (!elecWeek) continue;
+
+    // 日付行（Row2）に各曜日の日付を入れる
+    var elecDayKeys = ["mon", "tue", "wed", "thu", "fri"];
+    for (var edi = 0; edi < elecDayKeys.length; edi++) {
+      var edayKey = elecDayKeys[edi];
+      var dateObj = getActualDate(w, edayKey === "fri" ? "nextMon" : edayKey);
+      if (dateObj) {
+        var ecol = dayColElec[edayKey];
+        setCell(ws, 2 + offset, ecol, (dateObj.getMonth()+1) + "/" + dateObj.getDate());
+      }
+    }
 
     var dayKeys = ["mon", "tue", "wed", "thu", "fri"];
     for (var di = 0; di < dayKeys.length; di++) {
@@ -2997,10 +3011,25 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
     sludgeRoomExhaustFanMode: 91,      // モード
   };
 
+  // H1に月表示を設定
+  setCell(ws, 1, 8, monthLabel);
+
   for (var w = 1; w <= 5; w++) {
     var offset = weekOffsets[w];
     var mechWeek = weeklyData.mechanical[w];
     if (!mechWeek) continue;
+
+    // E2-I2に点検者名、日付はE3-I3に入れる（曜日ごと）
+    var mechDayKeysMap = {mon: 5, tue: 6, wed: 7, thu: 8, fri: 9};
+    var mechDayLabels = ["mon", "tue", "wed", "thu", "fri"];
+    for (var mdi = 0; mdi < mechDayLabels.length; mdi++) {
+      var mdayKey = mechDayLabels[mdi];
+      var mdateObj = getActualDate(w, mdayKey === "fri" ? "nextMon" : mdayKey);
+      if (mdateObj) {
+        var mcol = mechDayKeysMap[mdayKey];
+        setCell(ws, 3 + offset, mcol, (mdateObj.getMonth()+1) + "/" + mdateObj.getDate());
+      }
+    }
 
     var dayKeys = ["mon", "tue", "wed", "thu", "fri"];
     for (var di = 0; di < dayKeys.length; di++) {
@@ -3048,8 +3077,8 @@ function fillQualityReportSheet(wb, yyyy, mm) {
 
   for (var d = 1; d <= daysInMonth; d++) {
     var dateObj = new Date(yyyy, mm - 1, d);
-    var dataRow1 = 6 + d; // 1/2: Row7=1日, Row8=2日, ...
-    var dataRow2 = 48 + d; // 2/2: Row49=1日, Row50=2日, ...
+    var dataRow1 = 7 + d; // 1/2: Row8=1日, Row9=2日, ...（Row3-7がヘッダー）
+    var dataRow2 = 49 + d; // 2/2: Row50=1日, Row51=2日, ...（Row45-49がヘッダー）
 
     // 日付・曜日
     setCell(ws, dataRow1, 1, d);
