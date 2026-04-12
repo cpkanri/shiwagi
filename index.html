@@ -1987,7 +1987,7 @@ async function saveCurrentTab() {
       body: JSON.stringify(payload)
     });
     var json = await res.json();
-    if (json.success) {
+    if (json.status === 'ok' || json.success) {
       showToast('保存しました');
     } else {
       showToast('保存エラー: ' + (json.error || ''), 'error');
