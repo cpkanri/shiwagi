@@ -2712,7 +2712,7 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
     setCell(ws, 1 + offset, 14, reiwaYear);
 
     // 日付行（Row3のI列）= 月曜日の日付
-    var startDateObj = computeDate(w, "mon");
+    var startDateObj = getActualDate(w, "mon");
     if (startDateObj) {
       setCell(ws, 3 + offset, 9, startDateObj.getDate());
     }
@@ -2787,10 +2787,10 @@ function fillEquipSheet(wb, yyyy, mm) {
   if (!ws) return;
 
   // 日付行
-  var startDate = computeDate(1, "mon");
+  var startDate = getActualDate(1, "mon");
   if (startDate) {
     setCell(ws, 3, 4, startDate.getMonth() + 1 + "/" + startDate.getDate());
-    var endDate = computeDate(1, "nextMon");
+    var endDate = getActualDate(1, "nextMon");
     if (endDate) {
       setCell(ws, 3, 6, endDate.getMonth() + 1 + "/" + endDate.getDate());
     }
