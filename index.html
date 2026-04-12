@@ -2602,6 +2602,13 @@ if ('serviceWorker' in navigator) {
 // ===== Excel出力機能（クライアントサイド） =====
 // EXCEL_TEMPLATE_B64 is loaded from template.js
 
+
+// 日付を「3月30日(月)」形式にフォーマット
+function formatDateJP(d) {
+  var dayNames = ["日","月","火","水","木","金","土"];
+  return (d.getMonth()+1) + "月" + d.getDate() + "日(" + dayNames[d.getDay()] + ")";
+}
+
 async function exportExcel() {
   var btnExcel = document.getElementById("btnExcel");
   btnExcel.textContent = "生成中...";
@@ -2711,13 +2718,24 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
     // 年度表示（Row1列N）
     setCell(ws, 1 + offset, 14, reiwaYear);
 
-    // 日付行（Row3のI列）= 月曜日のExcelシリアル日付
-    var startDateObj = getActualDate(w, "mon");
-    if (startDateObj) {
-      // ExcelJSではDateオブジェクトを直接セルに設定可能
-      var cell = ws.getCell(3 + offset, 9);
-      cell.value = startDateObj;
-      cell.numFmt = 'm/d';
+    // 日付行（Row3のI列以降）= 各曜日の日付を文字列で設定
+    var waterDayKeys2 = ["mon", "tue", "wed", "thu", "nextMon"];
+    var waterDayCols2 = { mon: 9, tue: 10, wed: 11, thu: 12, nextMon: 14 };
+    for (var wdi = 0; wdi < waterDayKeys2.length; wdi++) {
+      var wdKey = waterDayKeys2[wdi];
+      var wdObj = getActualDate(w, wdKey);
+      if (wdObj) {
+        setCell(ws, 3 + offset, waterDayCols2[wdKey], formatDateJP(wdObj));
+      }
+    }
+
+    // 測定者行（Row12のJ-N列）= 各曜日のinspectorを設定
+    var inspColMap = { mon: 10, tue: 11, wed: 12, thu: 13, nextMon: 14 };
+    for (var idi = 0; idi < waterDayKeys2.length; idi++) {
+      var idKey = waterDayKeys2[idi];
+      if (weekData[idKey] && weekData[idKey].inspector) {
+        setCell(ws, 12 + offset, inspColMap[idKey], weekData[idKey].inspector);
+      }
     }
 
     // 各曜日のデータ埋め込み
@@ -2893,7 +2911,7 @@ function fillElecSheet(wb, yyyy, mm, monthLabel) {
       var dateObj = getActualDate(w, edayKey === "fri" ? "nextMon" : edayKey);
       if (dateObj) {
         var ecol = dayColElec[edayKey];
-        setCell(ws, 2 + offset, ecol, (dateObj.getMonth()+1) + "/" + dateObj.getDate());
+        setCell(ws, 2 + offset, ecol, formatDateJP(dateObj));
       }
     }
 
@@ -3022,12 +3040,19 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
     // E2-I2に点検者名、日付はE3-I3に入れる（曜日ごと）
     var mechDayKeysMap = {mon: 5, tue: 6, wed: 7, thu: 8, fri: 9};
     var mechDayLabels = ["mon", "tue", "wed", "thu", "fri"];
+    // 点検者名: 日常水質のinspectorフィールドから取得
+    var waterDayMap = {mon: "mon", tue: "tue", wed: "wed", thu: "thu", fri: "nextMon"};
     for (var mdi = 0; mdi < mechDayLabels.length; mdi++) {
       var mdayKey = mechDayLabels[mdi];
       var mdateObj = getActualDate(w, mdayKey === "fri" ? "nextMon" : mdayKey);
       if (mdateObj) {
         var mcol = mechDayKeysMap[mdayKey];
-        setCell(ws, 3 + offset, mcol, (mdateObj.getMonth()+1) + "/" + mdateObj.getDate());
+        setCell(ws, 3 + offset, mcol, formatDateJP(mdateObj));
+      }
+      // 点検者名をRow2に設定
+      var wKey = waterDayMap[mdayKey];
+      if (weeklyData.weeks[w] && weeklyData.weeks[w][wKey] && weeklyData.weeks[w][wKey].inspector) {
+        setCell(ws, 2 + offset, mechDayKeysMap[mdayKey], weeklyData.weeks[w][wKey].inspector);
       }
     }
 
