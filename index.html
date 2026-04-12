@@ -589,7 +589,7 @@ header h1 {
   </div>
   <div class="section">
     <div class="section-header">外観 (油膜・色合)</div>
-    <div class="field"><span class="label">流入</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="gaikanRyunyu" data-options='["無","黄色","茶色","灰色"]'></button></div>
+    <div class="field"><span class="label">流入</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="gaikanRyunyu" data-options='["無","半透明","黄色","茶色","灰色"]'></button></div>
     <div class="field"><span class="label">ディッチ</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="gaikanDitch" data-options='["無","茶色","黄色","灰色"]'></button></div>
     <div class="field"><span class="label">終沈</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="gaikanShuchin" data-options='["無","透明","半透明","灰色"]'></button></div>
     <div class="field"><span class="label">放流水</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="gaikanHouryuu" data-options='["無","透明","半透明","灰色"]'></button></div>
@@ -604,7 +604,7 @@ header h1 {
     <div class="section-header">臭気 (腐敗臭)</div>
     <div class="field"><span class="label">流入</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="shukiRyunyu" data-options='["無","下水臭","腐敗臭"]'></button></div>
     <div class="field"><span class="label">ディッチ</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="shukiDitch" data-options='["無","活性汚泥臭"]'></button></div>
-    <div class="field"><span class="label">終沈</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="shukiShuchin" data-options='["無","無し"]'></button></div>
+    <div class="field"><span class="label">終沈</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="shukiShuchin" data-options='["無"]'></button></div>
     <div class="field"><span class="label">放流水</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="shukiHouryuu" data-options='["無","塩素臭"]'></button></div>
   </div>
   <div class="section">
@@ -1423,7 +1423,10 @@ function saveFormToData() {
   const day = weeklyData.weeks[currentWeek][currentDay];
   document.querySelectorAll("[data-field]").forEach(el => {
     const key = el.dataset.field;
-    if (el.type === "number") {
+    if (el.tagName === "BUTTON" && el.classList.contains("toggle-btn")) {
+      // トグルボタン: data-val から値を取得
+      day[key] = el.dataset.val || null;
+    } else if (el.type === "number") {
       day[key] = el.value === "" ? null : Number(el.value);
     } else {
       day[key] = el.value;
@@ -1436,7 +1439,14 @@ function loadDataToForm() {
   document.querySelectorAll("[data-field]").forEach(el => {
     const key = el.dataset.field;
     const v = day[key];
-    el.value = (v === null || v === undefined) ? "" : v;
+    if (el.tagName === "BUTTON" && el.classList.contains("toggle-btn")) {
+      // トグルボタン: data-val と textContent で値を設定
+      const val = (v === null || v === undefined) ? "" : String(v);
+      el.dataset.val = val;
+      el.textContent = val;
+    } else {
+      el.value = (v === null || v === undefined) ? "" : v;
+    }
   });
   const inspEl = document.querySelector('[data-field="inspector"]');
   if (inspEl && !inspEl.value) {
@@ -1844,6 +1854,38 @@ function bindEvents() {
         day[key] = el.value;
       }
       updateDayTabs();
+    });
+  });
+
+  // 日常水質フォーム内のトグルボタン（外観・臭気・汚泥界面等）にクリックハンドラを設定
+  document.querySelectorAll('.form-wrap .toggle-btn[data-field][data-options]').forEach(btn => {
+    btn.addEventListener("click", () => {
+      const opts = JSON.parse(btn.dataset.options);
+      const cur = btn.dataset.val || "";
+      const idx = opts.indexOf(cur);
+      const newVal = (idx === opts.length - 1) ? "" : (idx < 0 ? opts[0] : opts[idx + 1]);
+      btn.dataset.val = newVal;
+      btn.textContent = newVal;
+      // データに反映
+      const day = weeklyData.weeks[currentWeek][currentDay];
+      const key = btn.dataset.field;
+      day[key] = newVal || null;
+      updateDayTabs();
+      pushUndo({ type: "field", week: currentWeek, day: currentDay, field: key, oldVal: cur || null });
+      // 下方向にフォーカス移動（日常水質フォーム内のみ）
+      if (btn.closest('.form-wrap')) {
+        var allFields = Array.from(document.querySelectorAll('.form-wrap input[type="number"], .form-wrap input[type="text"], .form-wrap .toggle-btn'));
+        var visibleFields = allFields.filter(function(el) { return el.offsetParent !== null; });
+        var currentIdx = visibleFields.indexOf(btn);
+        if (currentIdx >= 0 && currentIdx < visibleFields.length - 1) {
+          var nextField = visibleFields[currentIdx + 1];
+          setTimeout(function() {
+            nextField.focus();
+            if (nextField.tagName === 'INPUT') nextField.select();
+            nextField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 100);
+        }
+      }
     });
   });
 
