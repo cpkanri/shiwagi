@@ -2830,19 +2830,13 @@ function fillEquipSheet(wb, yyyy, mm) {
     var reiwaStart = "令和" + (startDate.getFullYear() - 2018) + "年" + (startDate.getMonth() + 1) + "月" + startDate.getDate() + "日";
     var cellA3 = ws.getCell(3, 1);
     cellA3.value = reiwaStart;
-    var alignA3 = Object.assign({}, cellA3.alignment || {});
-    alignA3.vertical = 'middle';
-    alignA3.shrinkToFit = true;
-    cellA3.alignment = alignA3;
+    cellA3.alignment = { horizontal: 'center', vertical: 'center', shrinkToFit: true, wrapText: false };
     var endDate = getActualDate(currentWeek, "fri");
     if (endDate) {
       var reiwaEnd = "令和" + (endDate.getFullYear() - 2018) + "年" + (endDate.getMonth() + 1) + "月" + endDate.getDate() + "日";
       var cellF3 = ws.getCell(3, 6);
       cellF3.value = reiwaEnd;
-      var alignF3 = Object.assign({}, cellF3.alignment || {});
-      alignF3.vertical = 'middle';
-      alignF3.shrinkToFit = true;
-      cellF3.alignment = alignF3;
+      cellF3.alignment = { horizontal: 'center', vertical: 'center', shrinkToFit: true, wrapText: false };
     }
   }
 
