@@ -2724,14 +2724,24 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
     // 金曜(M列=13)の日付も追加（木曜+1日）
     for (var wdi = 0; wdi < waterDayKeys2.length; wdi++) {
       var wdKey = waterDayKeys2[wdi];
-      var wdObj = getActualDate(w, wdKey);
-      if (wdObj) {
-        setCell(ws, 3 + offset, waterDayCols2[wdKey], formatDateJP(wdObj));
-        // 木曜の次に金曜の日付をM列に追加
-        if (wdKey === "thu") {
-          var friObj = new Date(wdObj);
-          friObj.setDate(friObj.getDate() + 1);
-          setCell(ws, 3 + offset, 13, formatDateJP(friObj));
+      if (wdKey === "nextMon") {
+        // N列は翌週月曜（今週月曜+7日）
+        var monObj = getActualDate(w, "mon");
+        if (monObj) {
+          var nextMonObj = new Date(monObj);
+          nextMonObj.setDate(nextMonObj.getDate() + 7);
+          setCell(ws, 3 + offset, 14, formatDateJP(nextMonObj));
+        }
+      } else {
+        var wdObj = getActualDate(w, wdKey);
+        if (wdObj) {
+          setCell(ws, 3 + offset, waterDayCols2[wdKey], formatDateJP(wdObj));
+          // 木曜の次に金曜の日付をM列に追加
+          if (wdKey === "thu") {
+            var friObj = new Date(wdObj);
+            friObj.setDate(friObj.getDate() + 1);
+            setCell(ws, 3 + offset, 13, formatDateJP(friObj));
+          }
         }
       }
     }
