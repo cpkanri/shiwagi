@@ -2338,8 +2338,7 @@ function bindEvents() {
     btnSync.disabled = false;
   });
 
-  // Excel出力ボタン
-  document.getElementById("btnExcel").addEventListener("click", exportExcel);
+  // Excel出力ボタンはtemplate.js読込後に登録
 }
 
 // ===== 初期化 =====
@@ -3160,6 +3159,9 @@ function buildDateMap() {
   }
   return map;
 }
+
+// Excel出力ボタンのイベントリスナー登録
+document.getElementById("btnExcel").addEventListener("click", exportExcel);
 
 </script>
 </body>
