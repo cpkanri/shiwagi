@@ -3189,6 +3189,9 @@ function fillOperationReportSheet(wb, yyyy, mm) {
   const ws = wb.getWorksheet(6); // 運転管理月報
   if (!ws) return;
 
+  // ウィンドウ枠の固定を解除
+  ws.views = [{ state: 'normal' }];
+
   const reiwa = yyyy - 2018;
   const monthLabel = "令和" + reiwa + "年" + mm + "月分";
   setCell(ws, 1, 12, monthLabel); // L1
