@@ -584,29 +584,34 @@ header h1 {
     <div class="section-header">水温 (℃)</div>
     <div class="field"><span class="label">流入</span><span class="unit">℃</span><input type="number" inputmode="decimal" step="0.1" data-field="tempRyunyu"></div>
     <div class="field"><span class="label">ディッチ</span><span class="unit">℃</span><input type="number" inputmode="decimal" step="0.1" data-field="tempDitch"></div>
+    <div class="field"><span class="label">終沈</span><span class="unit">℃</span><input type="number" inputmode="decimal" step="0.1" data-field="tempShuchin"></div>
     <div class="field"><span class="label">放流水</span><span class="unit">℃</span><input type="number" inputmode="decimal" step="0.1" data-field="tempHouryuu"></div>
   </div>
   <div class="section">
     <div class="section-header">外観 (油膜・色合)</div>
     <div class="field"><span class="label">流入</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="gaikanRyunyu" data-options='["無","黄色","茶色","灰色"]'></button></div>
     <div class="field"><span class="label">ディッチ</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="gaikanDitch" data-options='["無","茶色","黄色","灰色"]'></button></div>
+    <div class="field"><span class="label">終沈</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="gaikanShuchin" data-options='["無","透明","半透明","灰色"]'></button></div>
     <div class="field"><span class="label">放流水</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="gaikanHouryuu" data-options='["無","透明","半透明","灰色"]'></button></div>
   </div>
   <div class="section">
     <div class="section-header">透視度 (cm)</div>
     <div class="field"><span class="label">流入水</span><span class="unit">cm</span><input type="number" inputmode="decimal" step="1" data-field="toushidoRyunyu"></div>
+    <div class="field"><span class="label">終沈</span><span class="unit">cm</span><input type="number" inputmode="decimal" step="1" data-field="toushidoShuchin"></div>
     <div class="field"><span class="label">放流水</span><span class="unit">cm</span><input type="number" inputmode="decimal" step="1" data-field="toushidoHouryuu"></div>
   </div>
   <div class="section">
     <div class="section-header">臭気 (腐敗臭)</div>
     <div class="field"><span class="label">流入</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="shukiRyunyu" data-options='["無","下水臭","腐敗臭"]'></button></div>
     <div class="field"><span class="label">ディッチ</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="shukiDitch" data-options='["無","活性汚泥臭"]'></button></div>
+    <div class="field"><span class="label">終沈</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="shukiShuchin" data-options='["無","無し"]'></button></div>
     <div class="field"><span class="label">放流水</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="shukiHouryuu" data-options='["無","塩素臭"]'></button></div>
   </div>
   <div class="section">
     <div class="section-header">pH</div>
     <div class="field"><span class="label">流入</span><span class="unit"></span><input type="number" inputmode="decimal" step="0.01" data-field="phRyunyu"></div>
     <div class="field"><span class="label">ディッチ</span><span class="unit"></span><input type="number" inputmode="decimal" step="0.01" data-field="phDitch"></div>
+    <div class="field"><span class="label">終沈</span><span class="unit"></span><input type="number" inputmode="decimal" step="0.01" data-field="phShuchin"></div>
     <div class="field"><span class="label">放流水</span><span class="unit"></span><input type="number" inputmode="decimal" step="0.01" data-field="phHouryuu"></div>
   </div>
   <div class="section">
@@ -619,6 +624,7 @@ header h1 {
   <div class="section">
     <div class="section-header">その他</div>
     <div class="field"><span class="label">MLSS</span><span class="unit">mg/L</span><input type="number" inputmode="decimal" step="10" data-field="mlss"></div>
+    <div class="field"><span class="label">MLDO</span><span class="unit">mg/L</span><input type="number" inputmode="decimal" step="0.01" data-field="mldo"></div>
     <div class="field"><span class="label">汚泥界面</span><span class="unit">cm</span><button type="button" class="toggle-btn" data-field="odeiKaimen" data-options='["-","－"]'></button></div>
     <div class="field"><span class="label">残留塩素</span><span class="unit">mg/L</span><input type="number" inputmode="decimal" step="0.01" data-field="zanryuuEnso"></div>
     <div class="field"><span class="label">塩素投入量</span><span class="unit">kg</span><input type="number" inputmode="decimal" step="0.1" data-field="ensoTounyuu"></div>
@@ -758,26 +764,26 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbw-Nosg4sZNFn7yew3oXNwN
 const ALL_FIELDS = [
   "denryoku200v", "denryoku100v", "keiyu",
   "hensouOdei", "yojouOdei", "houryuuRyuuryou",
-  "tempRyunyu", "tempDitch", "tempHouryuu",
-  "gaikanRyunyu", "gaikanDitch", "gaikanHouryuu",
-  "toushidoRyunyu", "toushidoHouryuu",
-  "shukiRyunyu", "shukiDitch", "shukiHouryuu",
-  "phRyunyu", "phDitch", "phHouryuu",
+  "tempRyunyu", "tempDitch", "tempShuchin", "tempHouryuu",
+  "gaikanRyunyu", "gaikanDitch", "gaikanShuchin", "gaikanHouryuu",
+  "toushidoRyunyu", "toushidoShuchin", "toushidoHouryuu",
+  "shukiRyunyu", "shukiDitch", "shukiShuchin", "shukiHouryuu",
+  "phRyunyu", "phDitch", "phShuchin", "phHouryuu",
   "sv10", "sv20", "sv30", "sv24h",
-  "mlss", "odeiKaimen", "zanryuuEnso", "ensoTounyuu",
+  "mlss", "mldo", "odeiKaimen", "zanryuuEnso", "ensoTounyuu",
   "bikou", "inspector"
 ];
 
 const COPY_FIELDS = [
   "denryoku200v", "denryoku100v", "keiyu",
   "hensouOdei", "yojouOdei", "houryuuRyuuryou",
-  "tempRyunyu", "tempDitch", "tempHouryuu",
-  "gaikanRyunyu", "gaikanDitch", "gaikanHouryuu",
-  "toushidoRyunyu", "toushidoHouryuu",
-  "shukiRyunyu", "shukiDitch", "shukiHouryuu",
-  "phRyunyu", "phDitch", "phHouryuu",
+  "tempRyunyu", "tempDitch", "tempShuchin", "tempHouryuu",
+  "gaikanRyunyu", "gaikanDitch", "gaikanShuchin", "gaikanHouryuu",
+  "toushidoRyunyu", "toushidoShuchin", "toushidoHouryuu",
+  "shukiRyunyu", "shukiDitch", "shukiShuchin", "shukiHouryuu",
+  "phRyunyu", "phDitch", "phShuchin", "phHouryuu",
   "sv10", "sv20", "sv30", "sv24h",
-  "mlss", "odeiKaimen", "zanryuuEnso", "ensoTounyuu"
+  "mlss", "mldo", "odeiKaimen", "zanryuuEnso", "ensoTounyuu"
 ];
 
 const DAYS = ["mon", "tue", "wed", "thu", "nextMon"];
@@ -823,12 +829,6 @@ const ELEC_SECTIONS = [
     { key: "uvStatus", label: "指示状況の確認", type: "toggle", options: ["○","△","×"] },
     { key: "uvValue", label: "UV値", type: "number", step: "0.001", unit: "Abs" },
     { key: "codValue", label: "COD値", type: "number", step: "0.01", unit: "mg/L" },
-  ]},
-  { title: "全窒素・全燐計", fields: [
-    { key: "tnLook", label: "外観の確認", type: "toggle", options: ["○","△","×"] },
-    { key: "tnStatus", label: "指示状況の確認", type: "toggle", options: ["○","△","×"] },
-    { key: "tnReading", label: "全窒素", type: "number", step: "0.01", unit: "mg/L" },
-    { key: "tpReading", label: "全りん", type: "number", step: "0.001", unit: "mg/L" },
   ]},
   { title: "圧力式液位計", fields: [
     { key: "pressureLook", label: "外観の確認", type: "toggle", options: ["○","△","×"] },
