@@ -361,6 +361,21 @@ body {
   box-shadow: 0 1px 3px rgba(0,0,0,.06);
 }
 
+/* Section title within table (stronger visual) */
+.section-title-row {
+  background: linear-gradient(135deg, #e8f5ef, #d4edda);
+  color: #0d4a34;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 10px 12px;
+  border-top: 2px solid var(--primary);
+  border-bottom: 1px solid #c3e6cb;
+  letter-spacing: 0.05em;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
 .day-header {
   display: grid;
   grid-template-columns: 1fr repeat(5, 52px) 28px 28px;
@@ -370,6 +385,9 @@ body {
   color: var(--text2);
   background: #fafaf8;
   border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 .day-header span {
   text-align: center;
@@ -386,15 +404,27 @@ body {
 .day-inputs:last-child {
   border-bottom: none;
 }
+/* Alternating row backgrounds */
+.day-inputs:nth-child(even) {
+  background: #fafaf8;
+}
+.day-inputs:hover {
+  background: #f0f7f4;
+}
 .day-inputs .label {
   font-size: 12px;
+  font-weight: 600;
+  color: #333;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .day-inputs .label .sub {
   font-size: 10px;
   color: var(--text2);
-  display: block;
+  display: inline;
+  font-weight: 400;
+  margin-left: 2px;
 }
 .day-inputs input {
   width: 100%;
@@ -835,7 +865,7 @@ body {
 /* ============================================================
    Configuration
    ============================================================ */
-var GAS_URL = 'https://script.google.com/macros/s/AKfycbw-Nosg4sZNFn7yew3oXNwNd58IDK8ElL4pRORmqLUF9MPvjexFaPI2SHl3Tsnl-ADh/exec';
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbyS-QpumW9SIKuXvS4qJZzQ8SuODUY1Qj-hAjDosBbcyog8dWgT64JaMnvo0e58Oxun/exec';
 var STORAGE_PREFIX = 'shibaki_weekly_';
 var DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
 var DAY_LABELS = ['月', '火', '水', '木', '金'];
@@ -1467,14 +1497,14 @@ function renderElectrical() {
   var html = '';
   for (var s = 0; s < ELEC_SECTIONS.length; s++) {
     var sec = ELEC_SECTIONS[s];
-    html += '<div class="section-title">' + sec.title + '</div>';
+    html += '<div class="section-title-row">' + sec.title + '</div>';
     html += '<div class="input-group">';
     html += dayHeaderHtml();
     for (var f = 0; f < sec.fields.length; f++) {
       var fld = sec.fields[f];
       html += '<div class="day-inputs">';
-      html += '<div class="label">' + fld.label +
-        '<span class="sub">' + (fld.unit || '') + '</span></div>';
+      var unitStr = fld.unit ? ' <span class="sub">(' + fld.unit + ')</span>' : '';
+      html += '<div class="label">' + fld.label + unitStr + '</div>';
       for (var d = 0; d < DAYS.length; d++) {
         if (fld.type === 'toggle') {
           html += '<div class="toggle-cell" ' +
@@ -1503,14 +1533,14 @@ function renderMechanical() {
   var html = '';
   for (var s = 0; s < MECH_SECTIONS.length; s++) {
     var sec = MECH_SECTIONS[s];
-    html += '<div class="section-title">' + sec.title + '</div>';
+    html += '<div class="section-title-row">' + sec.title + '</div>';
     html += '<div class="input-group">';
     html += dayHeaderHtml();
     for (var f = 0; f < sec.fields.length; f++) {
       var fld = sec.fields[f];
       html += '<div class="day-inputs">';
-      html += '<div class="label">' + fld.label +
-        '<span class="sub">' + (fld.unit || '') + '</span></div>';
+      var unitStr = fld.unit ? ' <span class="sub">(' + fld.unit + ')</span>' : '';
+      html += '<div class="label">' + fld.label + unitStr + '</div>';
       for (var d = 0; d < DAYS.length; d++) {
         if (fld.type === 'toggle') {
           html += '<div class="toggle-cell" ' +
@@ -2034,7 +2064,7 @@ async function syncAll() {
       body: JSON.stringify(payload)
     });
     var json = await res.json();
-    if (json.success) {
+    if (json.status === 'ok' || json.success) {
       showToast('全シート同期完了');
     } else {
       showToast('同期エラー: ' + (json.error || ''), 'error');
@@ -2054,7 +2084,7 @@ async function loadFromServer() {
     var url = GAS_URL + '?action=getAllData&month=' + currentMonth;
     var res = await fetch(url);
     var json = await res.json();
-    if (json.success && json.data) {
+    if ((json.status === 'ok' || json.success) && json.data) {
       for (var w = 1; w <= 5; w++) {
         if (json.data[w]) {
           if (json.data[w].water) {
