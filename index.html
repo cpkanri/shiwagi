@@ -589,10 +589,10 @@ header h1 {
   </div>
   <div class="section">
     <div class="section-header">外観 (油膜・色合)</div>
-    <div class="field"><span class="label">流入</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="gaikanRyunyu" data-options='["無","半透明","黄色","茶色","灰色"]'></button></div>
-    <div class="field"><span class="label">ディッチ</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="gaikanDitch" data-options='["無","茶色","黄色","灰色"]'></button></div>
-    <div class="field"><span class="label">終沈</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="gaikanShuchin" data-options='["無","透明","半透明","灰色"]'></button></div>
-    <div class="field"><span class="label">放流水</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="gaikanHouryuu" data-options='["無","透明","半透明","灰色"]'></button></div>
+    <div class="field"><span class="label">流入</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="gaikanRyunyu" data-options='["半透明","黄色","茶色"]'></button></div>
+    <div class="field"><span class="label">ディッチ</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="gaikanDitch" data-options='["茶色","黄色"]'></button></div>
+    <div class="field"><span class="label">終沈</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="gaikanShuchin" data-options='["透明","半透明"]'></button></div>
+    <div class="field"><span class="label">放流水</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="gaikanHouryuu" data-options='["透明","半透明"]'></button></div>
   </div>
   <div class="section">
     <div class="section-header">透視度 (cm)</div>
@@ -2274,9 +2274,6 @@ document.addEventListener("focusin", function(e) {
   if (el.tagName === "INPUT" && (el.type === "number" || el.type === "text")) {
     lastFocusedInput = el;
     setTimeout(function() { el.select(); }, 50);
-    setTimeout(function() {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 150);
   }
 });
 
