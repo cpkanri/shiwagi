@@ -2827,10 +2827,16 @@ function fillEquipSheet(wb, yyyy, mm) {
   // 日付行: A3=開始日付, F3=終了日付（現在の週）
   var startDate = getActualDate(currentWeek, "mon");
   if (startDate) {
-    setCell(ws, 3, 1, (startDate.getMonth() + 1) + "月" + startDate.getDate() + "日");
+    var reiwaStart = "令和" + (startDate.getFullYear() - 2018) + "年" + (startDate.getMonth() + 1) + "月" + startDate.getDate() + "日";
+    var cellA3 = ws.getCell(3, 1);
+    cellA3.value = reiwaStart;
+    cellA3.alignment = { horizontal: 'distributed', vertical: 'center', shrinkToFit: true };
     var endDate = getActualDate(currentWeek, "fri");
     if (endDate) {
-      setCell(ws, 3, 6, (endDate.getMonth() + 1) + "月" + endDate.getDate() + "日");
+      var reiwaEnd = "令和" + (endDate.getFullYear() - 2018) + "年" + (endDate.getMonth() + 1) + "月" + endDate.getDate() + "日";
+      var cellF3 = ws.getCell(3, 6);
+      cellF3.value = reiwaEnd;
+      cellF3.alignment = { horizontal: 'distributed', vertical: 'center', shrinkToFit: true };
     }
   }
 
