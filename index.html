@@ -1142,6 +1142,58 @@ function computeDate(weekIdx, dayKey) {
   return (d.getMonth() + 1) + "/" + d.getDate();
 }
 
+// 週番号と曜日キーから実際のDateオブジェクトを返す
+function getActualDate(weekIdx, dayKey) {
+  if (!weeklyData.startDate) return null;
+  var base = new Date(weeklyData.startDate + "T00:00:00");
+  if (isNaN(base.getTime())) return null;
+  var dayOffsetMap = { mon: 0, tue: 1, wed: 2, thu: 3, fri: 4, nextMon: 4 };
+  var offsetDays = (weekIdx - 1) * 7 + (dayOffsetMap[dayKey] || 0);
+  var d = new Date(base);
+  d.setDate(base.getDate() + offsetDays);
+  return d;
+}
+
+// DateオブジェクトからYYYY-MM形式の月文字列を返す
+function getMonthStr(date) {
+  if (!date) return "";
+  return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0");
+}
+
+// 週のデータを月ごとに分割する（電気設備・機械設備用）
+function splitWeekByMonth(weekIdx, dayKeys, weekData) {
+  var result = {};
+  dayKeys.forEach(function(dayKey) {
+    var date = getActualDate(weekIdx, dayKey);
+    if (!date) return;
+    var monthStr = getMonthStr(date);
+    if (!result[monthStr]) result[monthStr] = {};
+    result[monthStr][dayKey] = weekData[dayKey] || null;
+  });
+  return result;
+}
+
+// 機器運転時間用: 週データを月ごとに分割
+function splitEquipWeekByMonth(weekIdx, weekEquipData) {
+  var result = {};
+  var dayKeys = ["mon", "tue", "wed", "thu", "fri"];
+  dayKeys.forEach(function(dayKey) {
+    var date = getActualDate(weekIdx, dayKey);
+    if (!date) return;
+    var monthStr = getMonthStr(date);
+    if (!result[monthStr]) {
+      result[monthStr] = {};
+      Object.keys(weekEquipData).forEach(function(equipKey) {
+        result[monthStr][equipKey] = {};
+      });
+    }
+    Object.keys(weekEquipData).forEach(function(equipKey) {
+      result[monthStr][equipKey][dayKey] = weekEquipData[equipKey][dayKey];
+    });
+  });
+  return result;
+}
+
 function isDayFilled(weekIdx, dayKey) {
   const day = weeklyData.weeks[weekIdx] && weeklyData.weeks[weekIdx][dayKey];
   if (!day) return false;
@@ -1528,69 +1580,208 @@ async function fetchWithTimeout(url, options, timeoutMs) {
   }
 }
 
-// 現在のタブ＋週のデータだけをGASに送信
+// 現在のタブ＋週のデータだけをGASに送信（月またぎ対応）
 async function saveCurrentToServer() {
-  let payload;
+  var results = [];
+
   if (currentSheet === "water") {
-    payload = {
-      action: 'saveWeek',
-      month: weeklyData.targetMonth,
-      week: currentWeek,
-      startDate: weeklyData.startDate,
-      days: weeklyData.weeks[currentWeek]
-    };
+    var days = weeklyData.weeks[currentWeek];
+    var dayKeys = ["mon", "tue", "wed", "thu", "nextMon"];
+    var monthGroups = {};
+    dayKeys.forEach(function(dayKey) {
+      var date = getActualDate(currentWeek, dayKey);
+      if (!date) return;
+      var monthStr = getMonthStr(date);
+      if (!monthGroups[monthStr]) monthGroups[monthStr] = {};
+      monthGroups[monthStr][dayKey] = days[dayKey];
+    });
+    var monthKeys = Object.keys(monthGroups);
+    for (var i = 0; i < monthKeys.length; i++) {
+      var month = monthKeys[i];
+      var payload = {
+        action: 'saveWeek',
+        month: month,
+        week: currentWeek,
+        startDate: weeklyData.startDate,
+        days: monthGroups[month]
+      };
+      console.log('送信データ(' + month + '):', JSON.stringify(payload).substring(0, 500));
+      var res = await fetchWithTimeout(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload)
+      }, 15000);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var result = await res.json();
+      console.log('レスポンス(' + month + '):', JSON.stringify(result));
+      results.push(result);
+    }
   } else if (currentSheet === "equip") {
-    payload = {
-      action: 'saveEquipment',
-      month: weeklyData.targetMonth,
-      equipment: { [currentWeek]: weeklyData.equipment[currentWeek] }
-    };
+    var equipMonths = splitEquipWeekByMonth(currentWeek, weeklyData.equipment[currentWeek]);
+    var eMonthKeys = Object.keys(equipMonths);
+    for (var i = 0; i < eMonthKeys.length; i++) {
+      var month = eMonthKeys[i];
+      var payload = {
+        action: 'saveEquipment',
+        month: month,
+        equipment: { [currentWeek]: equipMonths[month] }
+      };
+      console.log('送信データ(' + month + '):', JSON.stringify(payload).substring(0, 500));
+      var res = await fetchWithTimeout(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload)
+      }, 15000);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var result = await res.json();
+      results.push(result);
+    }
   } else if (currentSheet === "elec") {
-    payload = {
-      action: 'saveElectrical',
-      month: weeklyData.targetMonth,
-      week: currentWeek,
-      electrical: { [currentWeek]: weeklyData.electrical[currentWeek] }
-    };
+    var elecDays = weeklyData.electrical[currentWeek];
+    var elecMonthGroups = splitWeekByMonth(currentWeek, ["mon", "tue", "wed", "thu", "fri"], elecDays);
+    var elMonthKeys = Object.keys(elecMonthGroups);
+    for (var i = 0; i < elMonthKeys.length; i++) {
+      var month = elMonthKeys[i];
+      var payload = {
+        action: 'saveElectrical',
+        month: month,
+        week: currentWeek,
+        electrical: { [currentWeek]: elecMonthGroups[month] }
+      };
+      var res = await fetchWithTimeout(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload)
+      }, 15000);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var result = await res.json();
+      results.push(result);
+    }
   } else if (currentSheet === "mech") {
-    payload = {
-      action: 'saveMechanical',
-      month: weeklyData.targetMonth,
-      week: currentWeek,
-      mechanical: { [currentWeek]: weeklyData.mechanical[currentWeek] }
-    };
+    var mechDays = weeklyData.mechanical[currentWeek];
+    var mechMonthGroups = splitWeekByMonth(currentWeek, ["mon", "tue", "wed", "thu", "fri"], mechDays);
+    var mMonthKeys = Object.keys(mechMonthGroups);
+    for (var i = 0; i < mMonthKeys.length; i++) {
+      var month = mMonthKeys[i];
+      var payload = {
+        action: 'saveMechanical',
+        month: month,
+        week: currentWeek,
+        mechanical: { [currentWeek]: mechMonthGroups[month] }
+      };
+      var res = await fetchWithTimeout(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload)
+      }, 15000);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var result = await res.json();
+      results.push(result);
+    }
   }
-  console.log('送信データ:', JSON.stringify(payload).substring(0, 500));
-  const res = await fetchWithTimeout(GAS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify(payload)
-  }, 15000);
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  const result = await res.json();
-  console.log('レスポンス:', JSON.stringify(result));
-  return result;
+
+  return results.length > 0 ? results[results.length - 1] : { status: 'ok' };
 }
 
-// 1シート全週を送信（全同期用）
+// 1シート全週を送信（全同期用・月またぎ対応）
 async function saveSheetToServer(sheetType) {
-  let payload;
+  var WEEK_LIST = [1, 2, 3, 4, 5];
+
   if (sheetType === "water") {
-    payload = { action: 'saveAll', month: weeklyData.targetMonth, startDate: weeklyData.startDate, weeks: weeklyData.weeks };
+    for (var w = 0; w < WEEK_LIST.length; w++) {
+      var weekIdx = WEEK_LIST[w];
+      var days = weeklyData.weeks[weekIdx];
+      var dayKeys = ["mon", "tue", "wed", "thu", "nextMon"];
+      var monthGroups = {};
+      dayKeys.forEach(function(dayKey) {
+        var date = getActualDate(weekIdx, dayKey);
+        if (!date) return;
+        var monthStr = getMonthStr(date);
+        if (!monthGroups[monthStr]) monthGroups[monthStr] = {};
+        monthGroups[monthStr][dayKey] = days[dayKey];
+      });
+      var monthKeys = Object.keys(monthGroups);
+      for (var i = 0; i < monthKeys.length; i++) {
+        var payload = {
+          action: 'saveWeek',
+          month: monthKeys[i],
+          week: weekIdx,
+          startDate: weeklyData.startDate,
+          days: monthGroups[monthKeys[i]]
+        };
+        var res = await fetchWithTimeout(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
+        }, 15000);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        await res.json();
+      }
+    }
   } else if (sheetType === "equip") {
-    payload = { action: 'saveEquipment', month: weeklyData.targetMonth, equipment: weeklyData.equipment };
+    for (var w = 0; w < WEEK_LIST.length; w++) {
+      var weekIdx = WEEK_LIST[w];
+      var equipMonths = splitEquipWeekByMonth(weekIdx, weeklyData.equipment[weekIdx]);
+      var monthKeys = Object.keys(equipMonths);
+      for (var i = 0; i < monthKeys.length; i++) {
+        var payload = {
+          action: 'saveEquipment',
+          month: monthKeys[i],
+          equipment: { [weekIdx]: equipMonths[monthKeys[i]] }
+        };
+        var res = await fetchWithTimeout(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
+        }, 15000);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        await res.json();
+      }
+    }
   } else if (sheetType === "elec") {
-    payload = { action: 'saveElectrical', month: weeklyData.targetMonth, electrical: weeklyData.electrical };
+    for (var w = 0; w < WEEK_LIST.length; w++) {
+      var weekIdx = WEEK_LIST[w];
+      var elecMonths = splitWeekByMonth(weekIdx, ["mon","tue","wed","thu","fri"], weeklyData.electrical[weekIdx]);
+      var monthKeys = Object.keys(elecMonths);
+      for (var i = 0; i < monthKeys.length; i++) {
+        var payload = {
+          action: 'saveElectrical',
+          month: monthKeys[i],
+          week: weekIdx,
+          electrical: { [weekIdx]: elecMonths[monthKeys[i]] }
+        };
+        var res = await fetchWithTimeout(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
+        }, 15000);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        await res.json();
+      }
+    }
   } else if (sheetType === "mech") {
-    payload = { action: 'saveMechanical', month: weeklyData.targetMonth, mechanical: weeklyData.mechanical };
+    for (var w = 0; w < WEEK_LIST.length; w++) {
+      var weekIdx = WEEK_LIST[w];
+      var mechMonths = splitWeekByMonth(weekIdx, ["mon","tue","wed","thu","fri"], weeklyData.mechanical[weekIdx]);
+      var monthKeys = Object.keys(mechMonths);
+      for (var i = 0; i < monthKeys.length; i++) {
+        var payload = {
+          action: 'saveMechanical',
+          month: monthKeys[i],
+          week: weekIdx,
+          mechanical: { [weekIdx]: mechMonths[monthKeys[i]] }
+        };
+        var res = await fetchWithTimeout(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
+        }, 15000);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        await res.json();
+      }
+    }
   }
-  const res = await fetchWithTimeout(GAS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify(payload)
-  }, 30000);
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  return await res.json();
+  return { status: 'ok' };
 }
 
 // GASからデータを取得（全シート）
@@ -1713,10 +1904,31 @@ function mergeServerData(serverData) {
 // バックグラウンドでサーバーから取得
 async function syncFromServer() {
   try {
-    const data = await loadFromServer(weeklyData.targetMonth);
+    // メインの対象月からデータ取得
+    var data = await loadFromServer(weeklyData.targetMonth);
+
+    // 前月と翌月も取得してマージ（月またぎ対応）
+    var ym = weeklyData.targetMonth.split("-");
+    var year = parseInt(ym[0]);
+    var month = parseInt(ym[1]);
+
+    // 前月
+    var prevMonth = month === 1 ? (year - 1) + "-12" : year + "-" + String(month - 1).padStart(2, "0");
+    // 翌月
+    var nextMonth = month === 12 ? (year + 1) + "-01" : year + "-" + String(month + 1).padStart(2, "0");
+
+    try {
+      var prevData = await loadFromServer(prevMonth);
+      if (prevData) mergeServerData(prevData);
+    } catch(e) {}
+
+    try {
+      var nextData = await loadFromServer(nextMonth);
+      if (nextData) mergeServerData(nextData);
+    } catch(e) {}
+
     if (data && (data.weeks || data.water || data.equipment || data.electrical || data.mechanical)) {
       mergeServerData(data);
-      // UI更新
       document.getElementById("startDate").value = weeklyData.startDate || "";
       updateDayTabs();
       if (currentSheet === "water") loadDataToForm();
