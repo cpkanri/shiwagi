@@ -2817,6 +2817,7 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
       // 備考はRow35、1列目にまとめて（最初の曜日のみ）
     }
   }
+
 }
 
 // ===== 機器運転時間シート =====
@@ -2952,6 +2953,7 @@ function fillElecSheet(wb, yyyy, mm, monthLabel) {
       }
     }
   }
+
 }
 
 // ===== 日常機械設備シート =====
@@ -3100,6 +3102,7 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
       }
     }
   }
+
 }
 
 
@@ -3183,8 +3186,6 @@ function fillOperationReportSheet(wb, yyyy, mm) {
   const ws = wb.getWorksheet(6); // 運転管理月報
   if (!ws) return;
 
-  // ウィンドウ枠の固定を解除
-  ws.views = [{ state: 'normal' }];
 
   const reiwa = yyyy - 2018;
   const monthLabel = "令和" + reiwa + "年" + mm + "月分";
