@@ -1872,20 +1872,6 @@ function bindEvents() {
       day[key] = newVal || null;
       updateDayTabs();
       pushUndo({ type: "field", week: currentWeek, day: currentDay, field: key, oldVal: cur || null });
-      // 下方向にフォーカス移動（日常水質フォーム内のみ）
-      if (btn.closest('.form-wrap')) {
-        var allFields = Array.from(document.querySelectorAll('.form-wrap input[type="number"], .form-wrap input[type="text"], .form-wrap .toggle-btn'));
-        var visibleFields = allFields.filter(function(el) { return el.offsetParent !== null; });
-        var currentIdx = visibleFields.indexOf(btn);
-        if (currentIdx >= 0 && currentIdx < visibleFields.length - 1) {
-          var nextField = visibleFields[currentIdx + 1];
-          setTimeout(function() {
-            nextField.focus();
-            if (nextField.tagName === 'INPUT') nextField.select();
-            nextField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }, 100);
-        }
-      }
     });
   });
 
@@ -2292,41 +2278,6 @@ document.addEventListener("focusin", function(e) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 150);
   }
-});
-
-// iOS自動次移動: blur後200msで別inputにフォーカスが移っていなければ次へ
-var isAutoFocusing = false;
-
-document.addEventListener("focusout", function(e) {
-  if (e.target.tagName !== "INPUT") return;
-  if (e.target.type !== "number" && e.target.type !== "text") return;
-  if (isAutoFocusing) return;
-
-  var blurredInput = e.target;
-  setTimeout(function() {
-    var active = document.activeElement;
-    // 別のinputに既にフォーカスが移っている → 何もしない
-    if (active && active.tagName === "INPUT" && (active.type === "number" || active.type === "text")) {
-      return;
-    }
-    // ボタンやselectをタップした場合も移動しない
-    if (active && (active.tagName === "BUTTON" || active.tagName === "SELECT")) {
-      return;
-    }
-    // bodyにフォーカスがある場合のみ次に移動（ユーザーがどこもタップしていない時だけ）
-    if (active && active !== document.body) {
-      return;
-    }
-    // 次のinputにフォーカス（テーブルなら縦方向）
-    var next = getNextInput(blurredInput);
-    if (next) {
-      isAutoFocusing = true;
-      next.focus();
-      next.select();
-      next.scrollIntoView({ behavior: "smooth", block: "center" });
-      setTimeout(function() { isAutoFocusing = false; }, 300);
-    }
-  }, 200);
 });
 
 // PCのEnterキーで次のinputに移動（テーブルなら縦方向）
