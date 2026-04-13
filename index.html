@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -6,7 +7,7 @@
 <link rel="icon" type="image/png" href="./icon-192.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="format-detection" content="telephone=no">
-<title>上殿浄化センター 週報入力</title>
+<title>柴木浄化センター 週報入力</title>
 <style>
 /* ===== 基本スタイル ===== */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -31,7 +32,7 @@ header {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: linear-gradient(135deg, #0d4f34, #1a7a56);
+  background: linear-gradient(135deg, #1a6b4e, #1a7a56);
   color: #fff;
   padding: 12px 16px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
@@ -457,12 +458,20 @@ header h1 {
 .mech-panel { display: none; }
 .mech-panel.visible { display: block; }
 .equip-table .section-row td {
-  background: #eef5f1;
-  color: #0d4f34;
-  font-weight: 600;
-  font-size: 12px;
-  padding: 8px 10px;
-  border-bottom: 1px solid #dde8e2;
+  background: linear-gradient(135deg, #e8f5ef, #d4edda);
+  color: #0d4a34;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 10px 12px;
+  border-top: 2px solid #1a6b4e;
+  border-bottom: 1px solid #c3e6cb;
+  letter-spacing: 0.05em;
+}
+.equip-table tbody tr:nth-child(even):not(.section-row) {
+  background: #fafaf8;
+}
+.equip-table tbody tr:hover:not(.section-row) {
+  background: #f0f7f4;
 }
 /* トグルボタン（○△×選択） */
 .toggle-btn {
@@ -511,7 +520,7 @@ header h1 {
 
 <!-- ヘッダー -->
 <header>
-  <h1>上殿浄化センター 週報入力</h1>
+  <h1>柴木浄化センター 週報入力</h1>
   <div class="header-controls">
     <label>
       <span>対象年月</span>
@@ -559,160 +568,72 @@ header h1 {
 
 <!-- 入力フォーム（static HTML） -->
 <div class="form-wrap">
-
-  <!-- セクション1: 積算値・流量 -->
+  <div class="inspector-field">
+    <span class="label">点検者</span>
+    <input type="text" data-field="inspector" placeholder="氏名">
+  </div>
   <div class="section">
     <div class="section-header">積算値・流量</div>
-    <div class="field">
-      <span class="label">普通電力量(200V)</span>
-      <span class="unit">Kwh</span>
-      <input type="number" inputmode="decimal" step="0.01" data-field="power200v">
-    </div>
-    <div class="field">
-      <span class="label">普通電力量(100V)</span>
-      <span class="unit">Kwh</span>
-      <input type="number" inputmode="decimal" step="0.1" data-field="power100v">
-    </div>
-    <div class="field">
-      <span class="label">水道使用量</span>
-      <span class="unit">㎥</span>
-      <input type="number" inputmode="decimal" step="0.001" data-field="water">
-    </div>
-    <div class="field">
-      <span class="label">軽油(残量)</span>
-      <span class="unit">ℓ</span>
-      <input type="number" inputmode="decimal" step="1" data-field="diesel">
-    </div>
-    <div class="field">
-      <span class="label">返送汚泥流量</span>
-      <span class="unit">㎥</span>
-      <input type="number" inputmode="decimal" step="0.01" data-field="returnSludge">
-    </div>
-    <div class="field">
-      <span class="label">余剰汚泥流量</span>
-      <span class="unit">㎥</span>
-      <input type="number" inputmode="decimal" step="0.01" data-field="excessSludge">
-    </div>
-    <div class="field">
-      <span class="label">放流流量</span>
-      <span class="unit">㎥</span>
-      <input type="number" inputmode="decimal" step="1" data-field="discharge">
-    </div>
+    <div class="field"><span class="label">普通電力量(200V)</span><span class="unit">Kwh</span><input type="number" inputmode="decimal" step="0.01" data-field="denryoku200v"></div>
+    <div class="field"><span class="label">普通電力量(100V)</span><span class="unit">Kwh</span><input type="number" inputmode="decimal" step="0.1" data-field="denryoku100v"></div>
+    <div class="field"><span class="label">軽油(残量)</span><span class="unit">ℓ</span><input type="number" inputmode="decimal" step="1" data-field="keiyu"></div>
+    <div class="field"><span class="label">返送汚泥流量</span><span class="unit">㎥</span><input type="number" inputmode="decimal" step="1" data-field="hensouOdei"></div>
+    <div class="field"><span class="label">余剰汚泥流量</span><span class="unit">㎥</span><input type="number" inputmode="decimal" step="1" data-field="yojouOdei"></div>
+    <div class="field"><span class="label">放流流量</span><span class="unit">㎥</span><input type="number" inputmode="decimal" step="1" data-field="houryuuRyuuryou"></div>
   </div>
-
-  <!-- セクション2: 水温 -->
   <div class="section">
     <div class="section-header">水温 (℃)</div>
-    <div class="field">
-      <span class="label">流入</span>
-      <span class="unit">℃</span>
-      <input type="number" inputmode="decimal" step="0.1" data-field="tempIn">
-    </div>
-    <div class="field">
-      <span class="label">ディッチ</span>
-      <span class="unit">℃</span>
-      <input type="number" inputmode="decimal" step="0.1" data-field="tempDitch">
-    </div>
-    <div class="field">
-      <span class="label">放流</span>
-      <span class="unit">℃</span>
-      <input type="number" inputmode="decimal" step="0.1" data-field="tempOut">
-    </div>
+    <div class="field"><span class="label">流入</span><span class="unit">℃</span><input type="number" inputmode="decimal" step="0.1" data-field="tempRyunyu"></div>
+    <div class="field"><span class="label">ディッチ</span><span class="unit">℃</span><input type="number" inputmode="decimal" step="0.1" data-field="tempDitch"></div>
+    <div class="field"><span class="label">終沈</span><span class="unit">℃</span><input type="number" inputmode="decimal" step="0.1" data-field="tempShuchin"></div>
+    <div class="field"><span class="label">放流水</span><span class="unit">℃</span><input type="number" inputmode="decimal" step="0.1" data-field="tempHouryuu"></div>
   </div>
-
-  <!-- セクション3: 透視度 -->
+  <div class="section">
+    <div class="section-header">外観 (油膜・色合)</div>
+    <div class="field"><span class="label">流入</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="gaikanRyunyu" data-options='["黄色","半透明","透明"]'></button></div>
+    <div class="field"><span class="label">ディッチ</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="gaikanDitch" data-options='["茶色"]'></button></div>
+    <div class="field"><span class="label">終沈</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="gaikanShuchin" data-options='["半透明","透明"]'></button></div>
+    <div class="field"><span class="label">放流水</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="gaikanHouryuu" data-options='["半透明","透明"]'></button></div>
+  </div>
   <div class="section">
     <div class="section-header">透視度 (cm)</div>
-    <div class="field">
-      <span class="label">流入水</span>
-      <span class="unit">cm</span>
-      <input type="number" inputmode="decimal" step="0.1" data-field="transIn">
-    </div>
-    <div class="field">
-      <span class="label">放流水</span>
-      <span class="unit">cm</span>
-      <input type="number" inputmode="decimal" step="0.1" data-field="transOut">
-    </div>
+    <div class="field"><span class="label">流入水</span><span class="unit">cm</span><input type="number" inputmode="decimal" step="1" data-field="toushidoRyunyu"></div>
+    <div class="field"><span class="label">終沈</span><span class="unit">cm</span><input type="number" inputmode="decimal" step="1" data-field="toushidoShuchin"></div>
+    <div class="field"><span class="label">放流水</span><span class="unit">cm</span><input type="number" inputmode="decimal" step="1" data-field="toushidoHouryuu"></div>
   </div>
-
-  <!-- セクション4: PH -->
   <div class="section">
-    <div class="section-header">PH</div>
-    <div class="field">
-      <span class="label">流入</span>
-      <span class="unit"></span>
-      <input type="number" inputmode="decimal" step="0.01" data-field="phIn">
-    </div>
-    <div class="field">
-      <span class="label">ディッチ</span>
-      <span class="unit"></span>
-      <input type="number" inputmode="decimal" step="0.01" data-field="phDitch">
-    </div>
-    <div class="field">
-      <span class="label">放流</span>
-      <span class="unit"></span>
-      <input type="number" inputmode="decimal" step="0.01" data-field="phOut">
-    </div>
+    <div class="section-header">臭気 (腐敗臭)</div>
+    <div class="field"><span class="label">流入</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="shukiRyunyu" data-options='["無","下水臭","腐敗臭"]'></button></div>
+    <div class="field"><span class="label">ディッチ</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="shukiDitch" data-options='["無","活性汚泥臭"]'></button></div>
+    <div class="field"><span class="label">終沈</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="shukiShuchin" data-options='["無"]'></button></div>
+    <div class="field"><span class="label">放流水</span><span class="unit"></span><button type="button" class="toggle-btn" data-field="shukiHouryuu" data-options='["無","塩素臭"]'></button></div>
   </div>
-
-  <!-- セクション5: SV -->
+  <div class="section">
+    <div class="section-header">pH</div>
+    <div class="field"><span class="label">流入</span><span class="unit"></span><input type="number" inputmode="decimal" step="0.01" data-field="phRyunyu"></div>
+    <div class="field"><span class="label">ディッチ</span><span class="unit"></span><input type="number" inputmode="decimal" step="0.01" data-field="phDitch"></div>
+    <div class="field"><span class="label">終沈</span><span class="unit"></span><input type="number" inputmode="decimal" step="0.01" data-field="phShuchin"></div>
+    <div class="field"><span class="label">放流水</span><span class="unit"></span><input type="number" inputmode="decimal" step="0.01" data-field="phHouryuu"></div>
+  </div>
   <div class="section">
     <div class="section-header">SV (%) ディッチ</div>
-    <div class="field">
-      <span class="label">SV・10</span>
-      <span class="unit">%</span>
-      <input type="number" inputmode="decimal" step="1" data-field="sv10">
-    </div>
-    <div class="field">
-      <span class="label">SV・20</span>
-      <span class="unit">%</span>
-      <input type="number" inputmode="decimal" step="1" data-field="sv20">
-    </div>
-    <div class="field">
-      <span class="label">SV・30</span>
-      <span class="unit">%</span>
-      <input type="number" inputmode="decimal" step="1" data-field="sv30">
-    </div>
-    <div class="field">
-      <span class="label">SV・24h</span>
-      <span class="unit">%</span>
-      <input type="number" inputmode="decimal" step="1" data-field="sv24h">
-    </div>
+    <div class="field"><span class="label">SV・10</span><span class="unit">%</span><input type="number" inputmode="decimal" step="1" data-field="sv10"></div>
+    <div class="field"><span class="label">SV・20</span><span class="unit">%</span><input type="number" inputmode="decimal" step="1" data-field="sv20"></div>
+    <div class="field"><span class="label">SV・30</span><span class="unit">%</span><input type="number" inputmode="decimal" step="1" data-field="sv30"></div>
+    <div class="field"><span class="label">SV・24h</span><span class="unit">%</span><input type="number" inputmode="decimal" step="1" data-field="sv24h"></div>
   </div>
-
-  <!-- セクション6: その他 -->
   <div class="section">
     <div class="section-header">その他</div>
-    <div class="field">
-      <span class="label">MLSS(ディッチ)</span>
-      <span class="unit">mg/L</span>
-      <input type="number" inputmode="decimal" step="1" data-field="mlss">
-    </div>
-    <div class="field">
-      <span class="label">汚泥界面(終沈)</span>
-      <span class="unit">cm</span>
-      <input type="number" inputmode="decimal" step="1" data-field="sludgeLevel">
-    </div>
-    <div class="field">
-      <span class="label">残留塩素(放流水)</span>
-      <span class="unit">mg/L</span>
-      <input type="number" inputmode="decimal" step="0.1" data-field="chlorine">
-    </div>
+    <div class="field"><span class="label">MLSS</span><span class="unit">mg/L</span><input type="number" inputmode="decimal" step="10" data-field="mlss"></div>
+    <div class="field"><span class="label">MLDO</span><span class="unit">mg/L</span><input type="number" inputmode="decimal" step="0.01" data-field="mldo"></div>
+    <div class="field"><span class="label">汚泥界面</span><span class="unit">cm</span><button type="button" class="toggle-btn" data-field="odeiKaimen" data-options='["-","－"]'></button></div>
+    <div class="field"><span class="label">残留塩素</span><span class="unit">mg/L</span><input type="number" inputmode="decimal" step="0.01" data-field="zanryuuEnso"></div>
+    <div class="field"><span class="label">塩素投入量</span><span class="unit">kg</span><input type="number" inputmode="decimal" step="0.1" data-field="ensoTounyuu"></div>
+    <div class="field"><span class="label">備考</span><span class="unit"></span><input type="text" data-field="bikou" placeholder="備考"></div>
   </div>
-
-  <!-- セクション7: 測定者 -->
-  <div class="section">
-    <div class="section-header">測定者</div>
-    <div class="field">
-      <span class="label">測定者名</span>
-      <span class="unit"></span>
-      <input type="text" data-field="inspector">
-    </div>
-  </div>
-
 </div>
-
-</div><!-- /waterPanel -->
+</div>
+<!-- /waterPanel -->
 
 <!-- ===== 機器運転時間パネル ===== -->
 <div id="equipPanel" class="equip-panel">
@@ -740,19 +661,17 @@ header h1 {
     </thead>
     <tbody>
       <tr><td>スクリーンユニット</td><td><input type="number" inputmode="decimal" step="0.1" data-equip="screenUnit" data-eday="mon"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="screenUnit" data-eday="tue"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="screenUnit" data-eday="wed"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="screenUnit" data-eday="thu"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="screenUnit" data-eday="fri"></td></tr>
-      <tr><td>№１主ポンプ</td><td><input type="number" inputmode="decimal" step="0.1" data-equip="mainPump1" data-eday="mon"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="mainPump1" data-eday="tue"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="mainPump1" data-eday="wed"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="mainPump1" data-eday="thu"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="mainPump1" data-eday="fri"></td></tr>
-      <tr><td>№２主ポンプ</td><td><input type="number" inputmode="decimal" step="0.1" data-equip="mainPump2" data-eday="mon"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="mainPump2" data-eday="tue"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="mainPump2" data-eday="wed"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="mainPump2" data-eday="thu"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="mainPump2" data-eday="fri"></td></tr>
-      <tr><td>№１汚泥ポンプ</td><td><input type="number" inputmode="decimal" step="0.1" data-equip="sludgePump1" data-eday="mon"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="sludgePump1" data-eday="tue"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="sludgePump1" data-eday="wed"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="sludgePump1" data-eday="thu"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="sludgePump1" data-eday="fri"></td></tr>
-      <tr><td>№２汚泥ポンプ</td><td><input type="number" inputmode="decimal" step="0.1" data-equip="sludgePump2" data-eday="mon"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="sludgePump2" data-eday="tue"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="sludgePump2" data-eday="wed"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="sludgePump2" data-eday="thu"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="sludgePump2" data-eday="fri"></td></tr>
-      <tr><td>№１エアレーション装置</td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration1" data-eday="mon"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration1" data-eday="tue"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration1" data-eday="wed"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration1" data-eday="thu"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration1" data-eday="fri"></td></tr>
-      <tr><td>№２エアレーション装置</td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration2" data-eday="mon"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration2" data-eday="tue"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration2" data-eday="wed"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration2" data-eday="thu"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration2" data-eday="fri"></td></tr>
-      <tr><td>№３エアレーション装置</td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration3" data-eday="mon"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration3" data-eday="tue"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration3" data-eday="wed"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration3" data-eday="thu"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration3" data-eday="fri"></td></tr>
-      <tr><td>終沈汚泥かき寄せ機</td><td><input type="number" inputmode="decimal" step="0.1" data-equip="finalScraper" data-eday="mon"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="finalScraper" data-eday="tue"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="finalScraper" data-eday="wed"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="finalScraper" data-eday="thu"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="finalScraper" data-eday="fri"></td></tr>
-      <tr><td>№１返流水ポンプ</td><td><input type="number" inputmode="decimal" step="0.1" data-equip="returnPump1" data-eday="mon"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="returnPump1" data-eday="tue"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="returnPump1" data-eday="wed"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="returnPump1" data-eday="thu"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="returnPump1" data-eday="fri"></td></tr>
-      <tr><td>№２返流水ポンプ</td><td><input type="number" inputmode="decimal" step="0.1" data-equip="returnPump2" data-eday="mon"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="returnPump2" data-eday="tue"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="returnPump2" data-eday="wed"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="returnPump2" data-eday="thu"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="returnPump2" data-eday="fri"></td></tr>
-      <tr><td>濃縮汚泥ポンプ</td><td><input type="number" inputmode="decimal" step="0.1" data-equip="thickPump" data-eday="mon"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="thickPump" data-eday="tue"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="thickPump" data-eday="wed"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="thickPump" data-eday="thu"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="thickPump" data-eday="fri"></td></tr>
-      <tr><td>濃縮汚泥かき寄せ機</td><td><input type="number" inputmode="decimal" step="0.1" data-equip="thickScraper" data-eday="mon"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="thickScraper" data-eday="tue"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="thickScraper" data-eday="wed"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="thickScraper" data-eday="thu"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="thickScraper" data-eday="fri"></td></tr>
+      <tr><td>濃縮汚泥ポンプ</td><td><input type="number" inputmode="decimal" step="0.1" data-equip="thickSludgePump" data-eday="mon"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="thickSludgePump" data-eday="tue"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="thickSludgePump" data-eday="wed"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="thickSludgePump" data-eday="thu"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="thickSludgePump" data-eday="fri"></td></tr>
       <tr><td>汚泥攪拌機</td><td><input type="number" inputmode="decimal" step="0.1" data-equip="sludgeMixer" data-eday="mon"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="sludgeMixer" data-eday="tue"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="sludgeMixer" data-eday="wed"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="sludgeMixer" data-eday="thu"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="sludgeMixer" data-eday="fri"></td></tr>
+      <tr><td>余剰汚泥ポンプ</td><td><input type="number" inputmode="decimal" step="0.1" data-equip="excessPump" data-eday="mon"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="excessPump" data-eday="tue"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="excessPump" data-eday="wed"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="excessPump" data-eday="thu"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="excessPump" data-eday="fri"></td></tr>
+      <tr><td>吸引ファン</td><td><input type="number" inputmode="decimal" step="0.1" data-equip="suctionFan" data-eday="mon"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="suctionFan" data-eday="tue"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="suctionFan" data-eday="wed"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="suctionFan" data-eday="thu"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="suctionFan" data-eday="fri"></td></tr>
+      <tr><td>№1主ポンプ</td><td><input type="number" inputmode="decimal" step="0.1" data-equip="mainPump1" data-eday="mon"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="mainPump1" data-eday="tue"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="mainPump1" data-eday="wed"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="mainPump1" data-eday="thu"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="mainPump1" data-eday="fri"></td></tr>
+      <tr><td>№2主ポンプ</td><td><input type="number" inputmode="decimal" step="0.1" data-equip="mainPump2" data-eday="mon"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="mainPump2" data-eday="tue"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="mainPump2" data-eday="wed"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="mainPump2" data-eday="thu"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="mainPump2" data-eday="fri"></td></tr>
+      <tr><td>№1返送汚泥ポンプ</td><td><input type="number" inputmode="decimal" step="0.1" data-equip="returnSludgePump1" data-eday="mon"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="returnSludgePump1" data-eday="tue"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="returnSludgePump1" data-eday="wed"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="returnSludgePump1" data-eday="thu"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="returnSludgePump1" data-eday="fri"></td></tr>
+      <tr><td>№2返送汚泥ポンプ</td><td><input type="number" inputmode="decimal" step="0.1" data-equip="returnSludgePump2" data-eday="mon"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="returnSludgePump2" data-eday="tue"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="returnSludgePump2" data-eday="wed"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="returnSludgePump2" data-eday="thu"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="returnSludgePump2" data-eday="fri"></td></tr>
+      <tr><td>№1エアレーション装置</td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration1" data-eday="mon"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration1" data-eday="tue"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration1" data-eday="wed"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration1" data-eday="thu"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration1" data-eday="fri"></td></tr>
+      <tr><td>№2エアレーション装置</td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration2" data-eday="mon"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration2" data-eday="tue"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration2" data-eday="wed"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration2" data-eday="thu"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="aeration2" data-eday="fri"></td></tr>
+      <tr><td>床排水ポンプ</td><td><input type="number" inputmode="decimal" step="0.1" data-equip="floorDrainPump" data-eday="mon"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="floorDrainPump" data-eday="tue"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="floorDrainPump" data-eday="wed"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="floorDrainPump" data-eday="thu"></td><td><input type="number" inputmode="decimal" step="0.1" data-equip="floorDrainPump" data-eday="fri"></td></tr>
     </tbody>
   </table>
 </div>
@@ -829,7 +748,7 @@ header h1 {
 </div>
 
 <div class="excel-wrap">
-  <button type="button" class="btn-excel" id="btnExcel">📄 Excel出力（日常水質）</button>
+  <button type="button" class="btn-excel" id="btnExcel">📥 Excel出力</button>
 </div>
 
 <div class="info-bar">データは端末に保存されます（localStorage）</div>
@@ -839,27 +758,33 @@ header h1 {
 
 <script>
 // ===== GAS URL =====
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzNAyPUWAAMaAH7h-bbCIesP-Yj_eqwNBkzh4H3Pd9UdliySG70WkOICAmHC-hs0-TG/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbw-Nosg4sZNFn7yew3oXNwNd58IDK8ElL4pRORmqLUF9MPvjexFaPI2SHl3Tsnl-ADh/exec';
 
 // ===== 定数定義 =====
 
 const ALL_FIELDS = [
-  "power200v", "power100v", "water", "diesel",
-  "returnSludge", "excessSludge", "discharge",
-  "tempIn", "tempDitch", "tempOut",
-  "transIn", "transOut",
-  "phIn", "phDitch", "phOut",
+  "denryoku200v", "denryoku100v", "keiyu",
+  "hensouOdei", "yojouOdei", "houryuuRyuuryou",
+  "tempRyunyu", "tempDitch", "tempShuchin", "tempHouryuu",
+  "gaikanRyunyu", "gaikanDitch", "gaikanShuchin", "gaikanHouryuu",
+  "toushidoRyunyu", "toushidoShuchin", "toushidoHouryuu",
+  "shukiRyunyu", "shukiDitch", "shukiShuchin", "shukiHouryuu",
+  "phRyunyu", "phDitch", "phShuchin", "phHouryuu",
   "sv10", "sv20", "sv30", "sv24h",
-  "mlss", "sludgeLevel", "chlorine",
-  "inspector"
+  "mlss", "mldo", "odeiKaimen", "zanryuuEnso", "ensoTounyuu",
+  "bikou", "inspector"
 ];
 
 const COPY_FIELDS = [
-  "tempIn", "tempDitch", "tempOut",
-  "transIn", "transOut",
-  "phIn", "phDitch", "phOut",
+  "denryoku200v", "denryoku100v", "keiyu",
+  "hensouOdei", "yojouOdei", "houryuuRyuuryou",
+  "tempRyunyu", "tempDitch", "tempShuchin", "tempHouryuu",
+  "gaikanRyunyu", "gaikanDitch", "gaikanShuchin", "gaikanHouryuu",
+  "toushidoRyunyu", "toushidoShuchin", "toushidoHouryuu",
+  "shukiRyunyu", "shukiDitch", "shukiShuchin", "shukiHouryuu",
+  "phRyunyu", "phDitch", "phShuchin", "phHouryuu",
   "sv10", "sv20", "sv30", "sv24h",
-  "mlss", "sludgeLevel", "chlorine"
+  "mlss", "mldo", "odeiKaimen", "zanryuuEnso", "ensoTounyuu"
 ];
 
 const DAYS = ["mon", "tue", "wed", "thu", "nextMon"];
@@ -870,25 +795,23 @@ const WEEKS = [1, 2, 3, 4, 5];
 const EQUIP_DAYS = ["mon", "tue", "wed", "thu", "fri"];
 // 機器キー（data-equip属性と一致）
 const EQUIP_KEYS = [
-  "screenUnit", "mainPump1", "mainPump2",
-  "sludgePump1", "sludgePump2",
-  "aeration1", "aeration2", "aeration3",
-  "finalScraper",
-  "returnPump1", "returnPump2",
-  "thickPump", "thickScraper", "sludgeMixer"
+  "screenUnit", "thickSludgePump", "sludgeMixer", "excessPump",
+  "suctionFan", "mainPump1", "mainPump2",
+  "returnSludgePump1", "returnSludgePump2",
+  "aeration1", "aeration2", "floorDrainPump"
 ];
 
 // 電気設備項目定義（セクション → フィールド配列）
 const ELEC_SECTIONS = [
   { title: "受電設備(1φ)", fields: [
     { key: "voltage1p", label: "受電電圧(1φ)", type: "number", step: "1", unit: "V" },
-    { key: "mode1p", label: "モード(1φ)", type: "toggle", options: ["RO","RS"] },
+    { key: "mode1p", label: "モード(1φ)", type: "toggle", options: ["1-N"] },
     { key: "switch1p", label: "受電切替(1φ)", type: "toggle", options: ["自動","手動"] },
     { key: "power1p", label: "買電/自家発(1φ)", type: "toggle", options: ["買電","自家発"] },
   ]},
   { title: "受電設備(3φ)", fields: [
     { key: "voltage3p", label: "受電電圧(3φ)", type: "number", step: "1", unit: "V" },
-    { key: "mode3p", label: "モード(3φ)", type: "toggle", options: ["RO","RS"] },
+    { key: "mode3p", label: "モード(3φ)", type: "toggle", options: ["1-2"] },
     { key: "switch3p", label: "受電切替(3φ)", type: "toggle", options: ["自動","手動"] },
     { key: "power3p", label: "買電/自家発(3φ)", type: "toggle", options: ["買電","自家発"] },
   ]},
@@ -908,11 +831,15 @@ const ELEC_SECTIONS = [
     { key: "uvValue", label: "UV値", type: "number", step: "0.001", unit: "Abs" },
     { key: "codValue", label: "COD値", type: "number", step: "0.01", unit: "mg/L" },
   ]},
-  { title: "全窒素・全燐計", fields: [
-    { key: "tnLook", label: "外観の確認", type: "toggle", options: ["○","△","×"] },
-    { key: "tnStatus", label: "指示状況の確認", type: "toggle", options: ["○","△","×"] },
-    { key: "tnReading", label: "全窒素", type: "number", step: "0.01", unit: "mg/L" },
-    { key: "tpReading", label: "全りん", type: "number", step: "0.001", unit: "mg/L" },
+  { title: "返送汚泥ポンプ流量計", fields: [
+    { key: "retSludgeLook", label: "外観の確認", type: "toggle", options: ["○","△","×"] },
+    { key: "retSludgeStatus", label: "指示状況の確認", type: "toggle", options: ["○","△","×"] },
+    { key: "retSludgeReading", label: "流量計の読み", type: "number", step: "0.01", unit: "㎥/h" },
+  ]},
+  { title: "余剰汚泥ポンプ流量計", fields: [
+    { key: "excessSludgeLook", label: "外観の確認", type: "toggle", options: ["○","△","×"] },
+    { key: "excessSludgeStatus", label: "指示状況の確認", type: "toggle", options: ["○","△","×"] },
+    { key: "excessSludgeReading", label: "流量計の読み", type: "number", step: "0.01", unit: "㎥/h" },
   ]},
   { title: "圧力式液位計", fields: [
     { key: "pressureLook", label: "外観の確認", type: "toggle", options: ["○","△","×"] },
@@ -939,7 +866,7 @@ const MECH_DAYS = ["mon", "tue", "wed", "thu", "fri"];
 // 機械設備項目定義
 const MECH_SECTIONS = [
   { title: "ポンプ井", fields: [
-    { key: "pumpWellCheck", label: "内部状況確認", type: "toggle", options: ["○","△","×"] },
+    { key: "pumpWellStatus", label: "内部状況確認", type: "toggle", options: ["○","△","×"] },
   ]},
   { title: "主ポンプNo.1", fields: [
     { key: "mainPump1Current", label: "電流値", type: "number", step: "0.1", unit: "A" },
@@ -955,25 +882,20 @@ const MECH_SECTIONS = [
     { key: "mainPumpMode", label: "モード確認", type: "toggle", options: ["自動","手動"] },
     { key: "mainPumpPriority", label: "優先機選択", type: "toggle", options: ["交互","No.1","No.2"] },
   ]},
-  { title: "自動除塵機", fields: [
-    { key: "screenVibration", label: "異音・振動", type: "toggle", options: ["○","△","×","－"] },
-    { key: "screenDebris", label: "し渣量の確認", type: "toggle", options: ["○","△","×","－"] },
-    { key: "screenOperation", label: "運転動作", type: "toggle", options: ["○","×"] },
+  { title: "スクリーンユニット", fields: [
+    { key: "screenVibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
+    { key: "screenResidue", label: "し渣量の確認", type: "toggle", options: ["○","△","×"] },
+    { key: "screenOperation", label: "運転動作", type: "toggle", options: ["○","△","×"] },
   ]},
   { title: "エアレーション装置No.1", fields: [
     { key: "aeration1Current", label: "電流値", type: "number", step: "0.1", unit: "A" },
     { key: "aeration1Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
-    { key: "aeration1Mode", label: "モード確認", type: "toggle", options: ["自動","手動"] },
+    { key: "aeration1Mode", label: "モード確認", type: "toggle", options: ["自動","手動","切"] },
   ]},
   { title: "エアレーション装置No.2", fields: [
     { key: "aeration2Current", label: "電流値", type: "number", step: "0.1", unit: "A" },
     { key: "aeration2Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
-    { key: "aeration2Mode", label: "モード確認", type: "toggle", options: ["自動","手動"] },
-  ]},
-  { title: "エアレーション装置No.3", fields: [
-    { key: "aeration3Current", label: "電流値", type: "number", step: "0.1", unit: "A" },
-    { key: "aeration3Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
-    { key: "aeration3Mode", label: "モード確認", type: "toggle", options: ["自動","手動"] },
+    { key: "aeration2Mode", label: "モード確認", type: "toggle", options: ["自動","手動","切"] },
   ]},
   { title: "消泡装置", fields: [
     { key: "defoamNozzle", label: "消泡ノズル", type: "toggle", options: ["○","△","×"] },
@@ -982,51 +904,48 @@ const MECH_SECTIONS = [
   { title: "終沈汚泥掻寄機", fields: [
     { key: "finalScraperCurrent", label: "電流値", type: "number", step: "0.01", unit: "A" },
     { key: "finalScraperVibration", label: "異音・振動等", type: "toggle", options: ["○","△","×"] },
+    { key: "finalScraperMode", label: "モード確認", type: "toggle", options: ["運転","停止"] },
   ]},
-  { title: "スカムスキマー(終沈)", fields: [
-    { key: "finalSkimmerOperation", label: "動作状況", type: "toggle", options: ["○","△","×"] },
-    { key: "finalSkimmerScum", label: "スカムの状況", type: "toggle", options: ["○","△","×"] },
+  { title: "スカムスキマー", fields: [
+    { key: "skimmerOperation", label: "動作状況", type: "toggle", options: ["○","△","×"] },
+    { key: "skimmerScum", label: "スカムの状況", type: "toggle", options: ["○","△","×"] },
   ]},
-  { title: "汚泥ポンプNo.1", fields: [
-    { key: "sludgePump1Current", label: "電流値", type: "number", step: "0.1", unit: "A" },
-    { key: "sludgePump1Pressure", label: "吐出圧力", type: "number", step: "0.01", unit: "Mpa" },
-    { key: "sludgePump1Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
+  { title: "返送汚泥ポンプNo.1", fields: [
+    { key: "retPump1Current", label: "電流値", type: "number", step: "0.1", unit: "A" },
+    { key: "retPump1Pressure", label: "吐出圧力", type: "number", step: "0.01", unit: "Mpa" },
+    { key: "retPump1Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
   ]},
-  { title: "汚泥ポンプNo.2", fields: [
-    { key: "sludgePump2Current", label: "電流値", type: "number", step: "0.1", unit: "A" },
-    { key: "sludgePump2Pressure", label: "吐出圧力", type: "number", step: "0.01", unit: "Mpa" },
-    { key: "sludgePump2Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×","－"] },
+  { title: "返送汚泥ポンプNo.2", fields: [
+    { key: "retPump2Current", label: "電流値", type: "number", step: "0.1", unit: "A" },
+    { key: "retPump2Pressure", label: "吐出圧力", type: "number", step: "0.01", unit: "Mpa" },
+    { key: "retPump2Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×","－"] },
   ]},
-  { title: "汚泥ポンプ共通", fields: [
-    { key: "sludgePumpMode", label: "モード確認", type: "toggle", options: ["自動","手動"] },
-    { key: "sludgePumpSelect", label: "常用機選択", type: "toggle", options: ["No.1","No.2"] },
+  { title: "返送汚泥ポンプ共通", fields: [
+    { key: "retPumpMode", label: "モード確認", type: "toggle", options: ["自動","手動"] },
+    { key: "retPumpSelect", label: "常用機選択", type: "toggle", options: ["No.1","No.2","交互"] },
   ]},
-  { title: "返流水ポンプNo.1", fields: [
-    { key: "returnPump1Current", label: "電流値", type: "number", step: "0.1", unit: "A" },
-    { key: "returnPump1Pressure", label: "吐出圧力", type: "number", step: "0.01", unit: "Mpa" },
-    { key: "returnPump1Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
-  ]},
-  { title: "返流水ポンプNo.2", fields: [
-    { key: "returnPump2Current", label: "電流値", type: "number", step: "0.1", unit: "A" },
-    { key: "returnPump2Pressure", label: "吐出圧力", type: "number", step: "0.01", unit: "Mpa" },
-    { key: "returnPump2Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
-  ]},
-  { title: "返流水ポンプ共通", fields: [
-    { key: "returnPumpMode", label: "モード確認", type: "toggle", options: ["自動","手動"] },
-    { key: "returnPumpPriority", label: "優先機選択", type: "toggle", options: ["交互","No.1","No.2"] },
+  { title: "余剰ポンプ", fields: [
+    { key: "excessPumpCurrent", label: "電流値", type: "number", step: "0.1", unit: "A" },
+    { key: "excessPumpPressure", label: "吐出圧力", type: "number", step: "0.01", unit: "Mpa" },
+    { key: "excessPumpVibration", label: "異音・振動", type: "toggle", options: ["○","△","×","－"] },
+    { key: "excessPumpMode", label: "モード確認", type: "toggle", options: ["手動","自動"] },
   ]},
   { title: "濃縮汚泥ポンプ", fields: [
     { key: "thickPumpCurrent", label: "電流値", type: "number", step: "0.1", unit: "A" },
     { key: "thickPumpPressure", label: "吐出圧力", type: "number", step: "0.01", unit: "Mpa" },
     { key: "thickPumpVibration", label: "異音・振動", type: "toggle", options: ["○","△","×","－"] },
-    { key: "thickPumpMode", label: "モード確認", type: "toggle", options: ["自動","手動"] },
+    { key: "thickPumpMode", label: "モード確認", type: "toggle", options: ["手動","自動"] },
   ]},
-  { title: "汚泥P室雨水排水用ポンプ", fields: [
-    { key: "drainPumpVibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
+  { title: "床排水ポンプ", fields: [
+    { key: "floorDrainCurrent", label: "電流値", type: "number", step: "0.1", unit: "A" },
+    { key: "floorDrainPressure", label: "吐出圧力", type: "number", step: "0.01", unit: "Mpa" },
+    { key: "floorDrainVibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
+    { key: "floorDrainMode", label: "モード確認", type: "toggle", options: ["自動","手動"] },
   ]},
   { title: "濃縮汚泥掻寄機", fields: [
     { key: "thickScraperCurrent", label: "電流値", type: "number", step: "0.01", unit: "A" },
     { key: "thickScraperVibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
+    { key: "thickScraperMode", label: "モード確認", type: "toggle", options: ["運転","停止"] },
   ]},
   { title: "スカムスキマー(濃縮)", fields: [
     { key: "thickSkimmerOperation", label: "動作状況", type: "toggle", options: ["○","△","×"] },
@@ -1047,7 +966,7 @@ const MECH_SECTIONS = [
     { key: "treatWater2Vibration", label: "異音・振動等", type: "toggle", options: ["○","△","×","－"] },
   ]},
   { title: "処理水給水装置共通", fields: [
-    { key: "treatWaterMode", label: "モード確認", type: "toggle", options: ["手動","自動"] },
+    { key: "treatWaterMode", label: "モード確認", type: "toggle", options: ["手動","自動","切"] },
   ]},
   { title: "加圧タンク", fields: [
     { key: "pressureTankLeak", label: "水漏れ", type: "toggle", options: ["無","有"] },
@@ -1061,24 +980,28 @@ const MECH_SECTIONS = [
     { key: "strainerTreatPressure", label: "処理水側圧力", type: "number", step: "0.01", unit: "Mpa" },
   ]},
   { title: "自家発室給気ファン", fields: [
-    { key: "supplyFanVibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
-    { key: "supplyFanMode", label: "モード確認", type: "toggle", options: ["連動","手動"] },
+    { key: "genSupplyFanVibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
+    { key: "genSupplyFanMode", label: "モード確認", type: "toggle", options: ["連動","手動","切"] },
   ]},
-  { title: "自家発室排気ファン", fields: [
-    { key: "exhaustFanVibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
-    { key: "exhaustFanMode", label: "モード確認", type: "toggle", options: ["連動","手動"] },
+  { title: "脱水機室給気ファン", fields: [
+    { key: "dehydSupplyFanCurrent", label: "電流値", type: "number", step: "0.1", unit: "A" },
+    { key: "dehydSupplyFanVibration", label: "異音・振動", type: "toggle", options: ["○","△","×","－"] },
+    { key: "dehydSupplyFanMode", label: "モード確認", type: "toggle", options: ["自動","手動","切"] },
   ]},
-  { title: "脱臭装置No.1", fields: [
-    { key: "deodor1Leak", label: "臭気の漏れ", type: "toggle", options: ["無","有"] },
-    { key: "deodor1Exit", label: "出口臭気", type: "toggle", options: ["無","有"] },
+  { title: "脱水機室排気ファン", fields: [
+    { key: "dehydExhaustFanCurrent", label: "電流値", type: "number", step: "0.1", unit: "A" },
+    { key: "dehydExhaustFanSmell", label: "臭気の漏れ", type: "toggle", options: ["無","有","－"] },
+    { key: "dehydExhaustFanMode", label: "モード確認", type: "toggle", options: ["自動","手動","切"] },
   ]},
-  { title: "脱臭装置No.2", fields: [
-    { key: "deodor2Leak", label: "臭気の漏れ", type: "toggle", options: ["無","有"] },
-    { key: "deodor2Exit", label: "出口臭気", type: "toggle", options: ["無","有"] },
+  { title: "汚泥ポンプ室給気ファン", fields: [
+    { key: "sludgeRoomSupplyFanCurrent", label: "電流値", type: "number", step: "0.1", unit: "A" },
+    { key: "sludgeRoomSupplyFanVibration", label: "異音・振動", type: "toggle", options: ["○","△","×","－"] },
+    { key: "sludgeRoomSupplyFanMode", label: "モード確認", type: "toggle", options: ["自動","手動","切"] },
   ]},
-  { title: "脱臭装置No.3", fields: [
-    { key: "deodor3Leak", label: "臭気の漏れ", type: "toggle", options: ["無","有"] },
-    { key: "deodor3Exit", label: "出口臭気", type: "toggle", options: ["無","有"] },
+  { title: "汚泥ポンプ室排気ファン", fields: [
+    { key: "sludgeRoomExhaustFanCurrent", label: "電流値", type: "number", step: "0.1", unit: "A" },
+    { key: "sludgeRoomExhaustFanSmell", label: "臭気の漏れ", type: "toggle", options: ["無","有","－"] },
+    { key: "sludgeRoomExhaustFanMode", label: "モード確認", type: "toggle", options: ["自動","手動","切"] },
   ]},
 ];
 const ALL_MECH_KEYS = MECH_SECTIONS.flatMap(s => s.fields.map(f => f.key));
@@ -1198,7 +1121,7 @@ function ensureWeeklyStructure() {
 }
 
 function storageKey() {
-  return "uedono_weekly_" + (weeklyData.targetMonth || "default");
+  return "shibaki_weekly_" + (weeklyData.targetMonth || "default");
 }
 
 function currentYearMonth() {
@@ -1230,6 +1153,58 @@ function computeDate(weekIdx, dayKey) {
   return (d.getMonth() + 1) + "/" + d.getDate();
 }
 
+// 週番号と曜日キーから実際のDateオブジェクトを返す
+function getActualDate(weekIdx, dayKey) {
+  if (!weeklyData.startDate) return null;
+  var base = new Date(weeklyData.startDate + "T00:00:00");
+  if (isNaN(base.getTime())) return null;
+  var dayOffsetMap = { mon: 0, tue: 1, wed: 2, thu: 3, fri: 4, nextMon: 4 };
+  var offsetDays = (weekIdx - 1) * 7 + (dayOffsetMap[dayKey] || 0);
+  var d = new Date(base);
+  d.setDate(base.getDate() + offsetDays);
+  return d;
+}
+
+// DateオブジェクトからYYYY-MM形式の月文字列を返す
+function getMonthStr(date) {
+  if (!date) return "";
+  return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0");
+}
+
+// 週のデータを月ごとに分割する（電気設備・機械設備用）
+function splitWeekByMonth(weekIdx, dayKeys, weekData) {
+  var result = {};
+  dayKeys.forEach(function(dayKey) {
+    var date = getActualDate(weekIdx, dayKey);
+    if (!date) return;
+    var monthStr = getMonthStr(date);
+    if (!result[monthStr]) result[monthStr] = {};
+    result[monthStr][dayKey] = weekData[dayKey] || null;
+  });
+  return result;
+}
+
+// 機器運転時間用: 週データを月ごとに分割
+function splitEquipWeekByMonth(weekIdx, weekEquipData) {
+  var result = {};
+  var dayKeys = ["mon", "tue", "wed", "thu", "fri"];
+  dayKeys.forEach(function(dayKey) {
+    var date = getActualDate(weekIdx, dayKey);
+    if (!date) return;
+    var monthStr = getMonthStr(date);
+    if (!result[monthStr]) {
+      result[monthStr] = {};
+      Object.keys(weekEquipData).forEach(function(equipKey) {
+        result[monthStr][equipKey] = {};
+      });
+    }
+    Object.keys(weekEquipData).forEach(function(equipKey) {
+      result[monthStr][equipKey][dayKey] = weekEquipData[equipKey][dayKey];
+    });
+  });
+  return result;
+}
+
 function isDayFilled(weekIdx, dayKey) {
   const day = weeklyData.weeks[weekIdx] && weeklyData.weeks[weekIdx][dayKey];
   if (!day) return false;
@@ -1247,7 +1222,7 @@ function saveEquipFormToData() {
     const key = el.dataset.equip;
     const day = el.dataset.eday;
     if (week[key]) {
-      week[key][day] = el.value === "" ? null : Number(el.value);
+      week[key][day] = el.value === "" ? null : el.value;
     }
   });
 }
@@ -1323,7 +1298,7 @@ function saveElecFormToData() {
     const day = el.dataset.eday;
     if (!week || !week[day]) return;
     if (el.tagName === "INPUT") {
-      week[day][key] = el.value === "" ? null : Number(el.value);
+      week[day][key] = el.value === "" ? null : el.value;
     } else {
       // toggle button
       week[day][key] = el.dataset.val || null;
@@ -1403,7 +1378,7 @@ function saveMechFormToData() {
     const day = el.dataset.mday;
     if (!week || !week[day]) return;
     if (el.tagName === "INPUT") {
-      week[day][key] = el.value === "" ? null : Number(el.value);
+      week[day][key] = el.value === "" ? null : el.value;
     } else {
       week[day][key] = el.dataset.val || null;
     }
@@ -1511,8 +1486,11 @@ function saveFormToData() {
   const day = weeklyData.weeks[currentWeek][currentDay];
   document.querySelectorAll("[data-field]").forEach(el => {
     const key = el.dataset.field;
-    if (el.type === "number") {
-      day[key] = el.value === "" ? null : Number(el.value);
+    if (el.tagName === "BUTTON" && el.classList.contains("toggle-btn")) {
+      // トグルボタン: data-val から値を取得
+      day[key] = el.dataset.val || null;
+    } else if (el.type === "number") {
+      day[key] = el.value === "" ? null : el.value;
     } else {
       day[key] = el.value;
     }
@@ -1524,11 +1502,18 @@ function loadDataToForm() {
   document.querySelectorAll("[data-field]").forEach(el => {
     const key = el.dataset.field;
     const v = day[key];
-    el.value = (v === null || v === undefined) ? "" : v;
+    if (el.tagName === "BUTTON" && el.classList.contains("toggle-btn")) {
+      // トグルボタン: data-val と textContent で値を設定
+      const val = (v === null || v === undefined) ? "" : String(v);
+      el.dataset.val = val;
+      el.textContent = val;
+    } else {
+      el.value = (v === null || v === undefined) ? "" : v;
+    }
   });
   const inspEl = document.querySelector('[data-field="inspector"]');
   if (inspEl && !inspEl.value) {
-    const last = localStorage.getItem("uedono_last_inspector") || "";
+    const last = localStorage.getItem("shibaki_last_inspector") || "";
     if (last) {
       inspEl.value = last;
       day.inspector = last;
@@ -1568,10 +1553,10 @@ function saveToStorage() {
     localStorage.setItem(storageKey(), JSON.stringify(weeklyData));
     const inspEl = document.querySelector('[data-field="inspector"]');
     if (inspEl && inspEl.value) {
-      localStorage.setItem("uedono_last_inspector", inspEl.value);
+      localStorage.setItem("shibaki_last_inspector", inspEl.value);
     }
     if (weeklyData.targetMonth) {
-      localStorage.setItem("uedono_current_month", weeklyData.targetMonth);
+      localStorage.setItem("shibaki_current_month", weeklyData.targetMonth);
     }
     return true;
   } catch (e) {
@@ -1606,69 +1591,208 @@ async function fetchWithTimeout(url, options, timeoutMs) {
   }
 }
 
-// 現在のタブ＋週のデータだけをGASに送信
+// 現在のタブ＋週のデータだけをGASに送信（月またぎ対応）
 async function saveCurrentToServer() {
-  let payload;
+  var results = [];
+
   if (currentSheet === "water") {
-    payload = {
-      action: 'saveWeek',
-      month: weeklyData.targetMonth,
-      week: currentWeek,
-      startDate: weeklyData.startDate,
-      days: weeklyData.weeks[currentWeek]
-    };
+    var days = weeklyData.weeks[currentWeek];
+    var dayKeys = ["mon", "tue", "wed", "thu", "nextMon"];
+    var monthGroups = {};
+    dayKeys.forEach(function(dayKey) {
+      var date = getActualDate(currentWeek, dayKey);
+      if (!date) return;
+      var monthStr = getMonthStr(date);
+      if (!monthGroups[monthStr]) monthGroups[monthStr] = {};
+      monthGroups[monthStr][dayKey] = days[dayKey];
+    });
+    var monthKeys = Object.keys(monthGroups);
+    for (var i = 0; i < monthKeys.length; i++) {
+      var month = monthKeys[i];
+      var payload = {
+        action: 'saveWeek',
+        month: month,
+        week: currentWeek,
+        startDate: weeklyData.startDate,
+        days: monthGroups[month]
+      };
+      console.log('送信データ(' + month + '):', JSON.stringify(payload).substring(0, 500));
+      var res = await fetchWithTimeout(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload)
+      }, 15000);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var result = await res.json();
+      console.log('レスポンス(' + month + '):', JSON.stringify(result));
+      results.push(result);
+    }
   } else if (currentSheet === "equip") {
-    payload = {
-      action: 'saveEquipment',
-      month: weeklyData.targetMonth,
-      equipment: { [currentWeek]: weeklyData.equipment[currentWeek] }
-    };
+    var equipMonths = splitEquipWeekByMonth(currentWeek, weeklyData.equipment[currentWeek]);
+    var eMonthKeys = Object.keys(equipMonths);
+    for (var i = 0; i < eMonthKeys.length; i++) {
+      var month = eMonthKeys[i];
+      var payload = {
+        action: 'saveEquipment',
+        month: month,
+        equipment: { [currentWeek]: equipMonths[month] }
+      };
+      console.log('送信データ(' + month + '):', JSON.stringify(payload).substring(0, 500));
+      var res = await fetchWithTimeout(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload)
+      }, 15000);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var result = await res.json();
+      results.push(result);
+    }
   } else if (currentSheet === "elec") {
-    payload = {
-      action: 'saveElectrical',
-      month: weeklyData.targetMonth,
-      week: currentWeek,
-      electrical: { [currentWeek]: weeklyData.electrical[currentWeek] }
-    };
+    var elecDays = weeklyData.electrical[currentWeek];
+    var elecMonthGroups = splitWeekByMonth(currentWeek, ["mon", "tue", "wed", "thu", "fri"], elecDays);
+    var elMonthKeys = Object.keys(elecMonthGroups);
+    for (var i = 0; i < elMonthKeys.length; i++) {
+      var month = elMonthKeys[i];
+      var payload = {
+        action: 'saveElectrical',
+        month: month,
+        week: currentWeek,
+        electrical: { [currentWeek]: elecMonthGroups[month] }
+      };
+      var res = await fetchWithTimeout(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload)
+      }, 15000);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var result = await res.json();
+      results.push(result);
+    }
   } else if (currentSheet === "mech") {
-    payload = {
-      action: 'saveMechanical',
-      month: weeklyData.targetMonth,
-      week: currentWeek,
-      mechanical: { [currentWeek]: weeklyData.mechanical[currentWeek] }
-    };
+    var mechDays = weeklyData.mechanical[currentWeek];
+    var mechMonthGroups = splitWeekByMonth(currentWeek, ["mon", "tue", "wed", "thu", "fri"], mechDays);
+    var mMonthKeys = Object.keys(mechMonthGroups);
+    for (var i = 0; i < mMonthKeys.length; i++) {
+      var month = mMonthKeys[i];
+      var payload = {
+        action: 'saveMechanical',
+        month: month,
+        week: currentWeek,
+        mechanical: { [currentWeek]: mechMonthGroups[month] }
+      };
+      var res = await fetchWithTimeout(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload)
+      }, 15000);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var result = await res.json();
+      results.push(result);
+    }
   }
-  console.log('送信データ:', JSON.stringify(payload).substring(0, 500));
-  const res = await fetchWithTimeout(GAS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify(payload)
-  }, 15000);
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  const result = await res.json();
-  console.log('レスポンス:', JSON.stringify(result));
-  return result;
+
+  return results.length > 0 ? results[results.length - 1] : { status: 'ok' };
 }
 
-// 1シート全週を送信（全同期用）
+// 1シート全週を送信（全同期用・月またぎ対応）
 async function saveSheetToServer(sheetType) {
-  let payload;
+  var WEEK_LIST = [1, 2, 3, 4, 5];
+
   if (sheetType === "water") {
-    payload = { action: 'saveAll', month: weeklyData.targetMonth, startDate: weeklyData.startDate, weeks: weeklyData.weeks };
+    for (var w = 0; w < WEEK_LIST.length; w++) {
+      var weekIdx = WEEK_LIST[w];
+      var days = weeklyData.weeks[weekIdx];
+      var dayKeys = ["mon", "tue", "wed", "thu", "nextMon"];
+      var monthGroups = {};
+      dayKeys.forEach(function(dayKey) {
+        var date = getActualDate(weekIdx, dayKey);
+        if (!date) return;
+        var monthStr = getMonthStr(date);
+        if (!monthGroups[monthStr]) monthGroups[monthStr] = {};
+        monthGroups[monthStr][dayKey] = days[dayKey];
+      });
+      var monthKeys = Object.keys(monthGroups);
+      for (var i = 0; i < monthKeys.length; i++) {
+        var payload = {
+          action: 'saveWeek',
+          month: monthKeys[i],
+          week: weekIdx,
+          startDate: weeklyData.startDate,
+          days: monthGroups[monthKeys[i]]
+        };
+        var res = await fetchWithTimeout(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
+        }, 15000);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        await res.json();
+      }
+    }
   } else if (sheetType === "equip") {
-    payload = { action: 'saveEquipment', month: weeklyData.targetMonth, equipment: weeklyData.equipment };
+    for (var w = 0; w < WEEK_LIST.length; w++) {
+      var weekIdx = WEEK_LIST[w];
+      var equipMonths = splitEquipWeekByMonth(weekIdx, weeklyData.equipment[weekIdx]);
+      var monthKeys = Object.keys(equipMonths);
+      for (var i = 0; i < monthKeys.length; i++) {
+        var payload = {
+          action: 'saveEquipment',
+          month: monthKeys[i],
+          equipment: { [weekIdx]: equipMonths[monthKeys[i]] }
+        };
+        var res = await fetchWithTimeout(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
+        }, 15000);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        await res.json();
+      }
+    }
   } else if (sheetType === "elec") {
-    payload = { action: 'saveElectrical', month: weeklyData.targetMonth, electrical: weeklyData.electrical };
+    for (var w = 0; w < WEEK_LIST.length; w++) {
+      var weekIdx = WEEK_LIST[w];
+      var elecMonths = splitWeekByMonth(weekIdx, ["mon","tue","wed","thu","fri"], weeklyData.electrical[weekIdx]);
+      var monthKeys = Object.keys(elecMonths);
+      for (var i = 0; i < monthKeys.length; i++) {
+        var payload = {
+          action: 'saveElectrical',
+          month: monthKeys[i],
+          week: weekIdx,
+          electrical: { [weekIdx]: elecMonths[monthKeys[i]] }
+        };
+        var res = await fetchWithTimeout(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
+        }, 15000);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        await res.json();
+      }
+    }
   } else if (sheetType === "mech") {
-    payload = { action: 'saveMechanical', month: weeklyData.targetMonth, mechanical: weeklyData.mechanical };
+    for (var w = 0; w < WEEK_LIST.length; w++) {
+      var weekIdx = WEEK_LIST[w];
+      var mechMonths = splitWeekByMonth(weekIdx, ["mon","tue","wed","thu","fri"], weeklyData.mechanical[weekIdx]);
+      var monthKeys = Object.keys(mechMonths);
+      for (var i = 0; i < monthKeys.length; i++) {
+        var payload = {
+          action: 'saveMechanical',
+          month: monthKeys[i],
+          week: weekIdx,
+          mechanical: { [weekIdx]: mechMonths[monthKeys[i]] }
+        };
+        var res = await fetchWithTimeout(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
+        }, 15000);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        await res.json();
+      }
+    }
   }
-  const res = await fetchWithTimeout(GAS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify(payload)
-  }, 30000);
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  return await res.json();
+  return { status: 'ok' };
 }
 
 // GASからデータを取得（全シート）
@@ -1682,13 +1806,14 @@ async function loadFromServer(month) {
 // 機器運転時間: 日本語名→キー変換マップ
 const EQUIP_NAME_TO_KEY = {
   "スクリーンユニット": "screenUnit",
-  "№１主ポンプ": "mainPump1", "№２主ポンプ": "mainPump2",
-  "№１汚泥ポンプ": "sludgePump1", "№２汚泥ポンプ": "sludgePump2",
-  "№１エアレーション装置": "aeration1", "№２エアレーション装置": "aeration2", "№３エアレーション装置": "aeration3",
-  "終沈汚泥かき寄せ機": "finalScraper",
-  "№１返流水ポンプ": "returnPump1", "№２返流水ポンプ": "returnPump2",
-  "濃縮汚泥ポンプ": "thickPump", "濃縮汚泥かき寄せ機": "thickScraper",
-  "汚泥攪拌機": "sludgeMixer"
+  "濃縮汚泥ポンプ": "thickSludgePump",
+  "汚泥攪拌機": "sludgeMixer",
+  "余剰汚泥ポンプ": "excessPump",
+  "吸引ファン": "suctionFan",
+  "№1主ポンプ": "mainPump1", "№2主ポンプ": "mainPump2",
+  "№1返送汚泥ポンプ": "returnSludgePump1", "№2返送汚泥ポンプ": "returnSludgePump2",
+  "№1エアレーション装置": "aeration1", "№2エアレーション装置": "aeration2",
+  "床排水ポンプ": "floorDrainPump"
 };
 
 // 曜日: 日本語→コード変換マップ
@@ -1790,10 +1915,31 @@ function mergeServerData(serverData) {
 // バックグラウンドでサーバーから取得
 async function syncFromServer() {
   try {
-    const data = await loadFromServer(weeklyData.targetMonth);
+    // メインの対象月からデータ取得
+    var data = await loadFromServer(weeklyData.targetMonth);
+
+    // 前月と翌月も取得してマージ（月またぎ対応）
+    var ym = weeklyData.targetMonth.split("-");
+    var year = parseInt(ym[0]);
+    var month = parseInt(ym[1]);
+
+    // 前月
+    var prevMonth = month === 1 ? (year - 1) + "-12" : year + "-" + String(month - 1).padStart(2, "0");
+    // 翌月
+    var nextMonth = month === 12 ? (year + 1) + "-01" : year + "-" + String(month + 1).padStart(2, "0");
+
+    try {
+      var prevData = await loadFromServer(prevMonth);
+      if (prevData) mergeServerData(prevData);
+    } catch(e) {}
+
+    try {
+      var nextData = await loadFromServer(nextMonth);
+      if (nextData) mergeServerData(nextData);
+    } catch(e) {}
+
     if (data && (data.weeks || data.water || data.equipment || data.electrical || data.mechanical)) {
       mergeServerData(data);
-      // UI更新
       document.getElementById("startDate").value = weeklyData.startDate || "";
       updateDayTabs();
       if (currentSheet === "water") loadDataToForm();
@@ -1926,7 +2072,7 @@ function bindEvents() {
       const day = weeklyData.weeks[currentWeek][currentDay];
       const key = el.dataset.field;
       if (el.type === "number") {
-        day[key] = el.value === "" ? null : Number(el.value);
+        day[key] = el.value === "" ? null : el.value;
       } else {
         day[key] = el.value;
       }
@@ -1934,11 +2080,29 @@ function bindEvents() {
     });
   });
 
+  // 日常水質フォーム内のトグルボタン（外観・臭気・汚泥界面等）にクリックハンドラを設定
+  document.querySelectorAll('.form-wrap .toggle-btn[data-field][data-options]').forEach(btn => {
+    btn.addEventListener("click", () => {
+      const opts = JSON.parse(btn.dataset.options);
+      const cur = btn.dataset.val || "";
+      const idx = opts.indexOf(cur);
+      const newVal = (idx === opts.length - 1) ? "" : (idx < 0 ? opts[0] : opts[idx + 1]);
+      btn.dataset.val = newVal;
+      btn.textContent = newVal;
+      // データに反映
+      const day = weeklyData.weeks[currentWeek][currentDay];
+      const key = btn.dataset.field;
+      day[key] = newVal || null;
+      updateDayTabs();
+      pushUndo({ type: "field", week: currentWeek, day: currentDay, field: key, oldVal: cur || null });
+    });
+  });
+
   // 対象月変更
   document.getElementById("targetMonth").addEventListener("change", (e) => {
     saveToStorage();
     const newMonth = e.target.value;
-    const raw = localStorage.getItem("uedono_weekly_" + newMonth);
+    const raw = localStorage.getItem("shibaki_weekly_" + newMonth);
     if (raw) {
       try { weeklyData = JSON.parse(raw); } catch (err) {
         weeklyData = { targetMonth: newMonth, startDate: "", weeks: {}, equipment: {}, electrical: {}, mechanical: {} };
@@ -1956,7 +2120,7 @@ function bindEvents() {
     weeklyData.targetMonth = newMonth;
     ensureWeeklyStructure();
     document.getElementById("startDate").value = weeklyData.startDate || "";
-    localStorage.setItem("uedono_current_month", newMonth);
+    localStorage.setItem("shibaki_current_month", newMonth);
     currentWeek = 1;
     currentDay = "mon";
     updateWeekTabs();
@@ -2185,38 +2349,14 @@ function bindEvents() {
     btnSync.disabled = false;
   });
 
-  // Excel出力ボタン
-  document.getElementById("btnExcel").addEventListener("click", async () => {
-    const btnExcel = document.getElementById("btnExcel");
-    btnExcel.textContent = "生成中...";
-    btnExcel.disabled = true;
-
-    try {
-      const month = weeklyData.targetMonth || document.getElementById("targetMonth").value;
-      const url = GAS_URL + '?action=exportExcel&month=' + encodeURIComponent(month);
-      const res = await fetch(url, { redirect: 'follow' });
-      const data = await res.json();
-
-      if (data.status === 'ok' && data.downloadUrl) {
-        window.open(data.downloadUrl, '_blank');
-        showToast("Excelファイルを生成しました。ダウンロードが開始されます。");
-      } else {
-        showToast("Excel生成に失敗しました: " + (data.message || "不明なエラー"), "error");
-      }
-    } catch (e) {
-      showToast("Excel生成に失敗しました: " + e.message, "error");
-    } finally {
-      btnExcel.textContent = "📄 Excel出力（日常水質）";
-      btnExcel.disabled = false;
-    }
-  });
+  // Excel出力ボタンはtemplate.js読込後に登録
 }
 
 // ===== 初期化 =====
 
 async function init() {
   // 対象月：前回保存 or 現在月
-  const savedMonth = localStorage.getItem("uedono_current_month");
+  const savedMonth = localStorage.getItem("shibaki_current_month");
   const ym = savedMonth || currentYearMonth();
   weeklyData.targetMonth = ym;
 
@@ -2228,7 +2368,7 @@ async function init() {
 
   document.getElementById("targetMonth").value = weeklyData.targetMonth;
   document.getElementById("startDate").value = weeklyData.startDate;
-  localStorage.setItem("uedono_current_month", weeklyData.targetMonth);
+  localStorage.setItem("shibaki_current_month", weeklyData.targetMonth);
 
   bindEvents();
 
@@ -2333,35 +2473,7 @@ document.addEventListener("focusin", function(e) {
   if (el.tagName === "INPUT" && (el.type === "number" || el.type === "text")) {
     lastFocusedInput = el;
     setTimeout(function() { el.select(); }, 50);
-    setTimeout(function() {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 150);
   }
-});
-
-// iOS自動次移動: blur後300msで別inputにフォーカスが移っていなければ次へ
-document.addEventListener("focusout", function(e) {
-  if (e.target.tagName !== "INPUT") return;
-  if (e.target.type !== "number" && e.target.type !== "text") return;
-  var blurredInput = e.target;
-  setTimeout(function() {
-    var active = document.activeElement;
-    // 別のinputに既にフォーカスが移っている → 何もしない
-    if (active && active.tagName === "INPUT" && (active.type === "number" || active.type === "text")) {
-      return;
-    }
-    // ボタンやselectをタップした場合も移動しない
-    if (active && (active.tagName === "BUTTON" || active.tagName === "SELECT")) {
-      return;
-    }
-    // 次のinputにフォーカス（テーブルなら縦方向）
-    var next = getNextInput(blurredInput);
-    if (next) {
-      next.focus();
-      next.select();
-      next.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  }, 50);
 });
 
 // PCのEnterキーで次のinputに移動（テーブルなら縦方向）
@@ -2491,10 +2603,670 @@ attachUndoToWaterInputs();
 attachUndoToTableInputs();
 </script>
 
+<script src="./template.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js');
 }
+
+
+// ===== Excel出力機能（クライアントサイド） =====
+// EXCEL_TEMPLATE_B64 is loaded from template.js
+
+
+// 日付を「3月30日(月)」形式にフォーマット
+function formatDateJP(d) {
+  var dayNames = ["日","月","火","水","木","金","土"];
+  return (d.getMonth()+1) + "月" + d.getDate() + "日(" + dayNames[d.getDay()] + ")";
+}
+
+async function exportExcel() {
+  var btnExcel = document.getElementById("btnExcel");
+  btnExcel.textContent = "生成中...";
+  btnExcel.disabled = true;
+
+  try {
+    // ExcelJS読み込み
+    if (typeof ExcelJS === "undefined") {
+      btnExcel.textContent = "ライブラリ読込中...";
+      await loadScript("https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js");
+    }
+    btnExcel.textContent = "テンプレート処理中...";
+
+    // テンプレート読み込み
+    const templateBytes = Uint8Array.from(atob(EXCEL_TEMPLATE_B64), c => c.charCodeAt(0));
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(templateBytes.buffer);
+
+    // 年度・月の設定
+    const ym = weeklyData.targetMonth || document.getElementById("targetMonth").value;
+    const [yyyy, mm] = ym.split("-").map(Number);
+    const reiwa = yyyy - 2018;
+    const reiwaYear = "令和" + reiwa + "年度";
+    const monthLabel = "令和" + reiwa + "年" + mm + "月分";
+
+    // ===== シート1: 日常水質 =====
+    fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel);
+
+    // ===== シート2: 機器運転時間 =====
+    fillEquipSheet(wb, yyyy, mm);
+
+    // ===== シート3: 日常電気設備 =====
+    fillElecSheet(wb, yyyy, mm, monthLabel);
+
+    // ===== シート4: 日常機械設備 =====
+    fillMechSheet(wb, yyyy, mm, monthLabel);
+
+    // ===== シート5: 水質管理報告 =====
+    fillQualityReportSheet(wb, yyyy, mm);
+
+    // ===== シート6: 運転管理月報 =====
+    fillOperationReportSheet(wb, yyyy, mm);
+
+    // ダウンロード
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "柴木浄化センター記録表_" + ym + ".xlsx";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("Excelファイルをダウンロードしました");
+
+  } catch (e) {
+    console.error("Excel出力エラー:", e);
+    showToast("Excel出力に失敗: " + e.message, "error");
+  } finally {
+    btnExcel.textContent = "📥 Excel出力";
+    btnExcel.disabled = false;
+  }
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector('script[src="' + src + '"]')) { resolve(); return; }
+    const s = document.createElement("script");
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error("スクリプト読み込み失敗: " + src));
+    document.head.appendChild(s);
+  });
+}
+
+// セル値設定ヘルパー（数値は数値型、それ以外はそのまま）
+function setCell(ws, row, col, val) {
+  if (val === null || val === undefined || val === "") return;
+  const cell = ws.getCell(row, col);
+  const num = Number(val);
+  if (!isNaN(num) && val !== "" && typeof val !== "boolean") {
+    cell.value = num;
+  } else {
+    cell.value = val;
+  }
+}
+
+// ===== 日常水質シート =====
+function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
+  const ws = wb.getWorksheet(1); // 日常水質
+  if (!ws) return;
+
+  // DAYSマッピング: mon=I(9), tue=J(10), wed=K(11), thu=L(12), nextMon=N(14)
+  const dayColMap = { mon: 9, tue: 10, wed: 11, thu: 12, nextMon: 14 };
+  // 水質データの入力列（測定者行以降）: J(10), K(11), L(12), M(13), N(14)
+  const dayColMapWQ = { mon: 10, tue: 11, wed: 12, thu: 13, nextMon: 14 };
+
+  // 週ブロックオフセット（各週44行）
+  const weekOffsets = { 1: 0, 2: 44, 3: 88, 4: 132, 5: 176 };
+
+  for (var w = 1; w <= 5; w++) {
+    var offset = weekOffsets[w];
+    var weekData = weeklyData.weeks[w];
+    if (!weekData) continue;
+
+    // 年度表示（Row1列N）
+    setCell(ws, 1 + offset, 14, reiwaYear);
+
+    // 日付行（Row3のI列以降）= 各曜日の日付を文字列で設定
+    var waterDayKeys2 = ["mon", "tue", "wed", "thu", "nextMon"];
+    var waterDayCols2 = { mon: 9, tue: 10, wed: 11, thu: 12, nextMon: 14 };
+    // 金曜(M列=13)の日付も追加（木曜+1日）
+    for (var wdi = 0; wdi < waterDayKeys2.length; wdi++) {
+      var wdKey = waterDayKeys2[wdi];
+      if (wdKey === "nextMon") {
+        // N列は翌週月曜（今週月曜+7日）
+        var monObj = getActualDate(w, "mon");
+        if (monObj) {
+          var nextMonObj = new Date(monObj);
+          nextMonObj.setDate(nextMonObj.getDate() + 7);
+          setCell(ws, 3 + offset, 14, formatDateJP(nextMonObj));
+        }
+      } else {
+        var wdObj = getActualDate(w, wdKey);
+        if (wdObj) {
+          setCell(ws, 3 + offset, waterDayCols2[wdKey], formatDateJP(wdObj));
+          // 木曜の次に金曜の日付をM列に追加
+          if (wdKey === "thu") {
+            var friObj = new Date(wdObj);
+            friObj.setDate(friObj.getDate() + 1);
+            setCell(ws, 3 + offset, 13, formatDateJP(friObj));
+          }
+        }
+      }
+    }
+
+    // 測定者行（Row12のJ-N列）= 各曜日のinspectorを設定
+    var inspColMap = { mon: 10, tue: 11, wed: 12, thu: 13, nextMon: 14 };
+    for (var idi = 0; idi < waterDayKeys2.length; idi++) {
+      var idKey = waterDayKeys2[idi];
+      if (weekData[idKey] && weekData[idKey].inspector) {
+        setCell(ws, 12 + offset, inspColMap[idKey], weekData[idKey].inspector);
+      }
+    }
+
+    // 各曜日のデータ埋め込み
+    var dayKeys = ["mon", "tue", "wed", "thu", "nextMon"];
+    for (var di = 0; di < dayKeys.length; di++) {
+      var dayKey = dayKeys[di];
+      var dayData = weekData[dayKey];
+      if (!dayData) continue;
+
+      // 累積読み値（Row4-9）: I～N列
+      var cumCol = dayColMap[dayKey];
+      setCell(ws, 4 + offset, cumCol, dayData.denryoku200v);
+      setCell(ws, 5 + offset, cumCol, dayData.denryoku100v);
+      setCell(ws, 6 + offset, cumCol, dayData.keiyu);
+      setCell(ws, 7 + offset, cumCol, dayData.hensouOdei);
+      setCell(ws, 8 + offset, cumCol, dayData.yojouOdei);
+      setCell(ws, 9 + offset, cumCol, dayData.houryuuRyuuryou);
+
+      // 水質データ（Row13-34）: J～N列
+      var wqCol = dayColMapWQ[dayKey];
+
+      // 水温
+      setCell(ws, 13 + offset, wqCol, dayData.tempRyunyu);
+      setCell(ws, 14 + offset, wqCol, dayData.tempDitch);
+      setCell(ws, 15 + offset, wqCol, dayData.tempHouryuu);
+
+      // 外観
+      setCell(ws, 16 + offset, wqCol, dayData.gaikanRyunyu);
+      setCell(ws, 17 + offset, wqCol, dayData.gaikanDitch);
+      setCell(ws, 18 + offset, wqCol, dayData.gaikanHouryuu);
+
+      // 透視度
+      setCell(ws, 19 + offset, wqCol, dayData.toushidoRyunyu);
+      setCell(ws, 20 + offset, wqCol, dayData.toushidoHouryuu);
+
+      // 臭気
+      setCell(ws, 21 + offset, wqCol, dayData.shukiRyunyu);
+      setCell(ws, 22 + offset, wqCol, dayData.shukiDitch);
+      setCell(ws, 23 + offset, wqCol, dayData.shukiHouryuu);
+
+      // PH
+      setCell(ws, 24 + offset, wqCol, dayData.phRyunyu);
+      setCell(ws, 25 + offset, wqCol, dayData.phDitch);
+      setCell(ws, 26 + offset, wqCol, dayData.phHouryuu);
+
+      // SV
+      setCell(ws, 27 + offset, wqCol, dayData.sv10);
+      setCell(ws, 28 + offset, wqCol, dayData.sv20);
+      setCell(ws, 29 + offset, wqCol, dayData.sv30);
+      setCell(ws, 30 + offset, wqCol, dayData.sv24h);
+
+      // MLSS, MLDO, 汚泥界面
+      setCell(ws, 31 + offset, wqCol, dayData.mlss);
+      // MLDOはRow31の次？テンプレートにMLDO行がない → 汚泥界面=Row32
+      setCell(ws, 32 + offset, wqCol, dayData.odeiKaimen);
+
+      // 残留塩素, 塩素投入量
+      setCell(ws, 33 + offset, wqCol, dayData.zanryuuEnso);
+      setCell(ws, 34 + offset, wqCol, dayData.ensoTounyuu);
+
+      // 備考
+      // 備考はRow35、1列目にまとめて（最初の曜日のみ）
+    }
+  }
+
+}
+
+// ===== 機器運転時間シート =====
+function fillEquipSheet(wb, yyyy, mm) {
+  const ws = wb.getWorksheet(2); // 機器運転時間
+  if (!ws) return;
+
+  // 日付行: A3=開始日付, F3=終了日付（現在の週）
+  var startDate = getActualDate(currentWeek, "mon");
+  if (startDate) {
+    var reiwaStart = "令和" + (startDate.getFullYear() - 2018) + "年" + (startDate.getMonth() + 1) + "月" + startDate.getDate() + "日";
+    var cellA3 = ws.getCell(3, 1);
+    cellA3.value = reiwaStart;
+    cellA3.alignment = { horizontal: 'center', vertical: 'center', shrinkToFit: true, wrapText: false };
+    var endDate = getActualDate(currentWeek, "fri");
+    if (endDate) {
+      var reiwaEnd = "令和" + (endDate.getFullYear() - 2018) + "年" + (endDate.getMonth() + 1) + "月" + endDate.getDate() + "日";
+      var cellF3 = ws.getCell(3, 6);
+      cellF3.value = reiwaEnd;
+      cellF3.alignment = { horizontal: 'center', vertical: 'center', shrinkToFit: true, wrapText: false };
+    }
+  }
+
+  // 機器キー → 行マッピング
+  var equipRowMap = {
+    screenUnit: 7,
+    thickSludgePump: 8,
+    sludgeMixer: 9,
+    excessPump: 10,
+    suctionFan: 11,
+    mainPump1: 12,
+    mainPump2: 13,
+    returnSludgePump1: 14,
+    returnSludgePump2: 15,
+    aeration1: 16,
+    aeration2: 17,
+    floorDrainPump: 18
+  };
+
+  // 曜日 → 列マッピング: D(4)=月, E(5)=火, F(6)=水, G(7)=木, H(8)=金
+  var dayColEquip = { mon: 4, tue: 5, wed: 6, thu: 7, fri: 8 };
+
+  // 現在の週のデータを出力（機器運転時間は1シートに1週分）
+  // アプリでは全5週のデータがあるが、Excelテンプレートは1週分のみ
+  // → 現在選択中の週を出力
+  var w = currentWeek;
+  var equipData = weeklyData.equipment[w];
+  if (!equipData) return;
+
+  for (var equipKey in equipRowMap) {
+    if (!equipData[equipKey]) continue;
+    var row = equipRowMap[equipKey];
+    for (var dayKey in dayColEquip) {
+      var col = dayColEquip[dayKey];
+      var val = equipData[equipKey][dayKey];
+      setCell(ws, row, col, val);
+    }
+  }
+}
+
+// ===== 日常電気設備シート =====
+function fillElecSheet(wb, yyyy, mm, monthLabel) {
+  const ws = wb.getWorksheet(4); // 日常電気設備
+  if (!ws) return;
+
+  // 入力列: G-H=月(7), I-J=火(9), K-L=水(11), M-N=木(13), O-P=金(15)
+  var dayColElec = { mon: 7, tue: 9, wed: 11, thu: 13, fri: 15 };
+
+  // 各週38行ブロック
+  var weekOffsets = { 1: 0, 2: 38, 3: 76, 4: 114, 5: 152 };
+
+  // フィールドキー → 相対行マッピング（週1基準の行番号）
+  var elecRowMap = {
+    voltage1p: 3,    // 受電電圧(1φ)
+    mode1p: 4,       // モード(1φ)
+    switch1p: 5,     // 受電切替(1φ)
+    power1p: 6,      // 買電/自家発(1φ)
+    voltage3p: 7,    // 受電電圧(3φ)
+    mode3p: 8,       // モード(3φ)
+    switch3p: 9,     // 受電切替(3φ)
+    power3p: 10,     // 買電/自家発(3φ)
+    pumpWellLook: 11,    // ポンプ井水位計 外観
+    pumpWellStatus: 12,  // 指示状況
+    pumpWellReading: 13, // 計器読み
+    flowLook: 14,        // 放流流量計 外観
+    flowStatus: 15,      // 指示状況
+    flowReading: 16,     // 流量計の読み
+    // flowTotal: 17,    // 流量計積算 → 数式で自動
+    uvLook: 18,          // 汚濁負荷量計 外観
+    uvStatus: 19,        // 指示状況
+    uvValue: 20,         // UV値
+    codValue: 21,        // COD値
+    retSludgeLook: 22,
+    retSludgeStatus: 23,
+    retSludgeReading: 24,
+    excessSludgeLook: 26,
+    excessSludgeStatus: 27,
+    excessSludgeReading: 28,
+    pressureLook: 30,    // 圧力式液位計 外観
+    pressureStatus: 31,  // 指示状況
+    pressureReading: 32, // 機器指示値
+    generatorLook: 33,   // 発電機盤
+    engineLook: 34,      // エンジン
+    fuelTankLook: 35,    // 燃料タンク
+    fuelRemain: 36,      // 残量の値
+    generatorHours: 37,  // 積算運転時間
+    alarmStatus: 38,     // 通報装置
+  };
+
+  for (var w = 1; w <= 5; w++) {
+    var offset = weekOffsets[w];
+    var elecWeek = weeklyData.electrical[w];
+    if (!elecWeek) continue;
+
+    // 日付行（Row2）に各曜日の日付を入れる
+    var elecDayKeys = ["mon", "tue", "wed", "thu", "fri"];
+    for (var edi = 0; edi < elecDayKeys.length; edi++) {
+      var edayKey = elecDayKeys[edi];
+      var dateObj = getActualDate(w, edayKey === "fri" ? "nextMon" : edayKey);
+      if (dateObj) {
+        var ecol = dayColElec[edayKey];
+        setCell(ws, 2 + offset, ecol, formatDateJP(dateObj));
+      }
+    }
+
+    var dayKeys = ["mon", "tue", "wed", "thu", "fri"];
+    for (var di = 0; di < dayKeys.length; di++) {
+      var dayKey = dayKeys[di];
+      var dayData = elecWeek[dayKey];
+      if (!dayData) continue;
+      var col = dayColElec[dayKey];
+
+      for (var fieldKey in elecRowMap) {
+        var row = elecRowMap[fieldKey];
+        var val = dayData[fieldKey];
+        setCell(ws, row + offset, col, val);
+      }
+
+      // 流量計積算の読み: 日常水質データから取得
+      var waterDayKey = (dayKey === "fri") ? "nextMon" : dayKey;
+      var waterDay = weeklyData.weeks[w] && weeklyData.weeks[w][waterDayKey];
+      if (waterDay) {
+        setCell(ws, 25 + offset, col, waterDay.hensouOdei);
+        setCell(ws, 29 + offset, col, waterDay.yojouOdei);
+      }
+    }
+  }
+
+}
+
+// ===== 日常機械設備シート =====
+function fillMechSheet(wb, yyyy, mm, monthLabel) {
+  const ws = wb.getWorksheet(3); // 日常機械設備
+  if (!ws) return;
+
+  // 入力列: E=月(5), F=火(6), G=水(7), H=木(8), I=金(9)
+  var dayColMech = { mon: 5, tue: 6, wed: 7, thu: 8, fri: 9 };
+
+  // 各週124行ブロック (1/2: 62行 + 2/2: 62行)
+  var weekOffsets = { 1: 0, 2: 124, 3: 248, 4: 372, 5: 496 };
+
+  // フィールドキー → 相対行マッピング（1/2部分: 基準行0=Row1）
+  var mechRowMap1 = {
+    // 1/2 部分
+    pumpWellStatus: 4,        // ポンプ井 内部状況確認
+    mainPump1Current: 5,      // 主ポンプNo.1 電流値
+    mainPump1Pressure: 6,     // 吐出圧力
+    mainPump1Vibration: 7,    // 異音・振動
+    mainPump2Current: 8,      // 主ポンプNo.2 電流値
+    mainPump2Pressure: 9,     // 吐出圧力
+    mainPump2Vibration: 10,   // 異音・振動
+    mainPumpMode: 11,         // モード確認
+    mainPumpPriority: 12,     // 優先機選択
+    screenVibration: 13,      // スクリーンユニット 異音・振動
+    screenResidue: 14,        // し渣量
+    screenOperation: 15,      // 運転動作
+    aeration1Current: 16,     // エアレーションNo.1 電流値
+    aeration1Vibration: 17,   // 異音・振動
+    aeration1Mode: 18,        // モード
+    aeration2Current: 19,     // エアレーションNo.2 電流値
+    aeration2Vibration: 20,   // 異音・振動
+    aeration2Mode: 21,        // モード
+    defoamNozzle: 22,         // 消泡装置 ノズル
+    defoamStatus: 23,         // 消泡状態
+    finalScraperCurrent: 24,  // 終沈汚泥掻寄機 電流値
+    finalScraperVibration: 25,// 異音・振動
+    finalScraperMode: 26,     // モード
+    skimmerOperation: 27,     // スカムスキマー 動作状況
+    skimmerScum: 28,          // スカムの状況
+    retPump1Current: 29,      // 返送汚泥ポンプNo.1 電流値
+    retPump1Pressure: 30,     // 吐出圧力
+    retPump1Vibration: 31,    // 異音・振動
+    retPump2Current: 32,      // 返送汚泥ポンプNo.2 電流値
+    retPump2Pressure: 33,     // 吐出圧力
+    retPump2Vibration: 34,    // 異音・振動
+    retPumpMode: 35,          // モード
+    retPumpSelect: 36,        // 常用機選択
+    excessPumpCurrent: 37,    // 余剰ポンプ 電流値
+    excessPumpPressure: 38,   // 吐出圧力
+    excessPumpVibration: 39,  // 異音・振動
+    excessPumpMode: 40,       // モード
+    thickPumpCurrent: 41,     // 濃縮汚泥ポンプ 電流値
+    thickPumpPressure: 42,    // 吐出圧力
+    thickPumpVibration: 43,   // 異音・振動
+    thickPumpMode: 44,        // モード
+    floorDrainCurrent: 45,    // 床排水ポンプ 電流値
+    floorDrainPressure: 46,   // 吐出圧力
+    floorDrainVibration: 47,  // 異音・振動
+    floorDrainMode: 48,       // モード
+    thickScraperCurrent: 49,  // 濃縮汚泥掻寄機 電流値
+    thickScraperVibration: 50,// 異音・振動
+    thickScraperMode: 51,     // モード
+    thickSkimmerOperation: 52,// スカムスキマー(濃縮)
+    sludgeMixerCurrent: 53,   // 汚泥貯留槽攪拌機 電流値
+    sludgeMixerVibration: 54, // 異音・振動
+    sludgeMixerMode: 55,      // モード
+  };
+
+  // 2/2 部分 (offset +62)
+  var mechRowMap2 = {
+    treatWater1Current: 66,     // 処理水給水装置No.1 電流値
+    treatWater1Pressure: 67,    // 吐出圧力
+    treatWater1Vibration: 68,   // 異音・振動
+    treatWater2Current: 69,     // No.2 電流値
+    treatWater2Pressure: 70,    // 吐出圧力
+    treatWater2Vibration: 71,   // 異音・振動
+    treatWaterMode: 72,         // モード
+    pressureTankLeak: 73,       // 加圧タンク 水漏れ
+    pressureTankPressure: 74,   // 吐出圧力
+    chlorineRemain: 75,         // 塩素接触装置
+    strainerRawPressure: 76,    // オートストレーナー 原水側
+    strainerTreatPressure: 77,  // 処理水側
+    genSupplyFanVibration: 78,  // 自家発室給気ファン 異音・振動
+    genSupplyFanMode: 79,       // モード
+    dehydSupplyFanCurrent: 80,  // 脱水機室給気ファン 電流値
+    dehydSupplyFanVibration: 81,// 異音・振動
+    dehydSupplyFanMode: 82,     // モード
+    dehydExhaustFanCurrent: 83, // 脱水機室排気ファン 電流値
+    dehydExhaustFanSmell: 84,   // 臭気の漏れ
+    dehydExhaustFanMode: 85,    // モード
+    sludgeRoomSupplyFanCurrent: 86,    // 汚泥ポンプ室給気ファン 電流値
+    sludgeRoomSupplyFanVibration: 87,  // 異音・振動
+    sludgeRoomSupplyFanMode: 88,       // モード
+    sludgeRoomExhaustFanCurrent: 89,   // 汚泥ポンプ室排気ファン 電流値
+    sludgeRoomExhaustFanSmell: 90,     // 臭気の漏れ
+    sludgeRoomExhaustFanMode: 91,      // モード
+  };
+
+  // H1に月表示を設定
+  setCell(ws, 1, 8, monthLabel);
+
+  for (var w = 1; w <= 5; w++) {
+    var offset = weekOffsets[w];
+    var mechWeek = weeklyData.mechanical[w];
+    if (!mechWeek) continue;
+
+    // E2-I2に点検者名、日付はE3-I3に入れる（曜日ごと）
+    var mechDayKeysMap = {mon: 5, tue: 6, wed: 7, thu: 8, fri: 9};
+    var mechDayLabels = ["mon", "tue", "wed", "thu", "fri"];
+    // 点検者名: 日常水質のinspectorフィールドから取得
+    var waterDayMap = {mon: "mon", tue: "tue", wed: "wed", thu: "thu", fri: "nextMon"};
+    for (var mdi = 0; mdi < mechDayLabels.length; mdi++) {
+      var mdayKey = mechDayLabels[mdi];
+      var mdateObj = getActualDate(w, mdayKey === "fri" ? "nextMon" : mdayKey);
+      if (mdateObj) {
+        var mcol = mechDayKeysMap[mdayKey];
+        setCell(ws, 3 + offset, mcol, formatDateJP(mdateObj));
+      }
+      // 点検者名をRow2に設定
+      var wKey = waterDayMap[mdayKey];
+      if (weeklyData.weeks[w] && weeklyData.weeks[w][wKey] && weeklyData.weeks[w][wKey].inspector) {
+        setCell(ws, 2 + offset, mechDayKeysMap[mdayKey], weeklyData.weeks[w][wKey].inspector);
+      }
+    }
+
+    var dayKeys = ["mon", "tue", "wed", "thu", "fri"];
+    for (var di = 0; di < dayKeys.length; di++) {
+      var dayKey = dayKeys[di];
+      var dayData = mechWeek[dayKey];
+      if (!dayData) continue;
+      var col = dayColMech[dayKey];
+
+      // 1/2部分
+      for (var fieldKey in mechRowMap1) {
+        var row = mechRowMap1[fieldKey] + offset;
+        var val = dayData[fieldKey];
+        setCell(ws, row, col, val);
+      }
+      // 2/2部分
+      for (var fieldKey in mechRowMap2) {
+        var row = mechRowMap2[fieldKey] + offset;
+        var val = dayData[fieldKey];
+        setCell(ws, row, col, val);
+      }
+    }
+  }
+
+}
+
+
+
+// ===== 水質管理報告シート =====
+function fillQualityReportSheet(wb, yyyy, mm) {
+  const ws = wb.getWorksheet(5); // 水質管理報告
+  if (!ws) return;
+
+  const reiwa = yyyy - 2018;
+  const monthLabel = "令和" + reiwa + "年" + mm + "月分";
+  setCell(ws, 1, 16, monthLabel); // P1
+  setCell(ws, 43, 16, monthLabel); // P43
+
+  // 1/2: Row7-38 = 日次データ (A=日付, B=曜日, C-F=水温, G-J=外観, K-N=臭気, O-R=PH)
+  // 2/2: Row49-80 = 日次データ (C-E=透視度, F=MLSS, G=MLDO, H=SV30, I=残留塩素, J=備考)
+
+  var daysInMonth = new Date(yyyy, mm, 0).getDate();
+  var dayNames = ["日","月","火","水","木","金","土"];
+
+  // 全週全日のデータを日付でマッピング
+  var dateMap = buildDateMap();
+
+  for (var d = 1; d <= daysInMonth; d++) {
+    var dateObj = new Date(yyyy, mm - 1, d);
+    var dataRow1 = 7 + d; // 1/2: Row8=1日, Row9=2日, ...（Row3-7がヘッダー）
+    var dataRow2 = 49 + d; // 2/2: Row50=1日, Row51=2日, ...（Row45-49がヘッダー）
+
+    // 日付・曜日
+    setCell(ws, dataRow1, 1, d);
+    setCell(ws, dataRow1, 2, dayNames[dateObj.getDay()]);
+    setCell(ws, dataRow2, 1, d);
+    setCell(ws, dataRow2, 2, dayNames[dateObj.getDay()]);
+
+    var dateKey = yyyy + "-" + String(mm).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+    var dayData = dateMap[dateKey];
+    if (!dayData) continue;
+
+    // 1/2: 水温 (C=流入, D=ディッチ, E=終沈, F=放流)
+    setCell(ws, dataRow1, 3, dayData.tempRyunyu);
+    setCell(ws, dataRow1, 4, dayData.tempDitch);
+    setCell(ws, dataRow1, 5, dayData.tempShuchin);
+    setCell(ws, dataRow1, 6, dayData.tempHouryuu);
+
+    // 外観 (G=流入, H=ディッチ, I=終沈, J=放流)
+    setCell(ws, dataRow1, 7, dayData.gaikanRyunyu);
+    setCell(ws, dataRow1, 8, dayData.gaikanDitch);
+    setCell(ws, dataRow1, 9, dayData.gaikanShuchin);
+    setCell(ws, dataRow1, 10, dayData.gaikanHouryuu);
+
+    // 臭気 (K=流入, L=ディッチ, M=終沈, N=放流)
+    setCell(ws, dataRow1, 11, dayData.shukiRyunyu);
+    setCell(ws, dataRow1, 12, dayData.shukiDitch);
+    setCell(ws, dataRow1, 13, dayData.shukiShuchin);
+    setCell(ws, dataRow1, 14, dayData.shukiHouryuu);
+
+    // PH (O=流入, P=ディッチ, Q=終沈, R=放流)
+    setCell(ws, dataRow1, 15, dayData.phRyunyu);
+    setCell(ws, dataRow1, 16, dayData.phDitch);
+    setCell(ws, dataRow1, 17, dayData.phShuchin);
+    setCell(ws, dataRow1, 18, dayData.phHouryuu);
+
+    // 2/2: 透視度 (C=流入, D=終沈, E=放流)
+    setCell(ws, dataRow2, 3, dayData.toushidoRyunyu);
+    setCell(ws, dataRow2, 4, dayData.toushidoShuchin);
+    setCell(ws, dataRow2, 5, dayData.toushidoHouryuu);
+
+    // MLSS (F), MLDO (G), SV30 (H), 残留塩素 (I)
+    setCell(ws, dataRow2, 6, dayData.mlss);
+    setCell(ws, dataRow2, 7, dayData.mldo);
+    setCell(ws, dataRow2, 8, dayData.sv30);
+    setCell(ws, dataRow2, 9, dayData.zanryuuEnso);
+
+    // 備考 (J)
+    setCell(ws, dataRow2, 10, dayData.bikou);
+  }
+}
+
+// ===== 運転管理月報シート =====
+function fillOperationReportSheet(wb, yyyy, mm) {
+  const ws = wb.getWorksheet(6); // 運転管理月報
+  if (!ws) return;
+
+
+  const reiwa = yyyy - 2018;
+  const monthLabel = "令和" + reiwa + "年" + mm + "月分";
+  setCell(ws, 1, 12, monthLabel); // L1
+
+  var daysInMonth = new Date(yyyy, mm, 0).getDate();
+  var dayNames = ["日","月","火","水","木","金","土"];
+  var dateMap = buildDateMap();
+
+  for (var d = 1; d <= daysInMonth; d++) {
+    var dateObj = new Date(yyyy, mm - 1, d);
+    var row = 5 + d; // Row6=1日, Row7=2日, ...
+
+    setCell(ws, row, 1, d);
+    setCell(ws, row, 2, dayNames[dateObj.getDay()]);
+
+    var dateKey = yyyy + "-" + String(mm).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+    var dayData = dateMap[dateKey];
+    if (!dayData) continue;
+
+    // C=全日電力量200V, D=100V
+    setCell(ws, row, 3, dayData.denryoku200v);
+    setCell(ws, row, 4, dayData.denryoku100v);
+
+    // E=固形塩素使用量(=ensoTounyuu), H=返送汚泥流量, J=余剰汚泥流量, L=放流流量
+    setCell(ws, row, 5, dayData.ensoTounyuu);
+    setCell(ws, row, 8, dayData.hensouOdei);
+    setCell(ws, row, 10, dayData.yojouOdei);
+    setCell(ws, row, 12, dayData.houryuuRyuuryou);
+  }
+}
+
+// 日付→データのマップを構築（全週全日を走査）
+function buildDateMap() {
+  var map = {};
+  for (var w = 1; w <= 5; w++) {
+    var weekData = weeklyData.weeks[w];
+    if (!weekData) continue;
+    var dayKeys = ["mon", "tue", "wed", "thu", "nextMon"];
+    for (var di = 0; di < dayKeys.length; di++) {
+      var dayKey = dayKeys[di];
+      var dateObj = getActualDate(w, dayKey);
+      if (!dateObj) continue;
+      var y = dateObj.getFullYear();
+      var m = String(dateObj.getMonth() + 1).padStart(2, "0");
+      var d = String(dateObj.getDate()).padStart(2, "0");
+      var key = y + "-" + m + "-" + d;
+      if (weekData[dayKey]) {
+        map[key] = weekData[dayKey];
+      }
+    }
+  }
+  return map;
+}
+
+// Excel出力ボタンのイベントリスナー登録
+document.getElementById("btnExcel").addEventListener("click", exportExcel);
+
 </script>
 </body>
 </html>
