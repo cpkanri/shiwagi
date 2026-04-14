@@ -548,7 +548,7 @@ header h1 {
     </label>
     <label>
       <span>第1週 月曜日</span>
-      <input type="date" id="startDate">
+      <input type="date" id="startDate" readonly style="opacity:0.8;pointer-events:none;">
     </label>
   </div>
   <div class="conn-status" id="connStatus">
@@ -1171,9 +1171,10 @@ function currentYearMonth() {
 function estimateStartDate(ym) {
   if (!ym) return "";
   const [y, m] = ym.split("-").map(Number);
-  const first = new Date(y, m - 1, 1);
-  const dow = first.getDay();
-  const offset = (dow === 1) ? 0 : (dow === 0 ? 1 : (8 - dow) % 7);
+  const first = new Date(y, m - 1, 1); // その月の1日
+  const dow = first.getDay(); // 0=日, 1=月, ..., 6=土
+  // 1日を含む週の月曜日を求める（1日が日曜なら前日の-6、月曜なら0、火曜なら-1、...）
+  const offset = dow === 0 ? -6 : 1 - dow;
   const monday = new Date(y, m - 1, 1 + offset);
   const yy = monday.getFullYear();
   const mm = String(monday.getMonth() + 1).padStart(2, "0");
@@ -1311,6 +1312,33 @@ function getWeekPercent(sheetType, weekIdx) {
     EQUIP_DAYS.forEach(d => { total += getMechDayPercent(weekIdx, d); count++; });
   }
   return count > 0 ? Math.round(total / count) : 0;
+}
+
+// データがある前日を探す（空日をスキップ）
+function findPrevDayWithData(sheetType, weekIdx, dayIdx, daysArr) {
+  // dayIdxから前方に探す
+  var w = weekIdx;
+  var i = dayIdx - 1;
+  while (true) {
+    if (i < 0) {
+      w--;
+      if (w < 1) return null; // これ以上前がない
+      i = daysArr.length - 1;
+    }
+    var d = daysArr[i];
+    var hasData = false;
+    if (sheetType === "water") {
+      hasData = getWaterDayPercent(w, d) > 0;
+    } else if (sheetType === "equip") {
+      hasData = getEquipDayPercent(w, d) > 0;
+    } else if (sheetType === "elec") {
+      hasData = getElecDayPercent(w, d) > 0;
+    } else if (sheetType === "mech") {
+      hasData = getMechDayPercent(w, d) > 0;
+    }
+    if (hasData) return { week: w, day: d };
+    i--;
+  }
 }
 
 // ===== 機器運転時間フォーム <-> データ =====
@@ -1533,8 +1561,8 @@ function switchMainTab(sheet) {
   else if (currentSheet === "mech") saveMechFormToData();
 
   currentSheet = sheet;
-  // 前日コピーボタンは日常水質タブでのみ表示
-  document.getElementById("btnCopy").style.display = (sheet === "water") ? "" : "none";
+  // 前日コピーボタンは全タブで表示
+  document.getElementById("btnCopy").style.display = "";
   const waterPanel = document.getElementById("waterPanel");
   const equipPanel = document.getElementById("equipPanel");
   const elecPanel = document.getElementById("elecPanel");
@@ -2245,6 +2273,8 @@ function bindEvents() {
       };
     }
     weeklyData.targetMonth = newMonth;
+    // startDateを常に自動計算（1日を含む週の月曜日）
+    weeklyData.startDate = estimateStartDate(newMonth);
     ensureWeeklyStructure();
     document.getElementById("startDate").value = weeklyData.startDate || "";
     localStorage.setItem("shibaki_current_month", newMonth);
@@ -2264,49 +2294,81 @@ function bindEvents() {
     updateDayTabs();
   });
 
-  // 前日コピー
-  // 前日コピー（日常水質タブ専用）
+  // 前日コピー（全タブ対応・空日スキップ）
   document.getElementById("btnCopy").addEventListener("click", () => {
-    if (currentSheet !== "water") return;
-    saveFormToData();
-    const order = ["mon", "tue", "wed", "thu", "nextMon"];
-    const idx = order.indexOf(currentDay);
-    let srcWeek = currentWeek, srcDay;
-    console.log("前日コピー: currentDay=" + currentDay + ", idx=" + idx + ", currentWeek=" + currentWeek);
-    if (idx > 0) {
-      srcDay = order[idx - 1];
-    } else if (currentWeek > 1) {
-      srcWeek = currentWeek - 1;
-      srcDay = order[order.length - 1]; // 前週の金曜(nextMon)
+    if (currentSheet === "water") {
+      saveFormToData();
+      const order = ["mon", "tue", "wed", "thu", "nextMon"];
+      const idx = order.indexOf(currentDay);
+      var found = findPrevDayWithData("water", currentWeek, idx, order);
+      if (!found) {
+        showToast("コピー元のデータがありません", "error");
+        return;
+      }
+      var srcWeek = found.week, srcDay = found.day;
+      const srcLabel = (srcWeek !== currentWeek ? "第" + srcWeek + "週" : "") + (DAY_LABELS[srcDay] || srcDay);
+      const src = weeklyData.weeks[srcWeek][srcDay];
+      const dst = weeklyData.weeks[currentWeek][currentDay];
+      COPY_FIELDS.forEach(k => { dst[k] = src[k]; });
+      loadDataToForm();
+      updateDayTabs();
+      markDirty();
+      showToast(srcLabel + "から" + (DAY_LABELS[currentDay] || currentDay) + "にコピーしました");
     } else {
-      showToast("コピー元の前日がありません", "error");
-      return;
+      // テーブル系タブ: 全曜日を一括で前日コピー（空日スキップ）
+      const daysArr = EQUIP_DAYS;
+      let copyCount = 0;
+
+      if (currentSheet === "equip") {
+        saveEquipFormToData();
+        for (let i = 0; i < daysArr.length; i++) {
+          var found = findPrevDayWithData("equip", currentWeek, i, daysArr);
+          if (!found) continue;
+          EQUIP_KEYS.forEach(k => {
+            weeklyData.equipment[currentWeek][k][daysArr[i]] = weeklyData.equipment[found.week][k][found.day];
+          });
+          copyCount++;
+        }
+        loadEquipDataToForm();
+      } else if (currentSheet === "elec") {
+        saveElecFormToData();
+        for (let i = 0; i < daysArr.length; i++) {
+          var found = findPrevDayWithData("elec", currentWeek, i, daysArr);
+          if (!found) continue;
+          const srcData = weeklyData.electrical[found.week][found.day];
+          const dstData = weeklyData.electrical[currentWeek][daysArr[i]];
+          ALL_ELEC_KEYS.forEach(k => { dstData[k] = srcData[k]; });
+          copyCount++;
+        }
+        loadElecDataToForm();
+      } else if (currentSheet === "mech") {
+        saveMechFormToData();
+        for (let i = 0; i < daysArr.length; i++) {
+          var found = findPrevDayWithData("mech", currentWeek, i, daysArr);
+          if (!found) continue;
+          const srcData = weeklyData.mechanical[found.week][found.day];
+          const dstData = weeklyData.mechanical[currentWeek][daysArr[i]];
+          ALL_MECH_KEYS.forEach(k => { dstData[k] = srcData[k]; });
+          copyCount++;
+        }
+        loadMechDataToForm();
+      }
+      markDirty();
+      showToast("第" + currentWeek + "週 前日コピー完了（" + copyCount + "日分）");
     }
-    const srcLabel = (srcWeek !== currentWeek ? "第" + srcWeek + "週" : "") + (DAY_LABELS[srcDay] || srcDay);
-    console.log("コピー元: week=" + srcWeek + ", day=" + srcDay + " → コピー先: week=" + currentWeek + ", day=" + currentDay);
-    const src = weeklyData.weeks[srcWeek][srcDay];
-    const dst = weeklyData.weeks[currentWeek][currentDay];
-    COPY_FIELDS.forEach(k => { dst[k] = src[k]; });
-    loadDataToForm();
-    updateDayTabs();
-    showToast(srcLabel + "から" + (DAY_LABELS[currentDay] || currentDay) + "にコピーしました");
   });
 
-  // 列コピー共通関数（テーブル形式タブ用: ← ボタンから呼ばれる）
+  // 列コピー共通関数（テーブル形式タブ用: ← ボタンから呼ばれる・空日スキップ）
   function copyColumn(tableType, targetDay) {
     const daysArr = (tableType === "mech") ? MECH_DAYS : EQUIP_DAYS;
     const idx = daysArr.indexOf(targetDay);
     if (idx < 0) return;
-    let srcWeek = currentWeek, srcDay;
-    if (idx > 0) {
-      srcDay = daysArr[idx - 1];
-    } else if (currentWeek > 1) {
-      srcWeek = currentWeek - 1;
-      srcDay = daysArr[daysArr.length - 1];
-    } else {
-      showToast("コピー元の前日がありません", "error");
+    var found = findPrevDayWithData(tableType, currentWeek, idx, daysArr);
+    if (!found) {
+      showToast("コピー元のデータがありません", "error");
       return;
     }
+    var srcWeek = found.week, srcDay = found.day;
     const srcLabel = (srcWeek !== currentWeek ? "第" + srcWeek + "週" : "") + (DAY_LABELS[srcDay] || srcDay);
 
     if (tableType === "equip") {
@@ -2337,6 +2399,7 @@ function bindEvents() {
         el.classList.add("copied");
       });
     }
+    markDirty();
     showToast(srcLabel + "→" + (DAY_LABELS[targetDay] || targetDay) + " コピー完了");
   }
 
@@ -2477,7 +2540,8 @@ async function init() {
   loadFromStorage();
 
   if (!weeklyData.targetMonth) weeklyData.targetMonth = ym;
-  if (!weeklyData.startDate) weeklyData.startDate = estimateStartDate(weeklyData.targetMonth);
+  // startDateは常に対象年月から自動計算（1日を含む週の月曜日）
+  weeklyData.startDate = estimateStartDate(weeklyData.targetMonth);
 
   document.getElementById("targetMonth").value = weeklyData.targetMonth;
   document.getElementById("startDate").value = weeklyData.startDate;
