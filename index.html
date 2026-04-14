@@ -97,6 +97,20 @@ header h1 {
   border-bottom-color: #0d4f34;
   background: #f8fcfa;
 }
+.week-tabs button .pct, .day-tabs button .pct {
+  display: block;
+  font-size: 9px;
+  opacity: 0.7;
+  margin-top: 1px;
+  font-weight: 400;
+}
+.btn-save.unsaved {
+  animation: pulse-save 1.5s infinite;
+}
+@keyframes pulse-save {
+  0%, 100% { box-shadow: 0 2px 6px rgba(13,79,52,0.25); }
+  50% { box-shadow: 0 2px 12px rgba(255,152,0,0.6); }
+}
 
 /* ===== 日タブ ===== */
 .day-tabs {
@@ -505,6 +519,12 @@ header h1 {
 .toggle-btn[data-val="連動"] { background: #e8f5e9; color: #2e7d32; border-color: #a5d6a7; font-size: 12px; }
 .toggle-btn[data-val="無"] { background: #e8f5e9; color: #2e7d32; border-color: #a5d6a7; }
 .toggle-btn[data-val="有"] { background: #ffcdd2; color: #c62828; border-color: #ef9a9a; }
+.toggle-btn[data-val="1-N"] { background: #e3f2fd; color: #1565c0; border-color: #90caf9; }
+.toggle-btn[data-val="1-2"] { background: #e3f2fd; color: #1565c0; border-color: #90caf9; }
+.toggle-btn[data-val="切"] { background: #eceff1; color: #546e7a; border-color: #b0bec5; }
+.toggle-btn[data-val="運転"] { background: #e8f5e9; color: #2e7d32; border-color: #a5d6a7; font-size: 12px; }
+.toggle-btn[data-val="停止"] { background: #ffcdd2; color: #c62828; border-color: #ef9a9a; font-size: 12px; }
+.toggle-btn[data-val="単独"] { background: #fff3e0; color: #e65100; border-color: #ffcc80; font-size: 12px; }
 
 /* ===== フッター情報 ===== */
 .info-bar {
@@ -626,7 +646,7 @@ header h1 {
     <div class="section-header">その他</div>
     <div class="field"><span class="label">MLSS</span><span class="unit">mg/L</span><input type="number" inputmode="decimal" step="10" data-field="mlss"></div>
     <div class="field"><span class="label">MLDO</span><span class="unit">mg/L</span><input type="number" inputmode="decimal" step="0.01" data-field="mldo"></div>
-    <div class="field"><span class="label">汚泥界面</span><span class="unit">cm</span><button type="button" class="toggle-btn" data-field="odeiKaimen" data-options='["-","－"]'></button></div>
+    <div class="field"><span class="label">汚泥界面</span><span class="unit">cm</span><input type="text" inputmode="text" data-field="odeiKaimen" placeholder="－ or 数値"></div>
     <div class="field"><span class="label">残留塩素</span><span class="unit">mg/L</span><input type="number" inputmode="decimal" step="0.01" data-field="zanryuuEnso"></div>
     <div class="field"><span class="label">塩素投入量</span><span class="unit">kg</span><input type="number" inputmode="decimal" step="0.1" data-field="ensoTounyuu"></div>
     <div class="field"><span class="label">備考</span><span class="unit"></span><input type="text" data-field="bikou" placeholder="備考"></div>
@@ -1021,6 +1041,25 @@ let currentWeek = 1;
 let currentDay = "mon";
 let currentSheet = "water"; // "water", "equip", "elec", "mech"
 let isOnline = false;
+let isDirty = false; // 未保存の変更があるか
+
+function markDirty() {
+  isDirty = true;
+  var btn = document.getElementById("btnSave");
+  if (btn) {
+    btn.classList.add("unsaved");
+    btn.textContent = "保存 *";
+  }
+}
+
+function markClean() {
+  isDirty = false;
+  var btn = document.getElementById("btnSave");
+  if (btn) {
+    btn.classList.remove("unsaved");
+    btn.textContent = "保存";
+  }
+}
 
 // ===== ユーティリティ =====
 
@@ -1214,6 +1253,66 @@ function isDayFilled(weekIdx, dayKey) {
   });
 }
 
+// 入力パーセンテージ計算（日常水質：曜日単位）
+function getWaterDayPercent(weekIdx, dayKey) {
+  const day = weeklyData.weeks[weekIdx] && weeklyData.weeks[weekIdx][dayKey];
+  if (!day) return 0;
+  const fields = ALL_FIELDS.filter(k => k !== "bikou" && k !== "inspector");
+  const filled = fields.filter(k => {
+    const v = day[k];
+    return v !== null && v !== undefined && v !== "";
+  }).length;
+  return Math.round(filled / fields.length * 100);
+}
+
+// 入力パーセンテージ計算（機器運転時間：曜日単位）
+function getEquipDayPercent(weekIdx, dayKey) {
+  const week = weeklyData.equipment[weekIdx];
+  if (!week) return 0;
+  const filled = EQUIP_KEYS.filter(k => {
+    const v = week[k] && week[k][dayKey];
+    return v !== null && v !== undefined && v !== "";
+  }).length;
+  return Math.round(filled / EQUIP_KEYS.length * 100);
+}
+
+// 入力パーセンテージ計算（電気設備：曜日単位）
+function getElecDayPercent(weekIdx, dayKey) {
+  const day = weeklyData.electrical[weekIdx] && weeklyData.electrical[weekIdx][dayKey];
+  if (!day) return 0;
+  const filled = ALL_ELEC_KEYS.filter(k => {
+    const v = day[k];
+    return v !== null && v !== undefined && v !== "";
+  }).length;
+  return Math.round(filled / ALL_ELEC_KEYS.length * 100);
+}
+
+// 入力パーセンテージ計算（機械設備：曜日単位）
+function getMechDayPercent(weekIdx, dayKey) {
+  const day = weeklyData.mechanical[weekIdx] && weeklyData.mechanical[weekIdx][dayKey];
+  if (!day) return 0;
+  const filled = ALL_MECH_KEYS.filter(k => {
+    const v = day[k];
+    return v !== null && v !== undefined && v !== "";
+  }).length;
+  return Math.round(filled / ALL_MECH_KEYS.length * 100);
+}
+
+// 週全体のパーセンテージ（各シート用）
+function getWeekPercent(sheetType, weekIdx) {
+  var days, total = 0, count = 0;
+  if (sheetType === "water") {
+    DAYS.forEach(d => { total += getWaterDayPercent(weekIdx, d); count++; });
+  } else if (sheetType === "equip") {
+    EQUIP_DAYS.forEach(d => { total += getEquipDayPercent(weekIdx, d); count++; });
+  } else if (sheetType === "elec") {
+    EQUIP_DAYS.forEach(d => { total += getElecDayPercent(weekIdx, d); count++; });
+  } else if (sheetType === "mech") {
+    EQUIP_DAYS.forEach(d => { total += getMechDayPercent(weekIdx, d); count++; });
+  }
+  return count > 0 ? Math.round(total / count) : 0;
+}
+
 // ===== 機器運転時間フォーム <-> データ =====
 
 function saveEquipFormToData() {
@@ -1239,7 +1338,12 @@ function loadEquipDataToForm() {
 
 function updateEquipWeekTabs() {
   document.querySelectorAll("#equipWeekTabs button").forEach(btn => {
-    btn.classList.toggle("active", Number(btn.dataset.week) === currentWeek);
+    const w = Number(btn.dataset.week);
+    btn.classList.toggle("active", w === currentWeek);
+    var pct = btn.querySelector(".pct");
+    if (!pct) { pct = document.createElement("span"); pct.className = "pct"; btn.appendChild(pct); }
+    var p = getWeekPercent("equip", w);
+    pct.textContent = p > 0 ? p + "%" : "";
   });
 }
 
@@ -1287,6 +1391,7 @@ function buildElecTable() {
       if (week && week[btn.dataset.eday]) {
         week[btn.dataset.eday][btn.dataset.elec] = newVal || null;
       }
+      markDirty();
     });
   });
 }
@@ -1325,7 +1430,12 @@ function loadElecDataToForm() {
 
 function updateElecWeekTabs() {
   document.querySelectorAll("#elecWeekTabs button").forEach(btn => {
-    btn.classList.toggle("active", Number(btn.dataset.week) === currentWeek);
+    const w = Number(btn.dataset.week);
+    btn.classList.toggle("active", w === currentWeek);
+    var pct = btn.querySelector(".pct");
+    if (!pct) { pct = document.createElement("span"); pct.className = "pct"; btn.appendChild(pct); }
+    var p = getWeekPercent("elec", w);
+    pct.textContent = p > 0 ? p + "%" : "";
   });
 }
 
@@ -1367,6 +1477,7 @@ function buildMechTable() {
       if (week && week[btn.dataset.mday]) {
         week[btn.dataset.mday][btn.dataset.mech] = newVal || null;
       }
+      markDirty();
     });
   });
 }
@@ -1403,7 +1514,12 @@ function loadMechDataToForm() {
 
 function updateMechWeekTabs() {
   document.querySelectorAll("#mechWeekTabs button").forEach(btn => {
-    btn.classList.toggle("active", Number(btn.dataset.week) === currentWeek);
+    const w = Number(btn.dataset.week);
+    btn.classList.toggle("active", w === currentWeek);
+    var pct = btn.querySelector(".pct");
+    if (!pct) { pct = document.createElement("span"); pct.className = "pct"; btn.appendChild(pct); }
+    var p = getWeekPercent("mech", w);
+    pct.textContent = p > 0 ? p + "%" : "";
   });
 }
 
@@ -1525,7 +1641,12 @@ function loadDataToForm() {
 
 function updateWeekTabs() {
   document.querySelectorAll("#weekTabs button").forEach(btn => {
-    btn.classList.toggle("active", Number(btn.dataset.week) === currentWeek);
+    const w = Number(btn.dataset.week);
+    btn.classList.toggle("active", w === currentWeek);
+    var pct = btn.querySelector(".pct");
+    if (!pct) { pct = document.createElement("span"); pct.className = "pct"; btn.appendChild(pct); }
+    var p = getWeekPercent("water", w);
+    pct.textContent = p > 0 ? p + "%" : "";
   });
 }
 
@@ -1537,6 +1658,10 @@ function updateDayTabs() {
     const dateSpan = btn.querySelector(".day-date");
     if (check) check.textContent = isDayFilled(currentWeek, d) ? "✓" : "";
     if (dateSpan) dateSpan.textContent = computeDate(currentWeek, d) || "";
+    var pct = btn.querySelector(".pct");
+    if (!pct) { pct = document.createElement("span"); pct.className = "pct"; btn.appendChild(pct); }
+    var p = getWaterDayPercent(currentWeek, d);
+    pct.textContent = p > 0 ? p + "%" : "";
   });
 }
 
@@ -1999,15 +2124,15 @@ function bindEvents() {
 
   // 手動入力時にcopiedクラスを削除（機器運転時間）
   document.querySelectorAll("#equipTable [data-equip]").forEach(el => {
-    el.addEventListener("input", () => { el.classList.remove("copied"); });
+    el.addEventListener("input", () => { el.classList.remove("copied"); markDirty(); });
   });
   // 電気・機械はbuildElecTable/buildMechTable内のトグルボタンにも対応
   // （numberのinputイベントはbuild関数内で生成済みのため、ここでまとめて設定）
   document.querySelectorAll("#elecTable [data-elec]").forEach(el => {
-    if (el.tagName === "INPUT") el.addEventListener("input", () => { el.classList.remove("copied"); });
+    if (el.tagName === "INPUT") el.addEventListener("input", () => { el.classList.remove("copied"); markDirty(); });
   });
   document.querySelectorAll("#mechTable [data-mech]").forEach(el => {
-    if (el.tagName === "INPUT") el.addEventListener("input", () => { el.classList.remove("copied"); });
+    if (el.tagName === "INPUT") el.addEventListener("input", () => { el.classList.remove("copied"); markDirty(); });
   });
 
   // 機械設備の週タブ
@@ -2077,10 +2202,11 @@ function bindEvents() {
         day[key] = el.value;
       }
       updateDayTabs();
+      markDirty();
     });
   });
 
-  // 日常水質フォーム内のトグルボタン（外観・臭気・汚泥界面等）にクリックハンドラを設定
+  // 日常水質フォーム内のトグルボタン（外観・臭気等）にクリックハンドラを設定
   document.querySelectorAll('.form-wrap .toggle-btn[data-field][data-options]').forEach(btn => {
     btn.addEventListener("click", () => {
       const opts = JSON.parse(btn.dataset.options);
@@ -2094,6 +2220,7 @@ function bindEvents() {
       const key = btn.dataset.field;
       day[key] = newVal || null;
       updateDayTabs();
+      markDirty();
       pushUndo({ type: "field", week: currentWeek, day: currentDay, field: key, oldVal: cur || null });
     });
   });
@@ -2294,6 +2421,7 @@ function bindEvents() {
       await saveCurrentToServer();
       setConnectionStatus(true);
       showToast("保存しました（サーバー同期完了）");
+      markClean();
     } catch (e) {
       setConnectionStatus(false);
       showToast("端末に保存しました（サーバー同期に失敗。後で再試行してください）", "warn");
@@ -2518,6 +2646,7 @@ function attachUndoToTableInputs() {
       if (el.value !== prevVal) {
         pushUndo({ sheet: "equip", week: currentWeek, equipKey: el.dataset.equip, day: el.dataset.eday, oldValue: prevVal, newValue: el.value });
         prevVal = el.value;
+        markDirty();
       }
     });
   });
@@ -2531,6 +2660,7 @@ function attachUndoToTableInputs() {
       if (el.value !== prevVal) {
         pushUndo({ sheet: "elec", week: currentWeek, day: el.dataset.eday, field: el.dataset.elec, oldValue: prevVal, newValue: el.value });
         prevVal = el.value;
+        markDirty();
       }
     });
   });
@@ -2544,6 +2674,7 @@ function attachUndoToTableInputs() {
       if (el.value !== prevVal) {
         pushUndo({ sheet: "mech", week: currentWeek, day: el.dataset.mday, field: el.dataset.mech, oldValue: prevVal, newValue: el.value });
         prevVal = el.value;
+        markDirty();
       }
     });
   });
