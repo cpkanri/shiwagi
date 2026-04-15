@@ -1599,6 +1599,9 @@ function switchMainTab(sheet) {
   else if (currentSheet === "elec") saveElecFormToData();
   else if (currentSheet === "mech") saveMechFormToData();
 
+  // 切替前にメインタブの完了インジケーターを更新
+  updateMainTabIndicators();
+
   currentSheet = sheet;
   // 前日コピーボタンは全タブで表示
   document.getElementById("btnCopy").style.display = "";
@@ -1734,6 +1737,80 @@ function showValidationErrors(errors) {
       try { first.focus({ preventScroll: true }); } catch (e) {}
     }, 350);
   }
+}
+
+// ===== セクション完了インジケーター =====
+
+// シート全体が全て入力済みかを判定（全週・全曜日・全項目）
+function isSheetComplete(sheetType) {
+  const isEmpty = (v) => v === null || v === undefined || v === "";
+  if (sheetType === "water") {
+    const fields = ALL_FIELDS.filter(k => k !== "bikou" && k !== "inspector");
+    for (let wi = 0; wi < WEEKS.length; wi++) {
+      const weekData = weeklyData.weeks[WEEKS[wi]];
+      if (!weekData) return false;
+      for (let di = 0; di < DAYS.length; di++) {
+        const day = weekData[DAYS[di]];
+        if (!day) return false;
+        for (let fi = 0; fi < fields.length; fi++) {
+          if (isEmpty(day[fields[fi]])) return false;
+        }
+      }
+    }
+    return true;
+  } else if (sheetType === "equip") {
+    for (let wi = 0; wi < WEEKS.length; wi++) {
+      const weekData = weeklyData.equipment[WEEKS[wi]];
+      if (!weekData) return false;
+      for (let ki = 0; ki < EQUIP_KEYS.length; ki++) {
+        const keyData = weekData[EQUIP_KEYS[ki]];
+        if (!keyData) return false;
+        for (let di = 0; di < EQUIP_DAYS.length; di++) {
+          if (isEmpty(keyData[EQUIP_DAYS[di]])) return false;
+        }
+      }
+    }
+    return true;
+  } else if (sheetType === "elec") {
+    for (let wi = 0; wi < WEEKS.length; wi++) {
+      const weekData = weeklyData.electrical[WEEKS[wi]];
+      if (!weekData) return false;
+      for (let di = 0; di < EQUIP_DAYS.length; di++) {
+        const day = weekData[EQUIP_DAYS[di]];
+        if (!day) return false;
+        for (let ki = 0; ki < ALL_ELEC_KEYS.length; ki++) {
+          if (isEmpty(day[ALL_ELEC_KEYS[ki]])) return false;
+        }
+      }
+    }
+    return true;
+  } else if (sheetType === "mech") {
+    for (let wi = 0; wi < WEEKS.length; wi++) {
+      const weekData = weeklyData.mechanical[WEEKS[wi]];
+      if (!weekData) return false;
+      for (let di = 0; di < MECH_DAYS.length; di++) {
+        const day = weekData[MECH_DAYS[di]];
+        if (!day) return false;
+        for (let ki = 0; ki < ALL_MECH_KEYS.length; ki++) {
+          if (isEmpty(day[ALL_MECH_KEYS[ki]])) return false;
+        }
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
+// メインタブのラベルに完了インジケーター(✅)を反映
+function updateMainTabIndicators() {
+  document.querySelectorAll("#mainTabs button").forEach(btn => {
+    // 初期ラベルを保持（初回のみ dataset に退避）
+    if (!btn.dataset.baseLabel) {
+      btn.dataset.baseLabel = btn.textContent.replace(/^✅\s*/, "").trim();
+    }
+    const complete = isSheetComplete(btn.dataset.sheet);
+    btn.textContent = (complete ? "✅ " : "") + btn.dataset.baseLabel;
+  });
 }
 
 // 前週同曜日との数値乖離をチェック（2倍以上 or 0.5倍以下で警告）
@@ -2665,9 +2742,11 @@ function bindEvents() {
       showToast("保存しました（サーバー同期完了）");
       markClean();
       clearValidationErrors();
+      updateMainTabIndicators();
     } catch (e) {
       setConnectionStatus(false);
       showToast("端末に保存しました（サーバー同期に失敗。後で再試行してください）", "warn");
+      updateMainTabIndicators();
     } finally {
       btnSave.textContent = "保存";
       btnSave.disabled = false;
@@ -2733,6 +2812,7 @@ async function init() {
   updateWeekTabs();
   updateDayTabs();
   loadDataToForm();
+  updateMainTabIndicators();
 
   // b. バックグラウンドでGASからデータ取得（接続確認を兼ねる）
   syncFromServer();
