@@ -2593,7 +2593,7 @@ function bindEvents() {
   document.getElementById("btnSave").addEventListener("click", async () => {
     const btnSave = document.getElementById("btnSave");
 
-    // a-0. 必須項目チェック（日常水質シートのみ）
+    // a-0. 必須項目チェック（日常水質シートのみ・警告のみ・保存は続行）
     if (currentSheet === "water") {
       saveFormToData();
       clearValidationErrors();
@@ -2601,7 +2601,6 @@ function bindEvents() {
       if (!validation.ok) {
         showValidationErrors(validation.errors);
         showToast(validation.errors[0].label + " が未入力です", "error");
-        return;
       }
     }
 
