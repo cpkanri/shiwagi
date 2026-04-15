@@ -1736,6 +1736,41 @@ function showValidationErrors(errors) {
   }
 }
 
+// 前週同曜日との数値乖離をチェック（2倍以上 or 0.5倍以下で警告）
+// 該当した最初の1件のみ返す。なければ null。
+function checkValueDeviation() {
+  if (currentSheet !== "water") return null;
+  if (currentWeek <= 1) return null;
+  const prevWeek = weeklyData.weeks[currentWeek - 1];
+  if (!prevWeek) return null;
+  const prevDay = prevWeek[currentDay];
+  if (!prevDay) return null;
+  const curDay = weeklyData.weeks[currentWeek] && weeklyData.weeks[currentWeek][currentDay];
+  if (!curDay) return null;
+
+  for (let i = 0; i < REQUIRED_WATER_FIELDS.length; i++) {
+    const key = REQUIRED_WATER_FIELDS[i];
+    const el = document.querySelector('.form-wrap [data-field="' + key + '"]');
+    // 数値inputのみ対象（toggle-btn・テキストは除外）
+    if (!el || el.tagName !== "INPUT" || el.type !== "number") continue;
+    const prevRaw = prevDay[key];
+    const curRaw = curDay[key];
+    // 前回値・今回値どちらかが未入力ならスキップ
+    if (prevRaw === null || prevRaw === undefined || prevRaw === "") continue;
+    if (curRaw === null || curRaw === undefined || curRaw === "") continue;
+    const prevNum = Number(prevRaw);
+    const curNum = Number(curRaw);
+    if (!isFinite(prevNum) || !isFinite(curNum)) continue;
+    // 前回値がゼロならスキップ（0除算回避）
+    if (prevNum === 0) continue;
+    const ratio = curNum / prevNum;
+    if (ratio >= 2 || ratio <= 0.5) {
+      return { key: key, label: getFieldLabel(el), prev: prevRaw, current: curRaw };
+    }
+  }
+  return null;
+}
+
 // ===== フォーム <-> データ =====
 
 function saveFormToData() {
@@ -2593,7 +2628,7 @@ function bindEvents() {
   document.getElementById("btnSave").addEventListener("click", async () => {
     const btnSave = document.getElementById("btnSave");
 
-    // a-0. 必須項目チェック（日常水質シートのみ・警告のみ・保存は続行）
+    // a-0. 必須項目チェック・前回値乖離チェック（日常水質シートのみ・警告のみ・保存は続行）
     if (currentSheet === "water") {
       saveFormToData();
       clearValidationErrors();
@@ -2601,6 +2636,15 @@ function bindEvents() {
       if (!validation.ok) {
         showValidationErrors(validation.errors);
         showToast(validation.errors[0].label + " が未入力です", "error");
+      } else {
+        // 必須項目が揃っている場合のみ前週との乖離をチェック
+        const deviation = checkValueDeviation();
+        if (deviation) {
+          showToast(
+            deviation.label + " の値が先週と大きく異なります（先週：" + deviation.prev + "、今週：" + deviation.current + "）",
+            "warn"
+          );
+        }
       }
     }
 
