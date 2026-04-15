@@ -286,6 +286,42 @@ header h1 {
 .toast.error { background: #b3261e; }
 .toast.warn { background: #b8860b; }
 
+/* ===== 必須項目バリデーション ===== */
+.validation-error-banner {
+  display: none;
+  margin: 10px 14px 0;
+  padding: 12px 16px;
+  background: #ffebee;
+  color: #b71c1c;
+  border: 1px solid #ef9a9a;
+  border-left: 4px solid #c62828;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.validation-error-banner.visible { display: block; }
+.validation-error-banner .veb-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.validation-error-banner ul {
+  margin: 4px 0 0 18px;
+  padding: 0;
+  font-weight: 400;
+}
+.validation-error-banner li { margin: 0; }
+
+/* 未入力の入力欄ハイライト */
+.field.field-error {
+  background-color: #ffebee;
+  border-radius: 6px;
+}
+.field.field-error input,
+.field.field-error .toggle-btn {
+  border: 2px solid #c62828 !important;
+  background-color: #fff5f5 !important;
+}
+
 /* ===== Excel出力ボタン ===== */
 .excel-wrap {
   padding: 0 12px 12px;
@@ -556,6 +592,9 @@ header h1 {
     <span id="connLabel">接続確認中...</span>
   </div>
 </header>
+
+<!-- 必須項目エラーバナー -->
+<div class="validation-error-banner" id="validationErrorBanner"></div>
 
 <!-- メインタブ（シート切替） -->
 <nav class="main-tabs" id="mainTabs">
@@ -1624,6 +1663,79 @@ async function checkConnection() {
   }
 }
 
+// ===== 必須項目バリデーション =====
+
+// 日常水質シートの必須項目（備考・点検者は除外）
+const REQUIRED_WATER_FIELDS = ALL_FIELDS.filter(k => k !== "bikou" && k !== "inspector");
+
+// 入力欄から表示用ラベル（セクション + 項目名）を取得
+function getFieldLabel(el) {
+  if (!el) return "";
+  const fieldDiv = el.closest('.field');
+  if (!fieldDiv) return el.dataset.field || "";
+  const labelEl = fieldDiv.querySelector('.label');
+  const sectionEl = fieldDiv.closest('.section');
+  const headerEl = sectionEl ? sectionEl.querySelector('.section-header') : null;
+  const fieldLabel = labelEl ? labelEl.textContent.trim() : (el.dataset.field || "");
+  const sectionLabel = headerEl ? headerEl.textContent.trim() : "";
+  return sectionLabel ? sectionLabel + " " + fieldLabel : fieldLabel;
+}
+
+// エラーハイライト・バナーを解除
+function clearValidationErrors() {
+  document.querySelectorAll('.field.field-error').forEach(el => el.classList.remove('field-error'));
+  const banner = document.getElementById('validationErrorBanner');
+  if (banner) {
+    banner.classList.remove('visible');
+    banner.innerHTML = '';
+  }
+}
+
+// 現在シートの必須項目をチェック（日常水質のみ対象）
+function validateRequiredFields() {
+  if (currentSheet !== "water") return { ok: true, errors: [] };
+  const errors = [];
+  REQUIRED_WATER_FIELDS.forEach(key => {
+    const el = document.querySelector('.form-wrap [data-field="' + key + '"]');
+    if (!el) return;
+    let value;
+    if (el.tagName === "BUTTON" && el.classList.contains("toggle-btn")) {
+      value = el.dataset.val || "";
+    } else {
+      value = el.value;
+    }
+    if (value === null || value === undefined || String(value).trim() === "") {
+      errors.push({ key: key, el: el, label: getFieldLabel(el) });
+    }
+  });
+  return { ok: errors.length === 0, errors: errors };
+}
+
+// エラー表示・最初のエラー項目へスクロール＆フォーカス
+function showValidationErrors(errors) {
+  errors.forEach(err => {
+    const fieldDiv = err.el.closest('.field');
+    if (fieldDiv) fieldDiv.classList.add('field-error');
+  });
+  const banner = document.getElementById('validationErrorBanner');
+  if (banner) {
+    const items = errors.map(e => '<li>' + e.label + '</li>').join("");
+    banner.innerHTML = '<div class="veb-title">未入力の項目があります（' + errors.length + '件）</div><ul>' + items + '</ul>';
+    banner.classList.add('visible');
+  }
+  if (errors.length > 0) {
+    const first = errors[0].el;
+    try {
+      first.scrollIntoView({ behavior: "smooth", block: "center" });
+    } catch (e) {
+      first.scrollIntoView();
+    }
+    setTimeout(function() {
+      try { first.focus({ preventScroll: true }); } catch (e) {}
+    }, 350);
+  }
+}
+
 // ===== フォーム <-> データ =====
 
 function saveFormToData() {
@@ -2119,6 +2231,8 @@ function switchTo(week, day) {
   updateWeekTabs();
   updateDayTabs();
   loadDataToForm();
+  // 別の日付に切り替えたらエラー表示をリセット
+  clearValidationErrors();
 }
 
 // ===== トースト通知 =====
@@ -2231,6 +2345,11 @@ function bindEvents() {
       }
       updateDayTabs();
       markDirty();
+      // 値が入ったらエラーハイライトを解除
+      if (el.value !== "" && el.value !== null) {
+        const fieldDiv = el.closest('.field');
+        if (fieldDiv) fieldDiv.classList.remove('field-error');
+      }
     });
   });
 
@@ -2249,6 +2368,11 @@ function bindEvents() {
       day[key] = newVal || null;
       updateDayTabs();
       markDirty();
+      // 値が入ったらエラーハイライトを解除
+      if (newVal) {
+        const fieldDiv = btn.closest('.field');
+        if (fieldDiv) fieldDiv.classList.remove('field-error');
+      }
       pushUndo({ type: "field", week: currentWeek, day: currentDay, field: key, oldVal: cur || null });
     });
   });
@@ -2469,6 +2593,18 @@ function bindEvents() {
   document.getElementById("btnSave").addEventListener("click", async () => {
     const btnSave = document.getElementById("btnSave");
 
+    // a-0. 必須項目チェック（日常水質シートのみ）
+    if (currentSheet === "water") {
+      saveFormToData();
+      clearValidationErrors();
+      const validation = validateRequiredFields();
+      if (!validation.ok) {
+        showValidationErrors(validation.errors);
+        showToast(validation.errors[0].label + " が未入力です", "error");
+        return;
+      }
+    }
+
     // a. まずlocalStorageに全データ保存
     const ok = saveToStorage();
     if (!ok) {
@@ -2485,6 +2621,7 @@ function bindEvents() {
       setConnectionStatus(true);
       showToast("保存しました（サーバー同期完了）");
       markClean();
+      clearValidationErrors();
     } catch (e) {
       setConnectionStatus(false);
       showToast("端末に保存しました（サーバー同期に失敗。後で再試行してください）", "warn");
