@@ -3610,54 +3610,10 @@ function fillEquipSheet(wb, yyyy, mm) {
   }
 
   // 第2週以降の分、下方向にテンプレを複製
+  // テンプレは修正済みで Row19-Row20 に不要マージがないため、duplicateRowRangeInSheet の通常動作で OK
   for (var i = 1; i < relevantWeeks.length; i++) {
     var offsetRows = i * BLOCK_HEIGHT;
     duplicateRowRangeInSheet(ws, 1, BLOCK_HEIGHT, offsetRows);
-    // タイトル行を確実にマージ：
-    //   複製で各セルに1文字ずつ値がコピーされてマージが拒否されるケースに対処。
-    //   (1) A列以外の値を取得して連結 (2) A列以外をnull (3) A:Hマージ (4) 連結値をA列に書き込む
-    titleMergeRanges.forEach(function(tm) {
-      var r1 = tm.r1 + offsetRows;
-      var r2 = tm.r2 + offsetRows;
-      var startCol = 1; // A
-      var endCol = 8;   // H
-      // 列名から数値に変換（A=1,B=2,...）
-      try {
-        var cn1 = 0, cn2 = 0;
-        for (var ci = 0; ci < tm.col1.length; ci++) cn1 = cn1 * 26 + (tm.col1.charCodeAt(ci) - 64);
-        for (var ci2 = 0; ci2 < tm.col2.length; ci2++) cn2 = cn2 * 26 + (tm.col2.charCodeAt(ci2) - 64);
-        if (cn1 > 0) startCol = cn1;
-        if (cn2 > 0) endCol = cn2;
-      } catch(e) {}
-
-      // 値を連結取得
-      var parts = [];
-      for (var rr = r1; rr <= r2; rr++) {
-        for (var cc = startCol; cc <= endCol; cc++) {
-          var v = ws.getCell(rr, cc).value;
-          if (v !== null && v !== undefined && v !== '') parts.push(String(v));
-        }
-      }
-      var joined = parts.join('');
-
-      // 値を全部クリア
-      for (var rr2 = r1; rr2 <= r2; rr2++) {
-        for (var cc2 = startCol; cc2 <= endCol; cc2++) {
-          ws.getCell(rr2, cc2).value = null;
-        }
-      }
-
-      // マージ実行
-      var newRange = tm.col1 + r1 + ":" + tm.col2 + r2;
-      try { ws.mergeCells(newRange); } catch (e) { console.warn("タイトルマージ失敗:", newRange, e); }
-
-      // マージ後のmasterに連結値を書き込み（空の場合は「柴木浄化センター」を既定値として使用）
-      if (joined.replace(/\s/g, '').length > 0) {
-        ws.getCell(r1, startCol).value = joined;
-      } else {
-        ws.getCell(r1, startCol).value = "柴木浄化センター";
-      }
-    });
   }
 
   // 各週のデータ書き込み
