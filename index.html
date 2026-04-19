@@ -2408,7 +2408,12 @@ function mergeServerData(serverData) {
     merged = true;
   }
 
-  if (serverData.startDate) weeklyData.startDate = serverData.startDate;
+  // startDateはサーバーから受け取った値を使わず、常に対象月から自動計算する
+  // （古い不正な startDate がサーバーに残っている場合の防衛策）
+  weeklyData.startDate = estimateStartDate(weeklyData.targetMonth);
+  // UIも更新
+  const startDateEl = document.getElementById("startDate");
+  if (startDateEl) startDateEl.value = weeklyData.startDate || "";
   ensureWeeklyStructure();
   localStorage.setItem(storageKey(), JSON.stringify(weeklyData));
   return merged;
@@ -2817,6 +2822,17 @@ function bindEvents() {
   // 保存ボタン
   document.getElementById("btnSave").addEventListener("click", async () => {
     const btnSave = document.getElementById("btnSave");
+
+    // 保存前に UI の対象年月と startDate を強制同期
+    // （対象月ピッカー change が発火していないケースへの防衛策）
+    const uiMonth = document.getElementById("targetMonth").value;
+    if (uiMonth && uiMonth !== weeklyData.targetMonth) {
+      weeklyData.targetMonth = uiMonth;
+      localStorage.setItem("shibaki_current_month", uiMonth);
+    }
+    // startDateは常に対象月から自動計算
+    weeklyData.startDate = estimateStartDate(weeklyData.targetMonth);
+    document.getElementById("startDate").value = weeklyData.startDate || "";
 
     // a. まずlocalStorageに全データ保存
     const ok = saveToStorage();
