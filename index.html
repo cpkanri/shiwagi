@@ -3217,9 +3217,6 @@ async function exportExcel() {
     // ===== シート1: 日常水質 =====
     fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel);
 
-    // ===== シート2: 機器運転時間 =====
-    fillEquipSheet(wb, yyyy, mm);
-
     // ===== シート3: 日常電気設備 =====
     fillElecSheet(wb, yyyy, mm, monthLabel);
 
@@ -3231,6 +3228,9 @@ async function exportExcel() {
 
     // ===== シート6: 運転管理月報 =====
     fillOperationReportSheet(wb, yyyy, mm);
+
+    // ===== シート2: 機器運転時間（最後に実行：シート複製が他シートの処理に影響しないため） =====
+    fillEquipSheet(wb, yyyy, mm);
 
     // ダウンロード
     const buf = await wb.xlsx.writeBuffer();
@@ -3410,35 +3410,58 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
 // ===== 機器運転時間シート =====
 // ===== シート複製ヘルパー =====
 // ExcelJSでシートを完全複製する（値・スタイル・マージ・列幅・行高）
+// スタイル参照の共有による他シート汚染を防ぐため JSON.parse(JSON.stringify) で深いコピー
 function duplicateSheetExcel(wb, origSheet, newName) {
   const ns = wb.addWorksheet(newName);
 
-  // 列幅コピー
-  origSheet.columns.forEach(function(col, i) {
-    if (col && col.width) ns.getColumn(i + 1).width = col.width;
-  });
+  // ページ設定をディープコピー
+  try {
+    if (origSheet.pageSetup) {
+      const ps = JSON.parse(JSON.stringify(origSheet.pageSetup));
+      Object.assign(ns.pageSetup, ps);
+    }
+  } catch (e) {}
 
-  // 全行・全セルコピー
+  // 列幅
+  if (origSheet.columns) {
+    origSheet.columns.forEach(function(col, i) {
+      if (col && col.width !== undefined) {
+        ns.getColumn(i + 1).width = col.width;
+      }
+    });
+  }
+
+  // 全行・全セルコピー（style はディープコピー）
   origSheet.eachRow({ includeEmpty: true }, function(row, rowNumber) {
     const newRow = ns.getRow(rowNumber);
-    if (row.height) newRow.height = row.height;
+    if (row.height !== undefined && row.height !== null) {
+      newRow.height = row.height;
+    }
     row.eachCell({ includeEmpty: true }, function(cell, colNumber) {
       const newCell = ns.getCell(rowNumber, colNumber);
       if (cell.value !== null && cell.value !== undefined) {
         newCell.value = cell.value;
       }
-      if (cell.numFmt) newCell.numFmt = cell.numFmt;
-      if (cell.font) newCell.font = cell.font;
-      if (cell.alignment) newCell.alignment = cell.alignment;
-      if (cell.border) newCell.border = cell.border;
-      if (cell.fill) newCell.fill = cell.fill;
+      // style 全体をディープコピーして参照共有を避ける
+      try {
+        if (cell.style) {
+          newCell.style = JSON.parse(JSON.stringify(cell.style));
+        }
+      } catch (e) {
+        // 一部プロパティが循環参照の場合、個別にコピー
+        if (cell.numFmt) newCell.numFmt = cell.numFmt;
+        if (cell.font) try { newCell.font = JSON.parse(JSON.stringify(cell.font)); } catch(e2) {}
+        if (cell.alignment) try { newCell.alignment = JSON.parse(JSON.stringify(cell.alignment)); } catch(e2) {}
+        if (cell.border) try { newCell.border = JSON.parse(JSON.stringify(cell.border)); } catch(e2) {}
+        if (cell.fill) try { newCell.fill = JSON.parse(JSON.stringify(cell.fill)); } catch(e2) {}
+      }
     });
   });
 
   // マージセル
   const merges = (origSheet.model && origSheet.model.merges) ? origSheet.model.merges : [];
   for (let i = 0; i < merges.length; i++) {
-    try { ns.mergeCells(merges[i]); } catch(e) { /* すでにマージ済み等はスキップ */ }
+    try { ns.mergeCells(merges[i]); } catch(e) { /* スキップ */ }
   }
 
   return ns;
