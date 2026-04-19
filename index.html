@@ -286,42 +286,6 @@ header h1 {
 .toast.error { background: #b3261e; }
 .toast.warn { background: #b8860b; }
 
-/* ===== 必須項目バリデーション ===== */
-.validation-error-banner {
-  display: none;
-  margin: 10px 14px 0;
-  padding: 12px 16px;
-  background: #ffebee;
-  color: #b71c1c;
-  border: 1px solid #ef9a9a;
-  border-left: 4px solid #c62828;
-  border-radius: 6px;
-  font-size: 14px;
-  line-height: 1.5;
-}
-.validation-error-banner.visible { display: block; }
-.validation-error-banner .veb-title {
-  font-weight: 700;
-  margin-bottom: 4px;
-}
-.validation-error-banner ul {
-  margin: 4px 0 0 18px;
-  padding: 0;
-  font-weight: 400;
-}
-.validation-error-banner li { margin: 0; }
-
-/* 未入力の入力欄ハイライト */
-.field.field-error {
-  background-color: #ffebee;
-  border-radius: 6px;
-}
-.field.field-error input,
-.field.field-error .toggle-btn {
-  border: 2px solid #c62828 !important;
-  background-color: #fff5f5 !important;
-}
-
 /* ===== Excel出力ボタン ===== */
 .excel-wrap {
   padding: 0 12px 12px;
@@ -570,20 +534,129 @@ header h1 {
   text-align: center;
   background: #fafafa;
 }
-
-/* ===== 最終送信バー ===== */
-.last-sent-bar {
-  padding: 6px 14px;
-  font-size: 12px;
-  font-weight: 500;
-  color: #0d4f34;
-  background: #f0f7f4;
-  border-bottom: 1px solid #dde8e2;
-  text-align: right;
+/* ===== ログイン画面 ===== */
+.login-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  width: 100vw;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a6b4e, #1a7a56);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 9999;
+  padding: 60px 20px 20px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
+.login-card {
+  background: white;
+  border-radius: 12px;
+  padding: 28px 24px;
+  width: 100%;
+  max-width: 340px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  margin-top: 40px;
+}
+.login-card h2 {
+  margin: 0 0 8px;
+  color: #1a6b4e;
+  text-align: center;
+  font-size: 18px;
+}
+.login-card .subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 12px;
+  margin-bottom: 20px;
+}
+.login-card label {
+  display: block;
+  font-size: 13px;
+  color: #555;
+  margin: 10px 0 4px;
+}
+.login-card input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccd;
+  border-radius: 8px;
+  font-size: 16px;
+  font-family: inherit;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.login-card input.pw-masked {
+  -webkit-text-security: disc;
+  text-security: disc;
+}
+.login-card button {
+  width: 100%;
+  margin-top: 18px;
+  padding: 14px;
+  background: #1a6b4e;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.login-card button:disabled { opacity: 0.6; }
+.login-error {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #ffebee;
+  color: #c62828;
+  border-radius: 6px;
+  font-size: 13px;
+  display: none;
+}
+.login-error.visible { display: block; }
+body.login-active { overflow: hidden; }
+
+/* ヘッダー内 ユーザー情報＆ログアウト */
+.user-info {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-top: 6px;
+}
+.user-info .user-name { font-weight: 600; }
+.user-info .logout-btn {
+  padding: 4px 10px;
+  background: rgba(255,255,255,0.15);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.user-info .logout-btn:hover { background: rgba(255,255,255,0.25); }
+
 </style>
 </head>
 <body>
+
+<!-- ログイン画面 -->
+<div class="login-overlay" id="loginOverlay" style="display:none;">
+  <div class="login-card">
+    <h2>柴木浄化センター 週報</h2>
+    <div class="subtitle">ログインしてください</div>
+    <label for="loginId">ID</label>
+    <input type="text" id="loginId" name="uid-shiwagi-app" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="next" readonly>
+    <label for="loginPassword">パスワード</label>
+    <input type="text" id="loginPassword" name="pw-shiwagi-app" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" readonly class="pw-masked">
+    <button type="button" id="btnLogin">ログイン</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
 
 <!-- ヘッダー -->
 <header>
@@ -598,17 +671,15 @@ header h1 {
       <input type="date" id="startDate" readonly style="opacity:0.8;pointer-events:none;">
     </label>
   </div>
+  <div class="user-info" id="userInfo">
+    <span class="user-name" id="userName"></span>
+    <button type="button" class="logout-btn" id="btnLogout">ログアウト</button>
+  </div>
   <div class="conn-status" id="connStatus">
     <span class="conn-dot" id="connDot"></span>
     <span id="connLabel">接続確認中...</span>
   </div>
 </header>
-
-<!-- 最終送信バー -->
-<div class="last-sent-bar" id="lastSentBar">最終送信：なし</div>
-
-<!-- 必須項目エラーバナー -->
-<div class="validation-error-banner" id="validationErrorBanner"></div>
 
 <!-- メインタブ（シート切替） -->
 <nav class="main-tabs" id="mainTabs">
@@ -832,6 +903,229 @@ header h1 {
 <script>
 // ===== GAS URL =====
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzRWnZ2D5rMGKNz86nQerlSiuoGFJFB02keNIk6b2xVLnTfhj0qRCr0G4BDCBz87W8h/exec';
+
+// ===== 認証管理 =====
+const AUTH_KEYS = {
+  token: 'shiwagi_auth_token',
+  userId: 'shiwagi_auth_userId',
+  userName: 'shiwagi_auth_userName',
+  expires: 'shiwagi_auth_expires'
+};
+function getAuthToken() { return localStorage.getItem(AUTH_KEYS.token); }
+function getAuthUserId() { return localStorage.getItem(AUTH_KEYS.userId); }
+function getAuthUserName() { return localStorage.getItem(AUTH_KEYS.userName); }
+function getAuthExpires() { const v = localStorage.getItem(AUTH_KEYS.expires); return v ? Number(v) : 0; }
+function setAuth(token, userId, userName, expires) {
+  localStorage.setItem(AUTH_KEYS.token, token);
+  localStorage.setItem(AUTH_KEYS.userId, userId);
+  localStorage.setItem(AUTH_KEYS.userName, userName || userId);
+  localStorage.setItem(AUTH_KEYS.expires, String(expires));
+}
+function clearAuth() {
+  localStorage.removeItem(AUTH_KEYS.token);
+  localStorage.removeItem(AUTH_KEYS.userId);
+  localStorage.removeItem(AUTH_KEYS.userName);
+  localStorage.removeItem(AUTH_KEYS.expires);
+}
+function isTokenValid() {
+  const token = getAuthToken();
+  const expires = getAuthExpires();
+  if (!token || !expires) return false;
+  return Date.now() < expires;
+}
+function withToken(url) {
+  const t = getAuthToken();
+  if (!t) return url;
+  const sep = url.indexOf('?') >= 0 ? '&' : '?';
+  return url + sep + 'token=' + encodeURIComponent(t);
+}
+function withTokenBody(body) {
+  const t = getAuthToken();
+  if (t && body && typeof body === 'object') body.token = t;
+  return body;
+}
+async function doLogin(userId, password) {
+  const res = await fetch(GAS_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'login', userId: userId, password: password })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  if (!data.token) throw new Error('ログインに失敗しました');
+  setAuth(data.token, data.userId, data.userName, data.expires || (Date.now() + 30 * 24 * 60 * 60 * 1000));
+  return data;
+}
+async function doLogout() {
+  const t = getAuthToken();
+  if (t) {
+    try {
+      await fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'logout', token: t })
+      });
+    } catch (e) {}
+  }
+  clearAuth();
+}
+function handleAuthFailure() {
+  clearAuth();
+  updateUserInfoUI();
+  showLoginScreen('セッションが切れました。再度ログインしてください。');
+}
+
+// ===== 祝日リスト管理 =====
+const HOLIDAYS_CACHE_KEY = 'shiwagi_holidays';
+const HOLIDAYS_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
+function getCachedHolidays() {
+  try {
+    const raw = localStorage.getItem(HOLIDAYS_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.ts || !parsed.data) return null;
+    if (Date.now() - parsed.ts > HOLIDAYS_CACHE_TTL) return null;
+    return parsed.data;
+  } catch (e) { return null; }
+}
+function saveHolidaysCache(arr) {
+  try {
+    localStorage.setItem(HOLIDAYS_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: arr }));
+  } catch (e) {}
+}
+async function fetchHolidaysFromServer() {
+  try {
+    const url = withToken(GAS_URL + '?action=getHolidays');
+    const res = await fetch(url, { method: 'GET' });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data && data.holidays) {
+      saveHolidaysCache(data.holidays);
+      return data.holidays;
+    }
+  } catch (e) { console.warn('祝日取得失敗:', e); }
+  return getCachedHolidays();
+}
+function getHolidaySetFromCache() {
+  const arr = getCachedHolidays();
+  const set = new Set();
+  if (arr) for (const h of arr) set.add(h.date);
+  return set;
+}
+function dateToStr(d) {
+  if (!d) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
+}
+function getNextWeekFirstWorkday(baseFri, holidaySet) {
+  if (!baseFri) return null;
+  const d = new Date(baseFri.getFullYear(), baseFri.getMonth(), baseFri.getDate() + 3);
+  for (let i = 0; i < 14; i++) {
+    const dow = d.getDay();
+    const ymd = dateToStr(d);
+    if (dow !== 0 && dow !== 6 && !holidaySet.has(ymd)) return d;
+    d.setDate(d.getDate() + 1);
+  }
+  return null;
+}
+
+// ===== ログイン画面制御 =====
+function showLoginScreen(errorMsg) {
+  const overlay = document.getElementById('loginOverlay');
+  if (!overlay) return;
+  const wasHidden = overlay.style.display !== 'flex';
+  overlay.style.display = 'flex';
+  document.body.classList.add('login-active');
+  const errEl = document.getElementById('loginError');
+  if (errEl) {
+    if (errorMsg) { errEl.textContent = errorMsg; errEl.classList.add('visible'); }
+    else { errEl.textContent = ''; errEl.classList.remove('visible'); }
+  }
+  if (wasHidden) {
+    setTimeout(() => {
+      const idEl = document.getElementById('loginId');
+      if (idEl && !idEl.value) idEl.focus();
+    }, 300);
+  }
+}
+function hideLoginScreen() {
+  const overlay = document.getElementById('loginOverlay');
+  if (overlay) overlay.style.display = 'none';
+  document.body.classList.remove('login-active');
+}
+function updateUserInfoUI() {
+  const wrap = document.getElementById('userInfo');
+  const nameEl = document.getElementById('userName');
+  if (!wrap || !nameEl) return;
+  const name = getAuthUserName();
+  if (name) {
+    nameEl.textContent = name;
+    wrap.style.display = 'flex';
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+function bindLoginEvents() {
+  if (window.__loginEventsBound) return;
+  window.__loginEventsBound = true;
+
+  const btnLogin = document.getElementById('btnLogin');
+  const idEl = document.getElementById('loginId');
+  const pwEl = document.getElementById('loginPassword');
+  const errEl = document.getElementById('loginError');
+
+  function unlockOnFocus(el) {
+    if (!el) return;
+    const handler = function() {
+      el.removeAttribute('readonly');
+      el.removeEventListener('focus', handler);
+      el.removeEventListener('click', handler);
+      el.removeEventListener('touchstart', handler);
+    };
+    el.addEventListener('focus', handler);
+    el.addEventListener('click', handler);
+    el.addEventListener('touchstart', handler, { passive: true });
+  }
+  unlockOnFocus(idEl);
+  unlockOnFocus(pwEl);
+
+  async function tryLogin() {
+    const uid = (idEl.value || '').trim();
+    const pw = pwEl.value || '';
+    if (!uid || !pw) {
+      errEl.textContent = 'IDとパスワードを入力してください';
+      errEl.classList.add('visible');
+      return;
+    }
+    btnLogin.disabled = true;
+    btnLogin.textContent = 'ログイン中...';
+    errEl.classList.remove('visible');
+    try {
+      await doLogin(uid, pw);
+      pwEl.value = '';
+      await continueInit();
+    } catch (e) {
+      errEl.textContent = e.message || 'ログインに失敗しました';
+      errEl.classList.add('visible');
+    } finally {
+      btnLogin.disabled = false;
+      btnLogin.textContent = 'ログイン';
+    }
+  }
+  if (btnLogin) btnLogin.addEventListener('click', tryLogin);
+  [idEl, pwEl].forEach(el => {
+    if (el) el.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') { ev.preventDefault(); tryLogin(); }
+    });
+  });
+
+  const btnLogout = document.getElementById('btnLogout');
+  if (btnLogout) btnLogout.addEventListener('click', async () => {
+    await doLogout();
+    updateUserInfoUI();
+    showLoginScreen();
+  });
+}
 
 // ===== 定数定義 =====
 
@@ -1613,9 +1907,6 @@ function switchMainTab(sheet) {
   else if (currentSheet === "elec") saveElecFormToData();
   else if (currentSheet === "mech") saveMechFormToData();
 
-  // 切替前にメインタブの完了インジケーターを更新
-  updateMainTabIndicators();
-
   currentSheet = sheet;
   // 前日コピーボタンは全タブで表示
   document.getElementById("btnCopy").style.display = "";
@@ -1678,216 +1969,6 @@ async function checkConnection() {
   } catch (e) {
     setConnectionStatus(false);
   }
-}
-
-// ===== 必須項目バリデーション =====
-
-// 日常水質シートの必須項目（備考・点検者は除外）
-const REQUIRED_WATER_FIELDS = ALL_FIELDS.filter(k => k !== "bikou" && k !== "inspector");
-
-// 入力欄から表示用ラベル（セクション + 項目名）を取得
-function getFieldLabel(el) {
-  if (!el) return "";
-  const fieldDiv = el.closest('.field');
-  if (!fieldDiv) return el.dataset.field || "";
-  const labelEl = fieldDiv.querySelector('.label');
-  const sectionEl = fieldDiv.closest('.section');
-  const headerEl = sectionEl ? sectionEl.querySelector('.section-header') : null;
-  const fieldLabel = labelEl ? labelEl.textContent.trim() : (el.dataset.field || "");
-  const sectionLabel = headerEl ? headerEl.textContent.trim() : "";
-  return sectionLabel ? sectionLabel + " " + fieldLabel : fieldLabel;
-}
-
-// エラーハイライト・バナーを解除
-function clearValidationErrors() {
-  document.querySelectorAll('.field.field-error').forEach(el => el.classList.remove('field-error'));
-  const banner = document.getElementById('validationErrorBanner');
-  if (banner) {
-    banner.classList.remove('visible');
-    banner.innerHTML = '';
-  }
-}
-
-// 現在シートの必須項目をチェック（日常水質のみ対象）
-function validateRequiredFields() {
-  if (currentSheet !== "water") return { ok: true, errors: [] };
-  const errors = [];
-  REQUIRED_WATER_FIELDS.forEach(key => {
-    const el = document.querySelector('.form-wrap [data-field="' + key + '"]');
-    if (!el) return;
-    let value;
-    if (el.tagName === "BUTTON" && el.classList.contains("toggle-btn")) {
-      value = el.dataset.val || "";
-    } else {
-      value = el.value;
-    }
-    if (value === null || value === undefined || String(value).trim() === "") {
-      errors.push({ key: key, el: el, label: getFieldLabel(el) });
-    }
-  });
-  return { ok: errors.length === 0, errors: errors };
-}
-
-// エラー表示・最初のエラー項目へスクロール＆フォーカス
-function showValidationErrors(errors) {
-  errors.forEach(err => {
-    const fieldDiv = err.el.closest('.field');
-    if (fieldDiv) fieldDiv.classList.add('field-error');
-  });
-  const banner = document.getElementById('validationErrorBanner');
-  if (banner) {
-    const items = errors.map(e => '<li>' + e.label + '</li>').join("");
-    banner.innerHTML = '<div class="veb-title">未入力の項目があります（' + errors.length + '件）</div><ul>' + items + '</ul>';
-    banner.classList.add('visible');
-  }
-  if (errors.length > 0) {
-    const first = errors[0].el;
-    try {
-      first.scrollIntoView({ behavior: "smooth", block: "center" });
-    } catch (e) {
-      first.scrollIntoView();
-    }
-    setTimeout(function() {
-      try { first.focus({ preventScroll: true }); } catch (e) {}
-    }, 350);
-  }
-}
-
-// ===== 送信履歴ログ =====
-
-const LAST_SENT_KEY = "shibaki_lastSent";
-
-// サーバー送信成功時に現在時刻を記録
-function recordLastSent() {
-  try {
-    localStorage.setItem(LAST_SENT_KEY, new Date().toISOString());
-  } catch (e) {}
-}
-
-// ISO文字列を「4月15日 13:54」形式に整形（初回送信前は「なし」）
-function formatLastSent(iso) {
-  if (!iso) return "なし";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return "なし";
-  const pad = (n) => String(n).padStart(2, "0");
-  return (d.getMonth() + 1) + "月" + d.getDate() + "日 " + pad(d.getHours()) + ":" + pad(d.getMinutes());
-}
-
-// 最終送信バーを更新（localStorage経由）
-function updateLastSentDisplay() {
-  const el = document.getElementById("lastSentBar");
-  if (!el) return;
-  const iso = localStorage.getItem(LAST_SENT_KEY);
-  el.textContent = "最終送信：" + formatLastSent(iso);
-}
-
-// ===== セクション完了インジケーター =====
-
-// シート全体が全て入力済みかを判定（全週・全曜日・全項目）
-function isSheetComplete(sheetType) {
-  const isEmpty = (v) => v === null || v === undefined || v === "";
-  if (sheetType === "water") {
-    const fields = ALL_FIELDS.filter(k => k !== "bikou" && k !== "inspector");
-    for (let wi = 0; wi < WEEKS.length; wi++) {
-      const weekData = weeklyData.weeks[WEEKS[wi]];
-      if (!weekData) return false;
-      for (let di = 0; di < DAYS.length; di++) {
-        const day = weekData[DAYS[di]];
-        if (!day) return false;
-        for (let fi = 0; fi < fields.length; fi++) {
-          if (isEmpty(day[fields[fi]])) return false;
-        }
-      }
-    }
-    return true;
-  } else if (sheetType === "equip") {
-    for (let wi = 0; wi < WEEKS.length; wi++) {
-      const weekData = weeklyData.equipment[WEEKS[wi]];
-      if (!weekData) return false;
-      for (let ki = 0; ki < EQUIP_KEYS.length; ki++) {
-        const keyData = weekData[EQUIP_KEYS[ki]];
-        if (!keyData) return false;
-        for (let di = 0; di < EQUIP_DAYS.length; di++) {
-          if (isEmpty(keyData[EQUIP_DAYS[di]])) return false;
-        }
-      }
-    }
-    return true;
-  } else if (sheetType === "elec") {
-    for (let wi = 0; wi < WEEKS.length; wi++) {
-      const weekData = weeklyData.electrical[WEEKS[wi]];
-      if (!weekData) return false;
-      for (let di = 0; di < EQUIP_DAYS.length; di++) {
-        const day = weekData[EQUIP_DAYS[di]];
-        if (!day) return false;
-        for (let ki = 0; ki < ALL_ELEC_KEYS.length; ki++) {
-          if (isEmpty(day[ALL_ELEC_KEYS[ki]])) return false;
-        }
-      }
-    }
-    return true;
-  } else if (sheetType === "mech") {
-    for (let wi = 0; wi < WEEKS.length; wi++) {
-      const weekData = weeklyData.mechanical[WEEKS[wi]];
-      if (!weekData) return false;
-      for (let di = 0; di < MECH_DAYS.length; di++) {
-        const day = weekData[MECH_DAYS[di]];
-        if (!day) return false;
-        for (let ki = 0; ki < ALL_MECH_KEYS.length; ki++) {
-          if (isEmpty(day[ALL_MECH_KEYS[ki]])) return false;
-        }
-      }
-    }
-    return true;
-  }
-  return false;
-}
-
-// メインタブのラベルに完了インジケーター(✅)を反映
-function updateMainTabIndicators() {
-  document.querySelectorAll("#mainTabs button").forEach(btn => {
-    // 初期ラベルを保持（初回のみ dataset に退避）
-    if (!btn.dataset.baseLabel) {
-      btn.dataset.baseLabel = btn.textContent.replace(/^✅\s*/, "").trim();
-    }
-    const complete = isSheetComplete(btn.dataset.sheet);
-    btn.textContent = (complete ? "✅ " : "") + btn.dataset.baseLabel;
-  });
-}
-
-// 前週同曜日との数値乖離をチェック（2倍以上 or 0.5倍以下で警告）
-// 該当した最初の1件のみ返す。なければ null。
-function checkValueDeviation() {
-  if (currentSheet !== "water") return null;
-  if (currentWeek <= 1) return null;
-  const prevWeek = weeklyData.weeks[currentWeek - 1];
-  if (!prevWeek) return null;
-  const prevDay = prevWeek[currentDay];
-  if (!prevDay) return null;
-  const curDay = weeklyData.weeks[currentWeek] && weeklyData.weeks[currentWeek][currentDay];
-  if (!curDay) return null;
-
-  for (let i = 0; i < REQUIRED_WATER_FIELDS.length; i++) {
-    const key = REQUIRED_WATER_FIELDS[i];
-    const el = document.querySelector('.form-wrap [data-field="' + key + '"]');
-    // 数値inputのみ対象（toggle-btn・テキストは除外）
-    if (!el || el.tagName !== "INPUT" || el.type !== "number") continue;
-    const prevRaw = prevDay[key];
-    const curRaw = curDay[key];
-    // 前回値・今回値どちらかが未入力ならスキップ
-    if (prevRaw === null || prevRaw === undefined || prevRaw === "") continue;
-    if (curRaw === null || curRaw === undefined || curRaw === "") continue;
-    const prevNum = Number(prevRaw);
-    const curNum = Number(curRaw);
-    if (!isFinite(prevNum) || !isFinite(curNum)) continue;
-    // 前回値がゼロならスキップ（0除算回避）
-    if (prevNum === 0) continue;
-    const ratio = curNum / prevNum;
-    if (ratio >= 2 || ratio <= 0.5) {
-      return { key: key, label: getFieldLabel(el), prev: prevRaw, current: curRaw };
-    }
-  }
-  return null;
 }
 
 // ===== フォーム <-> データ =====
@@ -2039,7 +2120,7 @@ async function saveCurrentToServer() {
       var res = await fetchWithTimeout(GAS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(withTokenBody(payload))
       }, 15000);
       if (!res.ok) throw new Error('HTTP ' + res.status);
       var result = await res.json();
@@ -2060,7 +2141,7 @@ async function saveCurrentToServer() {
       var res = await fetchWithTimeout(GAS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(withTokenBody(payload))
       }, 15000);
       if (!res.ok) throw new Error('HTTP ' + res.status);
       var result = await res.json();
@@ -2081,7 +2162,7 @@ async function saveCurrentToServer() {
       var res = await fetchWithTimeout(GAS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(withTokenBody(payload))
       }, 15000);
       if (!res.ok) throw new Error('HTTP ' + res.status);
       var result = await res.json();
@@ -2102,7 +2183,7 @@ async function saveCurrentToServer() {
       var res = await fetchWithTimeout(GAS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(withTokenBody(payload))
       }, 15000);
       if (!res.ok) throw new Error('HTTP ' + res.status);
       var result = await res.json();
@@ -2142,7 +2223,7 @@ async function saveSheetToServer(sheetType) {
         var res = await fetchWithTimeout(GAS_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(withTokenBody(payload))
         }, 15000);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         await res.json();
@@ -2162,7 +2243,7 @@ async function saveSheetToServer(sheetType) {
         var res = await fetchWithTimeout(GAS_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(withTokenBody(payload))
         }, 15000);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         await res.json();
@@ -2183,7 +2264,7 @@ async function saveSheetToServer(sheetType) {
         var res = await fetchWithTimeout(GAS_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(withTokenBody(payload))
         }, 15000);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         await res.json();
@@ -2204,7 +2285,7 @@ async function saveSheetToServer(sheetType) {
         var res = await fetchWithTimeout(GAS_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify(withTokenBody(payload))
         }, 15000);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         await res.json();
@@ -2216,10 +2297,12 @@ async function saveSheetToServer(sheetType) {
 
 // GASからデータを取得（全シート）
 async function loadFromServer(month) {
-  const url = GAS_URL + '?action=getAllData&month=' + encodeURIComponent(month);
+  const url = withToken(GAS_URL + '?action=getAllData&month=' + encodeURIComponent(month));
   const res = await fetchWithTimeout(url, { method: 'GET' }, 15000);
   if (!res.ok) throw new Error('HTTP ' + res.status);
-  return await res.json();
+  const data = await res.json();
+  if (data && data.authRequired) { handleAuthFailure(); throw new Error('認証エラー'); }
+  return data;
 }
 
 // 機器運転時間: 日本語名→キー変換マップ
@@ -2385,8 +2468,6 @@ function switchTo(week, day) {
   updateWeekTabs();
   updateDayTabs();
   loadDataToForm();
-  // 別の日付に切り替えたらエラー表示をリセット
-  clearValidationErrors();
 }
 
 // ===== トースト通知 =====
@@ -2499,11 +2580,6 @@ function bindEvents() {
       }
       updateDayTabs();
       markDirty();
-      // 値が入ったらエラーハイライトを解除
-      if (el.value !== "" && el.value !== null) {
-        const fieldDiv = el.closest('.field');
-        if (fieldDiv) fieldDiv.classList.remove('field-error');
-      }
     });
   });
 
@@ -2522,11 +2598,6 @@ function bindEvents() {
       day[key] = newVal || null;
       updateDayTabs();
       markDirty();
-      // 値が入ったらエラーハイライトを解除
-      if (newVal) {
-        const fieldDiv = btn.closest('.field');
-        if (fieldDiv) fieldDiv.classList.remove('field-error');
-      }
       pushUndo({ type: "field", week: currentWeek, day: currentDay, field: key, oldVal: cur || null });
     });
   });
@@ -2747,26 +2818,6 @@ function bindEvents() {
   document.getElementById("btnSave").addEventListener("click", async () => {
     const btnSave = document.getElementById("btnSave");
 
-    // a-0. 必須項目チェック・前回値乖離チェック（日常水質シートのみ・警告のみ・保存は続行）
-    if (currentSheet === "water") {
-      saveFormToData();
-      clearValidationErrors();
-      const validation = validateRequiredFields();
-      if (!validation.ok) {
-        showValidationErrors(validation.errors);
-        showToast(validation.errors[0].label + " が未入力です", "error");
-      } else {
-        // 必須項目が揃っている場合のみ前週との乖離をチェック
-        const deviation = checkValueDeviation();
-        if (deviation) {
-          showToast(
-            deviation.label + " の値が先週と大きく異なります（先週：" + deviation.prev + "、今週：" + deviation.current + "）",
-            "warn"
-          );
-        }
-      }
-    }
-
     // a. まずlocalStorageに全データ保存
     const ok = saveToStorage();
     if (!ok) {
@@ -2783,14 +2834,9 @@ function bindEvents() {
       setConnectionStatus(true);
       showToast("保存しました（サーバー同期完了）");
       markClean();
-      clearValidationErrors();
-      updateMainTabIndicators();
-      recordLastSent();
-      updateLastSentDisplay();
     } catch (e) {
       setConnectionStatus(false);
       showToast("端末に保存しました（サーバー同期に失敗。後で再試行してください）", "warn");
-      updateMainTabIndicators();
     } finally {
       btnSave.textContent = "保存";
       btnSave.disabled = false;
@@ -2834,6 +2880,22 @@ function bindEvents() {
 // ===== 初期化 =====
 
 async function init() {
+  bindLoginEvents();
+  updateUserInfoUI();
+
+  // トークンが無い or 期限切れならログイン画面表示
+  if (!isTokenValid()) {
+    showLoginScreen();
+    return;
+  }
+  // 続きの初期化
+  await continueInit();
+}
+
+async function continueInit() {
+  hideLoginScreen();
+  updateUserInfoUI();
+
   // 対象月：前回保存 or 現在月
   const savedMonth = localStorage.getItem("shibaki_current_month");
   const ym = savedMonth || currentYearMonth();
@@ -2856,11 +2918,11 @@ async function init() {
   updateWeekTabs();
   updateDayTabs();
   loadDataToForm();
-  updateMainTabIndicators();
-  updateLastSentDisplay();
 
   // b. バックグラウンドでGASからデータ取得（接続確認を兼ねる）
   syncFromServer();
+  // 祝日リストもバックグラウンド取得
+  fetchHolidaysFromServer();
 }
 
 // ===== スマホUX改善 =====
@@ -3206,6 +3268,9 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
   // 週ブロックオフセット（各週44行）
   const weekOffsets = { 1: 0, 2: 44, 3: 88, 4: 132, 5: 176 };
 
+  // 祝日リスト取得（キャッシュから）
+  const holidaySet = getHolidaySetFromCache();
+
   for (var w = 1; w <= 5; w++) {
     var offset = weekOffsets[w];
     var weekData = weeklyData.weeks[w];
@@ -3221,12 +3286,16 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
     for (var wdi = 0; wdi < waterDayKeys2.length; wdi++) {
       var wdKey = waterDayKeys2[wdi];
       if (wdKey === "nextMon") {
-        // N列は翌週月曜（今週月曜+7日）
-        var monObj = getActualDate(w, "mon");
-        if (monObj) {
-          var nextMonObj = new Date(monObj);
-          nextMonObj.setDate(nextMonObj.getDate() + 7);
-          setCell(ws, 3 + offset, 14, formatDateJP(nextMonObj));
+        // N列は「次週の最初の平日」（祝日・土日を除く）
+        var thuObj = getActualDate(w, "thu");
+        var friObj = null;
+        if (thuObj) {
+          friObj = new Date(thuObj);
+          friObj.setDate(friObj.getDate() + 1);
+        }
+        var nextWorkday = getNextWeekFirstWorkday(friObj, holidaySet);
+        if (nextWorkday) {
+          setCell(ws, 3 + offset, 14, formatDateJP(nextWorkday));
         }
       } else {
         var wdObj = getActualDate(w, wdKey);
