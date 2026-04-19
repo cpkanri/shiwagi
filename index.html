@@ -3380,12 +3380,17 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
       }
     }
 
-    // 測定者行（Row12のJ-N列）= 各曜日のinspectorを設定
+    // 測定者行（Row12のJ-N列）= 各曜日のinspectorを設定（祝日はスキップ）
     var inspColMap = { mon: 10, tue: 11, wed: 12, thu: 13, nextMon: 14 };
     for (var idi = 0; idi < waterDayKeys2.length; idi++) {
       var idKey = waterDayKeys2[idi];
-      if (weekData[idKey] && weekData[idKey].inspector) {
+      var idDate = getActualDate(w, idKey);
+      var isHolidayInsp = idDate && holidaySet.has(dateToStr(idDate));
+      if (!isHolidayInsp && weekData[idKey] && weekData[idKey].inspector) {
         setCell(ws, 12 + offset, inspColMap[idKey], weekData[idKey].inspector);
+      } else {
+        // 祝日 or データ無しの場合は null でクリア
+        ws.getCell(12 + offset, inspColMap[idKey]).value = null;
       }
     }
 
@@ -3394,6 +3399,19 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
     for (var di = 0; di < dayKeys.length; di++) {
       var dayKey = dayKeys[di];
       var dayData = weekData[dayKey];
+      // 祝日チェック
+      var dayDate = getActualDate(w, dayKey);
+      var isHoliday = dayDate && holidaySet.has(dateToStr(dayDate));
+      if (isHoliday) {
+        // 祝日の列は累積読値+水質データも全部null
+        var cumColH = dayColMap[dayKey];
+        var wqColH = dayColMapWQ[dayKey];
+        // 累積読値
+        for (var rh = 4; rh <= 9; rh++) ws.getCell(rh + offset, cumColH).value = null;
+        // 水質データ（Row13-34）
+        for (var rh2 = 13; rh2 <= 34; rh2++) ws.getCell(rh2 + offset, wqColH).value = null;
+        continue;
+      }
       if (!dayData) continue;
 
       // 累積読み値（Row4-9）: I～N列
@@ -3516,7 +3534,7 @@ function duplicateSheetExcel(wb, origSheet, newName) {
 
 // ===== 同一シート内で行範囲を縦方向に複製するヘルパー =====
 function duplicateRowRangeInSheet(ws, startRow, endRow, offsetRows) {
-  // 値・スタイル
+  // 値・スタイル（マージ内の従セルはスキップ）
   for (var r = startRow; r <= endRow; r++) {
     var srcRow = ws.getRow(r);
     var dstRow = ws.getRow(r + offsetRows);
@@ -3524,8 +3542,15 @@ function duplicateRowRangeInSheet(ws, startRow, endRow, offsetRows) {
       dstRow.height = srcRow.height;
     }
     srcRow.eachCell({ includeEmpty: true }, function(cell, col) {
+      // マージ内の「従」セル（master が自分自身でない）は値コピーをスキップ
+      // スタイルだけコピーする
+      var isSlave = false;
+      try {
+        if (cell.isMerged && cell.master && cell.master !== cell) isSlave = true;
+      } catch(e) {}
+
       var newCell = ws.getCell(r + offsetRows, col);
-      if (cell.value !== null && cell.value !== undefined) {
+      if (!isSlave && cell.value !== null && cell.value !== undefined) {
         newCell.value = cell.value;
       }
       try {
@@ -3583,13 +3608,14 @@ function fillEquipSheet(wb, yyyy, mm) {
 // 1週分の機器運転時間データ書き込み（rowOffsetで縦位置を指定）
 function fillEquipSheetData(ws, w, yyyy, mm, rowOffset) {
   rowOffset = rowOffset || 0;
+  const holidaySet = getHolidaySetFromCache();
 
-  // その週の月〜金のうち対象月内にある日付のみ
+  // その週の月〜金のうち対象月内にある日付のみ（祝日は除く）
   var weekDates = [];
   var weekDayKeys = [];
   ["mon", "tue", "wed", "thu", "fri"].forEach(function(dk) {
     var dt = getActualDate(w, dk);
-    if (dt && dt.getFullYear() === yyyy && (dt.getMonth() + 1) === mm) {
+    if (dt && dt.getFullYear() === yyyy && (dt.getMonth() + 1) === mm && !holidaySet.has(dateToStr(dt))) {
       weekDates.push(dt);
       weekDayKeys.push(dk);
     }
@@ -3695,20 +3721,24 @@ function fillElecSheet(wb, yyyy, mm, monthLabel) {
     alarmStatus: 38,     // 通報装置
   };
 
+  const holidaySet = getHolidaySetFromCache();
+
   for (var w = 1; w <= 5; w++) {
     var offset = weekOffsets[w];
     var elecWeek = weeklyData.electrical[w];
 
-    // 日付行（Row2）に各曜日の日付を入れる（対象月内のみ、対象月外はnull）
+    // 日付行（Row2）に各曜日の日付を入れる（対象月内かつ祝日でない日のみ、それ以外はnull）
     var elecDayKeys = ["mon", "tue", "wed", "thu", "fri"];
     for (var edi = 0; edi < elecDayKeys.length; edi++) {
       var edayKey = elecDayKeys[edi];
       var dateObj = getActualDate(w, edayKey);
       var ecol = dayColElec[edayKey];
-      if (dateObj && dateObj.getFullYear() === yyyy && (dateObj.getMonth() + 1) === mm) {
+      var isTarget = dateObj && dateObj.getFullYear() === yyyy && (dateObj.getMonth() + 1) === mm;
+      var isHoliday = dateObj && holidaySet.has(dateToStr(dateObj));
+      if (isTarget && !isHoliday) {
         setCell(ws, 2 + offset, ecol, formatDateJP(dateObj));
       } else {
-        // 対象月外は空に
+        // 対象月外 or 祝日は空に
         ws.getCell(2 + offset, ecol).value = null;
       }
     }
@@ -3718,15 +3748,16 @@ function fillElecSheet(wb, yyyy, mm, monthLabel) {
     var dayKeys = ["mon", "tue", "wed", "thu", "fri"];
     for (var di = 0; di < dayKeys.length; di++) {
       var dayKey = dayKeys[di];
-      // 対象月チェック：対象月外の日はスキップ + データクリア
+      // 対象月+祝日チェック
       var dateObj2 = getActualDate(w, dayKey);
       var col = dayColElec[dayKey];
-      if (!dateObj2 || dateObj2.getFullYear() !== yyyy || (dateObj2.getMonth() + 1) !== mm) {
-        // 対象月外の日はすべてのフィールドをnullに
+      var inTarget = dateObj2 && dateObj2.getFullYear() === yyyy && (dateObj2.getMonth() + 1) === mm;
+      var isHoliday2 = dateObj2 && holidaySet.has(dateToStr(dateObj2));
+      if (!inTarget || isHoliday2) {
+        // 対象月外 or 祝日 はすべてのフィールドをnullに
         for (var fieldKey in elecRowMap) {
           var row = elecRowMap[fieldKey] + offset;
           ws.getCell(row, col).value = null;
-          // 2列分書式（G-H=7-8 etc）
           ws.getCell(row, col + 1).value = null;
         }
         continue;
@@ -3845,6 +3876,8 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
   // H1に月表示を設定
   setCell(ws, 1, 8, monthLabel);
 
+  const holidaySet = getHolidaySetFromCache();
+
   for (var w = 1; w <= 5; w++) {
     var offset = weekOffsets[w];
     var mechWeek = weeklyData.mechanical[w];
@@ -3863,7 +3896,9 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
         var mdayKey = mechDayLabels[mdi];
         var mdateObj = getActualDate(w, mdayKey);
         var mcol = mechDayKeysMap[mdayKey];
-        if (mdateObj && mdateObj.getFullYear() === yyyy && (mdateObj.getMonth() + 1) === mm) {
+        var inTargetM = mdateObj && mdateObj.getFullYear() === yyyy && (mdateObj.getMonth() + 1) === mm;
+        var isHolidayM = mdateObj && holidaySet.has(dateToStr(mdateObj));
+        if (inTargetM && !isHolidayM) {
           setCell(ws, dateRow, mcol, formatDateJP(mdateObj));
           var wKey = waterDayMap[mdayKey];
           if (weeklyData.weeks[w] && weeklyData.weeks[w][wKey] && weeklyData.weeks[w][wKey].inspector) {
@@ -3872,7 +3907,7 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
             ws.getCell(inspRow, mcol).value = null;
           }
         } else {
-          // 対象月外は空に
+          // 対象月外 or 祝日は空に
           ws.getCell(dateRow, mcol).value = null;
           ws.getCell(inspRow, mcol).value = null;
         }
@@ -3884,11 +3919,13 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
     var dayKeys = ["mon", "tue", "wed", "thu", "fri"];
     for (var di = 0; di < dayKeys.length; di++) {
       var dayKey = dayKeys[di];
-      // 対象月チェック
+      // 対象月+祝日チェック
       var mdateCheck = getActualDate(w, dayKey);
       var col = dayColMech[dayKey];
-      if (!mdateCheck || mdateCheck.getFullYear() !== yyyy || (mdateCheck.getMonth() + 1) !== mm) {
-        // 対象月外の日はデータをすべてnullに
+      var inTargetM2 = mdateCheck && mdateCheck.getFullYear() === yyyy && (mdateCheck.getMonth() + 1) === mm;
+      var isHolidayM2 = mdateCheck && holidaySet.has(dateToStr(mdateCheck));
+      if (!inTargetM2 || isHolidayM2) {
+        // 対象月外 or 祝日 はデータをすべてnullに
         for (var fieldKey in mechRowMap1) {
           ws.getCell(mechRowMap1[fieldKey] + offset, col).value = null;
         }
@@ -3934,6 +3971,7 @@ function fillQualityReportSheet(wb, yyyy, mm) {
 
   var daysInMonth = new Date(yyyy, mm, 0).getDate();
   var dayNames = ["日","月","火","水","木","金","土"];
+  const holidaySet = getHolidaySetFromCache();
 
   // 全週全日のデータを日付でマッピング
   var dateMap = buildDateMap();
@@ -3954,6 +3992,8 @@ function fillQualityReportSheet(wb, yyyy, mm) {
     setCell(ws, dataRow2, 2, dayNames[dateObj.getDay()]);
 
     var dateKey = yyyy + "-" + String(mm).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+    // 祝日の行はデータ書き込みをスキップ（A列の日付・曜日は残す）
+    if (holidaySet.has(dateKey)) continue;
     var dayData = dateMap[dateKey];
     if (!dayData) continue;
 
@@ -4010,6 +4050,7 @@ function fillOperationReportSheet(wb, yyyy, mm) {
   var daysInMonth = new Date(yyyy, mm, 0).getDate();
   var dayNames = ["日","月","火","水","木","金","土"];
   var dateMap = buildDateMap();
+  const holidaySet = getHolidaySetFromCache();
 
   for (var d = 1; d <= daysInMonth; d++) {
     var dateObj = new Date(yyyy, mm - 1, d);
@@ -4022,6 +4063,8 @@ function fillOperationReportSheet(wb, yyyy, mm) {
     setCell(ws, row, 2, dayNames[dateObj.getDay()]);
 
     var dateKey = yyyy + "-" + String(mm).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+    // 祝日の行はデータ書き込みをスキップ（A列の日付・曜日は残す）
+    if (holidaySet.has(dateKey)) continue;
     var dayData = dateMap[dateKey];
     if (!dayData) continue;
 
