@@ -3386,27 +3386,115 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
 }
 
 // ===== 機器運転時間シート =====
-function fillEquipSheet(wb, yyyy, mm) {
-  const ws = wb.getWorksheet(2); // 機器運転時間
-  if (!ws) return;
+// ===== シート複製ヘルパー =====
+// ExcelJSでシートを完全複製する（値・スタイル・マージ・列幅・行高）
+function duplicateSheetExcel(wb, origSheet, newName) {
+  const ns = wb.addWorksheet(newName);
 
-  // 日付行: A3=開始日付, F3=終了日付（現在の週）
-  var startDate = getActualDate(currentWeek, "mon");
-  if (startDate) {
-    var reiwaStart = "令和" + (startDate.getFullYear() - 2018) + "年" + (startDate.getMonth() + 1) + "月" + startDate.getDate() + "日";
+  // 列幅コピー
+  origSheet.columns.forEach(function(col, i) {
+    if (col && col.width) ns.getColumn(i + 1).width = col.width;
+  });
+
+  // 全行・全セルコピー
+  origSheet.eachRow({ includeEmpty: true }, function(row, rowNumber) {
+    const newRow = ns.getRow(rowNumber);
+    if (row.height) newRow.height = row.height;
+    row.eachCell({ includeEmpty: true }, function(cell, colNumber) {
+      const newCell = ns.getCell(rowNumber, colNumber);
+      if (cell.value !== null && cell.value !== undefined) {
+        newCell.value = cell.value;
+      }
+      if (cell.numFmt) newCell.numFmt = cell.numFmt;
+      if (cell.font) newCell.font = cell.font;
+      if (cell.alignment) newCell.alignment = cell.alignment;
+      if (cell.border) newCell.border = cell.border;
+      if (cell.fill) newCell.fill = cell.fill;
+    });
+  });
+
+  // マージセル
+  const merges = (origSheet.model && origSheet.model.merges) ? origSheet.model.merges : [];
+  for (let i = 0; i < merges.length; i++) {
+    try { ns.mergeCells(merges[i]); } catch(e) { /* すでにマージ済み等はスキップ */ }
+  }
+
+  return ns;
+}
+
+function fillEquipSheet(wb, yyyy, mm) {
+  const origSheet = wb.getWorksheet(2); // 機器運転時間（テンプレ1週分）
+  if (!origSheet) return;
+
+  // 対象月に関連する週を収集（週の月〜金のうち対象月の日がひとつでもある週）
+  const relevantWeeks = [];
+  for (var w = 1; w <= 5; w++) {
+    var hasTargetDay = false;
+    ["mon", "tue", "wed", "thu", "fri"].forEach(function(dk) {
+      var dt = getActualDate(w, dk);
+      if (dt && dt.getFullYear() === yyyy && (dt.getMonth() + 1) === mm) {
+        hasTargetDay = true;
+      }
+    });
+    if (hasTargetDay) relevantWeeks.push(w);
+  }
+  if (relevantWeeks.length === 0) return;
+
+  // 最初の週は元シートを使用、それ以外は複製して追加
+  const firstWeek = relevantWeeks[0];
+  const otherWeeks = relevantWeeks.slice(1);
+
+  // 先に複製を全部作成（元シートを書き換える前にコピー元が綺麗な状態であるため）
+  const sheetMap = {};
+  sheetMap[firstWeek] = origSheet;
+  otherWeeks.forEach(function(w) {
+    // 複製時に一時名を付与
+    sheetMap[w] = duplicateSheetExcel(wb, origSheet, "__tmp_eq_" + w);
+  });
+
+  // タブ名をつけ直し
+  origSheet.name = "機器運転時間 第" + firstWeek + "週";
+  otherWeeks.forEach(function(w) {
+    sheetMap[w].name = "機器運転時間 第" + w + "週";
+  });
+
+  // 各シートにデータ書き込み
+  Object.keys(sheetMap).forEach(function(wStr) {
+    var w = Number(wStr);
+    fillEquipSheetData(sheetMap[w], w, yyyy, mm);
+  });
+}
+
+// 1週分の機器運転時間データ書き込み
+function fillEquipSheetData(ws, w, yyyy, mm) {
+  // その週の月〜金のうち対象月内にある日付のみ
+  var weekDates = [];
+  var weekDayKeys = [];
+  ["mon", "tue", "wed", "thu", "fri"].forEach(function(dk) {
+    var dt = getActualDate(w, dk);
+    if (dt && dt.getFullYear() === yyyy && (dt.getMonth() + 1) === mm) {
+      weekDates.push(dt);
+      weekDayKeys.push(dk);
+    }
+  });
+
+  // A3=対象月内の最初の日, F3=対象月内の最後の日
+  if (weekDates.length > 0) {
+    var firstDay = weekDates[0];
+    var lastDay = weekDates[weekDates.length - 1];
+    var reiwaStart = "令和" + (firstDay.getFullYear() - 2018) + "年" + (firstDay.getMonth() + 1) + "月" + firstDay.getDate() + "日";
     var cellA3 = ws.getCell(3, 1);
     cellA3.value = reiwaStart;
     cellA3.alignment = { horizontal: 'center', vertical: 'center', shrinkToFit: true, wrapText: false };
-    var endDate = getActualDate(currentWeek, "fri");
-    if (endDate) {
-      var reiwaEnd = "令和" + (endDate.getFullYear() - 2018) + "年" + (endDate.getMonth() + 1) + "月" + endDate.getDate() + "日";
-      var cellF3 = ws.getCell(3, 6);
-      cellF3.value = reiwaEnd;
-      cellF3.alignment = { horizontal: 'center', vertical: 'center', shrinkToFit: true, wrapText: false };
-    }
+    var reiwaEnd = "令和" + (lastDay.getFullYear() - 2018) + "年" + (lastDay.getMonth() + 1) + "月" + lastDay.getDate() + "日";
+    var cellF3 = ws.getCell(3, 6);
+    cellF3.value = reiwaEnd;
+    cellF3.alignment = { horizontal: 'center', vertical: 'center', shrinkToFit: true, wrapText: false };
+  } else {
+    ws.getCell(3, 1).value = null;
+    ws.getCell(3, 6).value = null;
   }
 
-  // 機器キー → 行マッピング
   var equipRowMap = {
     screenUnit: 7,
     thickSludgePump: 8,
@@ -3421,24 +3509,23 @@ function fillEquipSheet(wb, yyyy, mm) {
     aeration2: 17,
     floorDrainPump: 18
   };
-
-  // 曜日 → 列マッピング: D(4)=月, E(5)=火, F(6)=水, G(7)=木, H(8)=金
   var dayColEquip = { mon: 4, tue: 5, wed: 6, thu: 7, fri: 8 };
 
-  // 現在の週のデータを出力（機器運転時間は1シートに1週分）
-  // アプリでは全5週のデータがあるが、Excelテンプレートは1週分のみ
-  // → 現在選択中の週を出力
-  var w = currentWeek;
-  var equipData = weeklyData.equipment[w];
-  if (!equipData) return;
+  var equipData = weeklyData.equipment[w] || {};
 
+  // 対象月外の曜日はセルをnullクリア、対象月内は値書き込み
+  var allDayKeys = ["mon", "tue", "wed", "thu", "fri"];
   for (var equipKey in equipRowMap) {
-    if (!equipData[equipKey]) continue;
     var row = equipRowMap[equipKey];
-    for (var dayKey in dayColEquip) {
-      var col = dayColEquip[dayKey];
-      var val = equipData[equipKey][dayKey];
-      setCell(ws, row, col, val);
+    for (var ddi = 0; ddi < allDayKeys.length; ddi++) {
+      var dk = allDayKeys[ddi];
+      var col = dayColEquip[dk];
+      if (weekDayKeys.indexOf(dk) < 0) {
+        ws.getCell(row, col).value = null;
+      } else if (equipData[equipKey]) {
+        var val = equipData[equipKey][dk];
+        setCell(ws, row, col, val);
+      }
     }
   }
 }
@@ -3495,25 +3582,41 @@ function fillElecSheet(wb, yyyy, mm, monthLabel) {
   for (var w = 1; w <= 5; w++) {
     var offset = weekOffsets[w];
     var elecWeek = weeklyData.electrical[w];
-    if (!elecWeek) continue;
 
-    // 日付行（Row2）に各曜日の日付を入れる
+    // 日付行（Row2）に各曜日の日付を入れる（対象月内のみ、対象月外はnull）
     var elecDayKeys = ["mon", "tue", "wed", "thu", "fri"];
     for (var edi = 0; edi < elecDayKeys.length; edi++) {
       var edayKey = elecDayKeys[edi];
-      var dateObj = getActualDate(w, edayKey === "fri" ? "nextMon" : edayKey);
-      if (dateObj) {
-        var ecol = dayColElec[edayKey];
+      var dateObj = getActualDate(w, edayKey);
+      var ecol = dayColElec[edayKey];
+      if (dateObj && dateObj.getFullYear() === yyyy && (dateObj.getMonth() + 1) === mm) {
         setCell(ws, 2 + offset, ecol, formatDateJP(dateObj));
+      } else {
+        // 対象月外は空に
+        ws.getCell(2 + offset, ecol).value = null;
       }
     }
+
+    if (!elecWeek) continue;
 
     var dayKeys = ["mon", "tue", "wed", "thu", "fri"];
     for (var di = 0; di < dayKeys.length; di++) {
       var dayKey = dayKeys[di];
+      // 対象月チェック：対象月外の日はスキップ + データクリア
+      var dateObj2 = getActualDate(w, dayKey);
+      var col = dayColElec[dayKey];
+      if (!dateObj2 || dateObj2.getFullYear() !== yyyy || (dateObj2.getMonth() + 1) !== mm) {
+        // 対象月外の日はすべてのフィールドをnullに
+        for (var fieldKey in elecRowMap) {
+          var row = elecRowMap[fieldKey] + offset;
+          ws.getCell(row, col).value = null;
+          // 2列分書式（G-H=7-8 etc）
+          ws.getCell(row, col + 1).value = null;
+        }
+        continue;
+      }
       var dayData = elecWeek[dayKey];
       if (!dayData) continue;
-      var col = dayColElec[dayKey];
 
       for (var fieldKey in elecRowMap) {
         var row = elecRowMap[fieldKey];
@@ -3629,33 +3732,49 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
   for (var w = 1; w <= 5; w++) {
     var offset = weekOffsets[w];
     var mechWeek = weeklyData.mechanical[w];
-    if (!mechWeek) continue;
 
-    // E2-I2に点検者名、日付はE3-I3に入れる（曜日ごと）
+    // E2-I2に点検者名、日付はE3-I3に入れる（曜日ごと、対象月内のみ）
     var mechDayKeysMap = {mon: 5, tue: 6, wed: 7, thu: 8, fri: 9};
     var mechDayLabels = ["mon", "tue", "wed", "thu", "fri"];
-    // 点検者名: 日常水質のinspectorフィールドから取得
     var waterDayMap = {mon: "mon", tue: "tue", wed: "wed", thu: "thu", fri: "nextMon"};
     for (var mdi = 0; mdi < mechDayLabels.length; mdi++) {
       var mdayKey = mechDayLabels[mdi];
-      var mdateObj = getActualDate(w, mdayKey === "fri" ? "nextMon" : mdayKey);
-      if (mdateObj) {
-        var mcol = mechDayKeysMap[mdayKey];
+      var mdateObj = getActualDate(w, mdayKey);
+      var mcol = mechDayKeysMap[mdayKey];
+      if (mdateObj && mdateObj.getFullYear() === yyyy && (mdateObj.getMonth() + 1) === mm) {
         setCell(ws, 3 + offset, mcol, formatDateJP(mdateObj));
-      }
-      // 点検者名をRow2に設定
-      var wKey = waterDayMap[mdayKey];
-      if (weeklyData.weeks[w] && weeklyData.weeks[w][wKey] && weeklyData.weeks[w][wKey].inspector) {
-        setCell(ws, 2 + offset, mechDayKeysMap[mdayKey], weeklyData.weeks[w][wKey].inspector);
+        // 点検者名をRow2に設定
+        var wKey = waterDayMap[mdayKey];
+        if (weeklyData.weeks[w] && weeklyData.weeks[w][wKey] && weeklyData.weeks[w][wKey].inspector) {
+          setCell(ws, 2 + offset, mcol, weeklyData.weeks[w][wKey].inspector);
+        }
+      } else {
+        // 対象月外の日は空に
+        ws.getCell(3 + offset, mcol).value = null;
+        ws.getCell(2 + offset, mcol).value = null;
       }
     }
+
+    if (!mechWeek) continue;
 
     var dayKeys = ["mon", "tue", "wed", "thu", "fri"];
     for (var di = 0; di < dayKeys.length; di++) {
       var dayKey = dayKeys[di];
+      // 対象月チェック
+      var mdateCheck = getActualDate(w, dayKey);
+      var col = dayColMech[dayKey];
+      if (!mdateCheck || mdateCheck.getFullYear() !== yyyy || (mdateCheck.getMonth() + 1) !== mm) {
+        // 対象月外の日はデータをすべてnullに
+        for (var fieldKey in mechRowMap1) {
+          ws.getCell(mechRowMap1[fieldKey] + offset, col).value = null;
+        }
+        for (var fieldKey in mechRowMap2) {
+          ws.getCell(mechRowMap2[fieldKey] + offset, col).value = null;
+        }
+        continue;
+      }
       var dayData = mechWeek[dayKey];
       if (!dayData) continue;
-      var col = dayColMech[dayKey];
 
       // 1/2部分
       for (var fieldKey in mechRowMap1) {
