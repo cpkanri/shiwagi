@@ -3183,6 +3183,12 @@ function formatDateJP(d) {
   return (d.getMonth()+1) + "月" + d.getDate() + "日(" + dayNames[d.getDay()] + ")";
 }
 
+// ExcelJS 用の日付変換ヘルパー（タイムゾーンずれ対策）
+function toExcelDate(date) {
+  if (!date) return null;
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0));
+}
+
 async function exportExcel() {
   var btnExcel = document.getElementById("btnExcel");
   btnExcel.textContent = "生成中...";
@@ -3749,25 +3755,33 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
     var offset = weekOffsets[w];
     var mechWeek = weeklyData.mechanical[w];
 
-    // E2-I2に点検者名、日付はE3-I3に入れる（曜日ごと、対象月内のみ）
+    // 1/2ページ=Row2(点検者)/Row3(日付)、2/2ページ=Row64(点検者)/Row65(日付)
+    var MECH_INSPECTOR_ROWS = [2, 64];
+    var MECH_DATE_ROWS = [3, 65];
     var mechDayKeysMap = {mon: 5, tue: 6, wed: 7, thu: 8, fri: 9};
     var mechDayLabels = ["mon", "tue", "wed", "thu", "fri"];
     var waterDayMap = {mon: "mon", tue: "tue", wed: "wed", thu: "thu", fri: "nextMon"};
-    for (var mdi = 0; mdi < mechDayLabels.length; mdi++) {
-      var mdayKey = mechDayLabels[mdi];
-      var mdateObj = getActualDate(w, mdayKey);
-      var mcol = mechDayKeysMap[mdayKey];
-      if (mdateObj && mdateObj.getFullYear() === yyyy && (mdateObj.getMonth() + 1) === mm) {
-        setCell(ws, 3 + offset, mcol, formatDateJP(mdateObj));
-        // 点検者名をRow2に設定
-        var wKey = waterDayMap[mdayKey];
-        if (weeklyData.weeks[w] && weeklyData.weeks[w][wKey] && weeklyData.weeks[w][wKey].inspector) {
-          setCell(ws, 2 + offset, mcol, weeklyData.weeks[w][wKey].inspector);
+
+    for (var pi = 0; pi < MECH_DATE_ROWS.length; pi++) {
+      var dateRow = MECH_DATE_ROWS[pi] + offset;
+      var inspRow = MECH_INSPECTOR_ROWS[pi] + offset;
+      for (var mdi = 0; mdi < mechDayLabels.length; mdi++) {
+        var mdayKey = mechDayLabels[mdi];
+        var mdateObj = getActualDate(w, mdayKey);
+        var mcol = mechDayKeysMap[mdayKey];
+        if (mdateObj && mdateObj.getFullYear() === yyyy && (mdateObj.getMonth() + 1) === mm) {
+          setCell(ws, dateRow, mcol, formatDateJP(mdateObj));
+          var wKey = waterDayMap[mdayKey];
+          if (weeklyData.weeks[w] && weeklyData.weeks[w][wKey] && weeklyData.weeks[w][wKey].inspector) {
+            setCell(ws, inspRow, mcol, weeklyData.weeks[w][wKey].inspector);
+          } else {
+            ws.getCell(inspRow, mcol).value = null;
+          }
+        } else {
+          // 対象月外は空に
+          ws.getCell(dateRow, mcol).value = null;
+          ws.getCell(inspRow, mcol).value = null;
         }
-      } else {
-        // 対象月外の日は空に
-        ws.getCell(3 + offset, mcol).value = null;
-        ws.getCell(2 + offset, mcol).value = null;
       }
     }
 
@@ -3835,10 +3849,14 @@ function fillQualityReportSheet(wb, yyyy, mm) {
     var dataRow1 = 7 + d; // 1/2: Row8=1日, Row9=2日, ...（Row3-7がヘッダー）
     var dataRow2 = 49 + d; // 2/2: Row50=1日, Row51=2日, ...（Row45-49がヘッダー）
 
-    // 日付・曜日
-    setCell(ws, dataRow1, 1, d);
+    // 日付・曜日: A列=日付型（書式'd'で「1」表示）、B列=曜日文字
+    var cellA1 = ws.getCell(dataRow1, 1);
+    cellA1.value = toExcelDate(dateObj);
+    cellA1.numFmt = 'd';
     setCell(ws, dataRow1, 2, dayNames[dateObj.getDay()]);
-    setCell(ws, dataRow2, 1, d);
+    var cellA2 = ws.getCell(dataRow2, 1);
+    cellA2.value = toExcelDate(dateObj);
+    cellA2.numFmt = 'd';
     setCell(ws, dataRow2, 2, dayNames[dateObj.getDay()]);
 
     var dateKey = yyyy + "-" + String(mm).padStart(2, "0") + "-" + String(d).padStart(2, "0");
@@ -3903,7 +3921,10 @@ function fillOperationReportSheet(wb, yyyy, mm) {
     var dateObj = new Date(yyyy, mm - 1, d);
     var row = 5 + d; // Row6=1日, Row7=2日, ...
 
-    setCell(ws, row, 1, d);
+    // A列=日付型（書式'd'で「1」表示）、B列=曜日文字
+    var cellA = ws.getCell(row, 1);
+    cellA.value = toExcelDate(dateObj);
+    cellA.numFmt = 'd';
     setCell(ws, row, 2, dayNames[dateObj.getDay()]);
 
     var dateKey = yyyy + "-" + String(mm).padStart(2, "0") + "-" + String(d).padStart(2, "0");
