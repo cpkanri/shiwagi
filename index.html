@@ -3594,9 +3594,30 @@ function fillEquipSheet(wb, yyyy, mm) {
   }
   if (relevantWeeks.length === 0) return;
 
+  // テンプレの Row1 (タイトル行)のマージ範囲を特定（複製時の強制マージ用）
+  var origMerges = (ws.model && ws.model.merges) ? ws.model.merges.slice() : [];
+  var titleMergeRanges = [];
+  origMerges.forEach(function(m) {
+    var match = m.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/);
+    if (!match) return;
+    var r1 = parseInt(match[2]);
+    var r2 = parseInt(match[4]);
+    if (r1 === 1 && r2 <= 2) titleMergeRanges.push({ col1: match[1], col2: match[3], r1: r1, r2: r2 });
+  });
+  // テンプレにタイトルマージがなければデフォルト A1:H1 を使用
+  if (titleMergeRanges.length === 0) {
+    titleMergeRanges.push({ col1: "A", col2: "H", r1: 1, r2: 1 });
+  }
+
   // 第2週以降の分、下方向にテンプレを複製
   for (var i = 1; i < relevantWeeks.length; i++) {
-    duplicateRowRangeInSheet(ws, 1, BLOCK_HEIGHT, i * BLOCK_HEIGHT);
+    var offsetRows = i * BLOCK_HEIGHT;
+    duplicateRowRangeInSheet(ws, 1, BLOCK_HEIGHT, offsetRows);
+    // タイトル行を強制マージ（duplicateRowRangeInSheetでマージが効かない場合の保険）
+    titleMergeRanges.forEach(function(tm) {
+      var newRange = tm.col1 + (tm.r1 + offsetRows) + ":" + tm.col2 + (tm.r2 + offsetRows);
+      try { ws.mergeCells(newRange); } catch (e) { /* 既存と被ったらスキップ */ }
+    });
   }
 
   // 各週のデータ書き込み
