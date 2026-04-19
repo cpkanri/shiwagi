@@ -3232,6 +3232,36 @@ async function exportExcel() {
     // ===== シート2: 機器運転時間（最後に実行：シート複製が他シートの処理に影響しないため） =====
     fillEquipSheet(wb, yyyy, mm);
 
+    // ===== シート順の最終調整 =====
+    // 期待順: 日常水質 → 機器運転時間 第1週〜第5週 → 日常機械設備 → 日常電気設備 → 水質管理報告 → 運転管理月報 → 祝日リスト
+    try {
+      var orderedNames = [
+        "日常水質",
+        "機器運転時間 第1週",
+        "機器運転時間 第2週",
+        "機器運転時間 第3週",
+        "機器運転時間 第4週",
+        "機器運転時間 第5週",
+        "日常機械設備",
+        "日常電気設備",
+        "水質管理報告",
+        "運転管理月報",
+        "祝日リスト"
+      ];
+      var newWorksheets = [undefined]; // ExcelJSの _worksheets は id ベースの疎配列、0番は空
+      orderedNames.forEach(function(n) {
+        var s = wb.getWorksheet(n);
+        if (s) newWorksheets.push(s);
+      });
+      // 漏れたシート（上記リストにない追加シート）も末尾に残す
+      if (wb._worksheets) {
+        wb._worksheets.forEach(function(s) {
+          if (s && newWorksheets.indexOf(s) < 0) newWorksheets.push(s);
+        });
+      }
+      wb._worksheets = newWorksheets;
+    } catch (e) { console.warn("シート順調整失敗:", e); }
+
     // ダウンロード
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
@@ -3292,6 +3322,16 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
 
   // 祝日リスト取得（キャッシュから）
   const holidaySet = getHolidaySetFromCache();
+
+  // I列 N列参照式（=N4, =N48 等）を全週クリア
+  // テンプレには各週のI4〜I10に「=前週のN4〜N10」のような式が仕込まれているため、
+  // データ書き込み前に明示的にnullクリアする
+  for (var wc = 1; wc <= 5; wc++) {
+    var offsetC = weekOffsets[wc];
+    for (var rowC = 4; rowC <= 10; rowC++) {
+      ws.getCell(rowC + offsetC, 9).value = null; // I列 = 9
+    }
+  }
 
   for (var w = 1; w <= 5; w++) {
     var offset = weekOffsets[w];
@@ -3539,18 +3579,18 @@ function fillEquipSheetData(ws, w, yyyy, mm) {
     }
   });
 
-  // A3=対象月内の最初の日, F3=対象月内の最後の日（vertical middleで中央配置）
+  // A3=対象月内の最初の日, F3=対象月内の最後の日（横：均等割り付け（インデント）、縦：中央）
   if (weekDates.length > 0) {
     var firstDay = weekDates[0];
     var lastDay = weekDates[weekDates.length - 1];
     var reiwaStart = "令和" + (firstDay.getFullYear() - 2018) + "年" + (firstDay.getMonth() + 1) + "月" + firstDay.getDate() + "日";
     var cellA3 = ws.getCell(3, 1);
     cellA3.value = reiwaStart;
-    cellA3.alignment = { horizontal: 'center', vertical: 'middle', shrinkToFit: true, wrapText: false };
+    cellA3.alignment = { horizontal: 'distributed', vertical: 'middle', indent: 1, shrinkToFit: true, wrapText: false };
     var reiwaEnd = "令和" + (lastDay.getFullYear() - 2018) + "年" + (lastDay.getMonth() + 1) + "月" + lastDay.getDate() + "日";
     var cellF3 = ws.getCell(3, 6);
     cellF3.value = reiwaEnd;
-    cellF3.alignment = { horizontal: 'center', vertical: 'middle', shrinkToFit: true, wrapText: false };
+    cellF3.alignment = { horizontal: 'distributed', vertical: 'middle', indent: 1, shrinkToFit: true, wrapText: false };
   } else {
     ws.getCell(3, 1).value = null;
     ws.getCell(3, 6).value = null;
