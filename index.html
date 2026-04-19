@@ -3233,33 +3233,40 @@ async function exportExcel() {
     fillEquipSheet(wb, yyyy, mm);
 
     // ===== シート順の最終調整 =====
-    // 期待順: 日常水質 → 機器運転時間 第1週〜第5週 → 日常機械設備 → 日常電気設備 → 水質管理報告 → 運転管理月報 → 祝日リスト
+    // 期待順: 日常水質 → 機器運転時間 → 日常機械設備 → 日常電気設備 → 水質管理報告 → 運転管理月報 → 祝日リスト
     try {
       var orderedNames = [
         "日常水質",
-        "機器運転時間 第1週",
-        "機器運転時間 第2週",
-        "機器運転時間 第3週",
-        "機器運転時間 第4週",
-        "機器運転時間 第5週",
+        "機器運転時間",
         "日常機械設備",
         "日常電気設備",
         "水質管理報告",
         "運転管理月報",
         "祝日リスト"
       ];
-      var newWorksheets = [undefined]; // ExcelJSの _worksheets は id ベースの疎配列、0番は空
+      // 1) orderNo を明示的に設定（ExcelJSの書き出しで並び順に使用される）
+      orderedNames.forEach(function(n, idx) {
+        var s = wb.getWorksheet(n);
+        if (s) s.orderNo = idx;
+      });
+      // 2) _worksheets 配列も再構築（idベースの疎配列）
+      var newWorksheets = [undefined];
+      var usedSheets = [];
       orderedNames.forEach(function(n) {
         var s = wb.getWorksheet(n);
-        if (s) newWorksheets.push(s);
+        if (s) { newWorksheets.push(s); usedSheets.push(s); }
       });
-      // 漏れたシート（上記リストにない追加シート）も末尾に残す
+      // 漏れたシートは末尾に追加
       if (wb._worksheets) {
-        wb._worksheets.forEach(function(s) {
-          if (s && newWorksheets.indexOf(s) < 0) newWorksheets.push(s);
+        wb._worksheets.forEach(function(s, idx2) {
+          if (s && usedSheets.indexOf(s) < 0) {
+            s.orderNo = orderedNames.length + idx2;
+            newWorksheets.push(s);
+          }
         });
       }
       wb._worksheets = newWorksheets;
+      console.log("シート順調整後:", wb.worksheets.map(function(s){ return s.name + "(o:" + s.orderNo + ")"; }).join(", "));
     } catch (e) { console.warn("シート順調整失敗:", e); }
 
     // ダウンロード
@@ -3507,9 +3514,45 @@ function duplicateSheetExcel(wb, origSheet, newName) {
   return ns;
 }
 
+// ===== 同一シート内で行範囲を縦方向に複製するヘルパー =====
+function duplicateRowRangeInSheet(ws, startRow, endRow, offsetRows) {
+  // 値・スタイル
+  for (var r = startRow; r <= endRow; r++) {
+    var srcRow = ws.getRow(r);
+    var dstRow = ws.getRow(r + offsetRows);
+    if (srcRow.height !== undefined && srcRow.height !== null) {
+      dstRow.height = srcRow.height;
+    }
+    srcRow.eachCell({ includeEmpty: true }, function(cell, col) {
+      var newCell = ws.getCell(r + offsetRows, col);
+      if (cell.value !== null && cell.value !== undefined) {
+        newCell.value = cell.value;
+      }
+      try {
+        if (cell.style) newCell.style = JSON.parse(JSON.stringify(cell.style));
+      } catch (e) {}
+    });
+  }
+  // マージセル
+  var merges = (ws.model && ws.model.merges) ? ws.model.merges.slice() : [];
+  merges.forEach(function(m) {
+    var match = m.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/);
+    if (!match) return;
+    var r1 = parseInt(match[2]);
+    var r2 = parseInt(match[4]);
+    if (r1 >= startRow && r2 <= endRow) {
+      var newRange = match[1] + (r1 + offsetRows) + ":" + match[3] + (r2 + offsetRows);
+      try { ws.mergeCells(newRange); } catch (e) {}
+    }
+  });
+}
+
 function fillEquipSheet(wb, yyyy, mm) {
-  const origSheet = wb.getWorksheet(2); // 機器運転時間（テンプレ1週分）
-  if (!origSheet) return;
+  const ws = wb.getWorksheet(2); // 機器運転時間（テンプレ1週分）
+  if (!ws) return;
+
+  // テンプレ1週分のブロックサイズ（Row1〜18）
+  var BLOCK_HEIGHT = 18;
 
   // 対象月に関連する週を収集
   const relevantWeeks = [];
@@ -3525,49 +3568,22 @@ function fillEquipSheet(wb, yyyy, mm) {
   }
   if (relevantWeeks.length === 0) return;
 
-  const firstWeek = relevantWeeks[0];
-  const otherWeeks = relevantWeeks.slice(1);
+  // 第2週以降の分、下方向にテンプレを複製
+  for (var i = 1; i < relevantWeeks.length; i++) {
+    duplicateRowRangeInSheet(ws, 1, BLOCK_HEIGHT, i * BLOCK_HEIGHT);
+  }
 
-  // 複製を作る（最初の週は元シート、他は新規複製）
-  const sheetMap = {};
-  sheetMap[firstWeek] = origSheet;
-  otherWeeks.forEach(function(w) {
-    sheetMap[w] = duplicateSheetExcel(wb, origSheet, "__tmp_eq_" + w);
-  });
-
-  // 名前を整える
-  origSheet.name = "機器運転時間 第" + firstWeek + "週";
-  otherWeeks.forEach(function(w) {
-    sheetMap[w].name = "機器運転時間 第" + w + "週";
-  });
-
-  // シート順を「第1週の直後に第2週、第3週...」と隣接配置
-  try {
-    var sheets = wb._worksheets;
-    if (sheets && sheets.length) {
-      var firstSheet = sheetMap[firstWeek];
-      for (var i = 0; i < otherWeeks.length; i++) {
-        var wk = otherWeeks[i];
-        var sheet = sheetMap[wk];
-        var curIdx = sheets.indexOf(sheet);
-        if (curIdx < 0) continue;
-        sheets.splice(curIdx, 1);
-        // 第1週の直後 + i 番目に挿入
-        var firstIdx = sheets.indexOf(firstSheet);
-        sheets.splice(firstIdx + 1 + i, 0, sheet);
-      }
-    }
-  } catch (e) { console.warn("シート順並び替え失敗:", e); }
-
-  // 各シートにデータ書き込み
-  Object.keys(sheetMap).forEach(function(wStr) {
-    var w = Number(wStr);
-    fillEquipSheetData(sheetMap[w], w, yyyy, mm);
+  // 各週のデータ書き込み
+  relevantWeeks.forEach(function(w, i) {
+    var rowOffset = i * BLOCK_HEIGHT;
+    fillEquipSheetData(ws, w, yyyy, mm, rowOffset);
   });
 }
 
-// 1週分の機器運転時間データ書き込み
-function fillEquipSheetData(ws, w, yyyy, mm) {
+// 1週分の機器運転時間データ書き込み（rowOffsetで縦位置を指定）
+function fillEquipSheetData(ws, w, yyyy, mm, rowOffset) {
+  rowOffset = rowOffset || 0;
+
   // その週の月〜金のうち対象月内にある日付のみ
   var weekDates = [];
   var weekDayKeys = [];
@@ -3579,21 +3595,21 @@ function fillEquipSheetData(ws, w, yyyy, mm) {
     }
   });
 
-  // A3=対象月内の最初の日, F3=対象月内の最後の日（横：均等割り付け（インデント）、縦：中央）
+  // A3(+offset)=対象月内の最初の日, F3(+offset)=対象月内の最後の日
   if (weekDates.length > 0) {
     var firstDay = weekDates[0];
     var lastDay = weekDates[weekDates.length - 1];
     var reiwaStart = "令和" + (firstDay.getFullYear() - 2018) + "年" + (firstDay.getMonth() + 1) + "月" + firstDay.getDate() + "日";
-    var cellA3 = ws.getCell(3, 1);
+    var cellA3 = ws.getCell(3 + rowOffset, 1);
     cellA3.value = reiwaStart;
     cellA3.alignment = { horizontal: 'distributed', vertical: 'middle', indent: 1, shrinkToFit: true, wrapText: false };
     var reiwaEnd = "令和" + (lastDay.getFullYear() - 2018) + "年" + (lastDay.getMonth() + 1) + "月" + lastDay.getDate() + "日";
-    var cellF3 = ws.getCell(3, 6);
+    var cellF3 = ws.getCell(3 + rowOffset, 6);
     cellF3.value = reiwaEnd;
     cellF3.alignment = { horizontal: 'distributed', vertical: 'middle', indent: 1, shrinkToFit: true, wrapText: false };
   } else {
-    ws.getCell(3, 1).value = null;
-    ws.getCell(3, 6).value = null;
+    ws.getCell(3 + rowOffset, 1).value = null;
+    ws.getCell(3 + rowOffset, 6).value = null;
   }
 
   var equipRowMap = {
@@ -3616,7 +3632,7 @@ function fillEquipSheetData(ws, w, yyyy, mm) {
 
   var allDayKeys = ["mon", "tue", "wed", "thu", "fri"];
   for (var equipKey in equipRowMap) {
-    var row = equipRowMap[equipKey];
+    var row = equipRowMap[equipKey] + rowOffset;
     for (var ddi = 0; ddi < allDayKeys.length; ddi++) {
       var dk = allDayKeys[ddi];
       var col = dayColEquip[dk];
