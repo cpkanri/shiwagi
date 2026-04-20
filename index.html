@@ -2042,6 +2042,31 @@ function updateDayTabs() {
 
 // ===== localStorage保存・読込 =====
 
+// ===== localStorage 容量対策 =====
+// 13ヶ月以上前の月データを削除して容量を確保
+function pruneOldMonthData(currentMonth) {
+  try {
+    if (!currentMonth || !/^\d{4}-\d{2}$/.test(currentMonth)) return 0;
+    var keepMonths = 13;
+    var curYear = parseInt(currentMonth.split("-")[0]);
+    var curMon = parseInt(currentMonth.split("-")[1]);
+    var deleted = 0;
+    var keysToDelete = [];
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (!k || k.indexOf("shibaki_weekly_") !== 0) continue;
+      var ym = k.replace("shibaki_weekly_", "");
+      var m = ym.match(/^(\d{4})-(\d{2})$/);
+      if (!m) continue;
+      var y = parseInt(m[1]), mm = parseInt(m[2]);
+      var diff = (curYear - y) * 12 + (curMon - mm);
+      if (diff >= keepMonths) keysToDelete.push(k);
+    }
+    keysToDelete.forEach(function(k) { localStorage.removeItem(k); deleted++; });
+    return deleted;
+  } catch (e) { return 0; }
+}
+
 function saveToStorage() {
   try {
     if (currentSheet === "water") saveFormToData();
@@ -2050,16 +2075,47 @@ function saveToStorage() {
     else if (currentSheet === "mech") saveMechFormToData();
     weeklyData.targetMonth = document.getElementById("targetMonth").value || weeklyData.targetMonth;
     weeklyData.startDate = document.getElementById("startDate").value || weeklyData.startDate;
-    localStorage.setItem(storageKey(), JSON.stringify(weeklyData));
+
+    var json = JSON.stringify(weeklyData);
+    try {
+      localStorage.setItem(storageKey(), json);
+    } catch (quotaErr) {
+      // QuotaExceededError 等: 古い月データを削除して再試行
+      var pruned = pruneOldMonthData(weeklyData.targetMonth);
+      console.warn("ストレージ容量超過のため古い月データを削除:", pruned, "件");
+      try {
+        // Undoスタックもクリア
+        if (typeof undoStack !== "undefined" && undoStack.length) undoStack.length = 0;
+        localStorage.setItem(storageKey(), json);
+      } catch (quotaErr2) {
+        // それでもダメなら shibaki_ 関連の古いキーを更に強制削除
+        var allKeys = [];
+        for (var i = 0; i < localStorage.length; i++) {
+          var k = localStorage.key(i);
+          if (k && k.indexOf("shibaki_weekly_") === 0 && k !== storageKey()) allKeys.push(k);
+        }
+        // 古い順で削除（キー名が shibaki_weekly_YYYY-MM なのでソートで古い順）
+        allKeys.sort();
+        for (var j = 0; j < allKeys.length; j++) {
+          localStorage.removeItem(allKeys[j]);
+          try {
+            localStorage.setItem(storageKey(), json);
+            console.warn("古い月データ削除で復旧:", allKeys.slice(0, j + 1));
+            break;
+          } catch (e3) { /* 続けて削除 */ }
+        }
+      }
+    }
     const inspEl = document.querySelector('[data-field="inspector"]');
     if (inspEl && inspEl.value) {
-      localStorage.setItem("shibaki_last_inspector", inspEl.value);
+      try { localStorage.setItem("shibaki_last_inspector", inspEl.value); } catch(e) {}
     }
     if (weeklyData.targetMonth) {
-      localStorage.setItem("shibaki_current_month", weeklyData.targetMonth);
+      try { localStorage.setItem("shibaki_current_month", weeklyData.targetMonth); } catch(e) {}
     }
     return true;
   } catch (e) {
+    console.error("saveToStorage 失敗:", e);
     return false;
   }
 }
