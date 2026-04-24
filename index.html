@@ -3623,6 +3623,59 @@ function setCell(ws, row, col, val) {
   }
 }
 
+// ===== 前月最終点検日のデータを取得するヘルパー =====
+// 対象月の第1週月曜の「前の点検日」（平日・非祝日）のデータを前月のlocalStorageから探して返す
+function getPrevMonthLastDayData(targetMonth, firstMonday, holidaySet) {
+  if (!firstMonday || !targetMonth) return null;
+
+  var ym = targetMonth.split("-");
+  var year = parseInt(ym[0], 10);
+  var month = parseInt(ym[1], 10);
+  if (isNaN(year) || isNaN(month)) return null;
+  var prevMonth = month === 1 ? (year - 1) + "-12" : year + "-" + String(month - 1).padStart(2, "0");
+
+  var rawPrev = null;
+  try { rawPrev = localStorage.getItem("shibaki_weekly_" + prevMonth); } catch(e) { return null; }
+  if (!rawPrev) return null;
+  var prevWeekly;
+  try { prevWeekly = JSON.parse(rawPrev); } catch(e) { return null; }
+  if (!prevWeekly || !prevWeekly.weeks || !prevWeekly.startDate) return null;
+
+  var candidates = [];
+  var prevBase = new Date(prevWeekly.startDate + "T00:00:00");
+  if (isNaN(prevBase.getTime())) return null;
+
+  var dayOffsetMap = { mon: 0, tue: 1, wed: 2, thu: 3, nextMon: 4 };
+  for (var wk = 1; wk <= 5; wk++) {
+    var wkData = prevWeekly.weeks[wk];
+    if (!wkData) continue;
+    ["mon", "tue", "wed", "thu", "nextMon"].forEach(function(dk) {
+      var dd = wkData[dk];
+      if (!dd) return;
+      var offsetDays = (wk - 1) * 7 + dayOffsetMap[dk];
+      var d = new Date(prevBase);
+      d.setDate(prevBase.getDate() + offsetDays);
+      candidates.push({ date: d, data: dd });
+    });
+  }
+
+  for (var back = 1; back <= 14; back++) {
+    var target = new Date(firstMonday.getFullYear(), firstMonday.getMonth(), firstMonday.getDate() - back);
+    var dow = target.getDay();
+    if (dow === 0 || dow === 6) continue;
+    var ymd = dateToStr(target);
+    if (holidaySet.has(ymd)) continue;
+
+    var targetStr = dateToStr(target);
+    for (var ci = 0; ci < candidates.length; ci++) {
+      if (dateToStr(candidates[ci].date) === targetStr) {
+        return { date: target, data: candidates[ci].data };
+      }
+    }
+  }
+  return null;
+}
+
 // ===== 日常水質シート =====
 function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
   const ws = wb.getWorksheet(1); // 日常水質
@@ -3640,14 +3693,24 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
   // 祝日リスト取得（キャッシュから）
   const holidaySet = getHolidaySetFromCache();
 
-  // I列 N列参照式（=N4, =N48 等）を全週クリア
-  // テンプレには各週のI4〜I10に「=前週のN4〜N10」のような式が仕込まれているため、
-  // データ書き込み前に明示的にnullクリアする
-  for (var wc = 1; wc <= 5; wc++) {
-    var offsetC = weekOffsets[wc];
-    for (var rowC = 4; rowC <= 10; rowC++) {
-      ws.getCell(rowC + offsetC, 9).value = null; // I列 = 9
+  // ===== 第1週のI列: 前月最終日のデータを書き込む =====
+  // （第2週以降のI列はテンプレート数式 =N3, =N47 等で自動計算される）
+  var firstMondayDate = getActualDate(1, "mon");
+  if (firstMondayDate) {
+    var prevLast = getPrevMonthLastDayData(weeklyData.targetMonth, firstMondayDate, holidaySet);
+    if (prevLast) {
+      setCell(ws, 3, 9, formatDateJP(prevLast.date));
+      setCell(ws, 4, 9, prevLast.data.denryoku200v);
+      setCell(ws, 5, 9, prevLast.data.denryoku100v);
+      setCell(ws, 6, 9, prevLast.data.keiyu);
+      setCell(ws, 7, 9, prevLast.data.hensouOdei);
+      setCell(ws, 8, 9, prevLast.data.yojouOdei);
+      setCell(ws, 9, 9, prevLast.data.houryuuRyuuryou);
+    } else {
+      for (var rI = 3; rI <= 9; rI++) ws.getCell(rI, 9).value = null;
     }
+  } else {
+    for (var rIx = 3; rIx <= 9; rIx++) ws.getCell(rIx, 9).value = null;
   }
 
   for (var w = 1; w <= 5; w++) {
