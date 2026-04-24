@@ -3611,10 +3611,14 @@ function loadScript(src) {
   });
 }
 
-// セル値設定ヘルパー（数値は数値型、それ以外はそのまま）
+// セル値設定ヘルパー（数値は数値型、Dateはそのまま、それ以外はそのまま）
 function setCell(ws, row, col, val) {
   if (val === null || val === undefined || val === "") return;
   const cell = ws.getCell(row, col);
+  if (val instanceof Date) {
+    cell.value = val;
+    return;
+  }
   const num = Number(val);
   if (!isNaN(num) && val !== "" && typeof val !== "boolean") {
     cell.value = num;
@@ -3699,7 +3703,7 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
   if (firstMondayDate) {
     var prevLast = getPrevMonthLastDayData(weeklyData.targetMonth, firstMondayDate, holidaySet);
     if (prevLast) {
-      setCell(ws, 3, 9, formatDateJP(prevLast.date));
+      setCell(ws, 3, 9, prevLast.date);
       setCell(ws, 4, 9, prevLast.data.denryoku200v);
       setCell(ws, 5, 9, prevLast.data.denryoku100v);
       setCell(ws, 6, 9, prevLast.data.keiyu);
@@ -3729,7 +3733,7 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
       var wdKey = waterDayKeys2[wdi];
       var wdObj = getActualDate(w, wdKey);
       if (wdObj) {
-        setCell(ws, 3 + offset, waterDayCols2[wdKey], formatDateJP(wdObj));
+        setCell(ws, 3 + offset, waterDayCols2[wdKey], wdObj);
       }
     }
     // N列(14): 次週の最初の点検日（通常は翌週月曜、祝日なら火→水...）
@@ -3737,7 +3741,7 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
     if (friObjForNext) {
       var nextWorkday = getNextWeekFirstWorkday(friObjForNext, holidaySet);
       if (nextWorkday) {
-        setCell(ws, 3 + offset, 14, formatDateJP(nextWorkday));
+        setCell(ws, 3 + offset, 14, nextWorkday);
       }
     }
 
@@ -4153,7 +4157,7 @@ function fillElecSheet(wb, yyyy, mm, monthLabel) {
       var isTarget = dateObj && dateObj.getFullYear() === yyyy && (dateObj.getMonth() + 1) === mm;
       var isHoliday = dateObj && holidaySet.has(dateToStr(dateObj));
       if (isTarget && !isHoliday) {
-        setCell(ws, 2 + offset, ecol, formatDateJP(dateObj));
+        setCell(ws, 2 + offset, ecol, dateObj);
       } else {
         // 対象月外 or 祝日は空に
         ws.getCell(2 + offset, ecol).value = null;
@@ -4338,7 +4342,7 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
         var inTargetM = mdateObj && mdateObj.getFullYear() === yyyy && (mdateObj.getMonth() + 1) === mm;
         var isHolidayM = mdateObj && holidaySet.has(dateToStr(mdateObj));
         if (inTargetM && !isHolidayM) {
-          setCell(ws, dateRow, mcol, formatDateJP(mdateObj));
+          setCell(ws, dateRow, mcol, mdateObj);
           var wKey = waterDayMap[mdayKey];
           if (weeklyData.weeks[w] && weeklyData.weeks[w][wKey] && weeklyData.weeks[w][wKey].inspector) {
             setCell(ws, inspRow, mcol, weeklyData.weeks[w][wKey].inspector);
