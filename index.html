@@ -640,6 +640,23 @@ body.login-active { overflow: hidden; }
 }
 .user-info .logout-btn:hover { background: rgba(255,255,255,0.25); }
 
+/* 強制更新ボタン */
+#btnForceRefresh {
+  background: rgba(255,180,80,0.25);
+  color: inherit;
+}
+#btnForceRefresh:hover {
+  background: rgba(255,180,80,0.4);
+}
+#btnForceRefresh.refreshing {
+  background: rgba(255,180,80,0.6);
+  animation: pulse-refresh 1s infinite;
+}
+@keyframes pulse-refresh {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 </style>
 </head>
 <body>
@@ -673,6 +690,7 @@ body.login-active { overflow: hidden; }
   </div>
   <div class="user-info" id="userInfo">
     <span class="user-name" id="userName"></span>
+    <button type="button" class="logout-btn" id="btnForceRefresh" title="アプリを最新版に更新" style="background:rgba(255,180,80,0.25); margin-right:8px;">⟳ 更新</button>
     <button type="button" class="logout-btn" id="btnLogout">ログアウト</button>
   </div>
   <div class="conn-status" id="connStatus">
@@ -1695,8 +1713,12 @@ function saveEquipFormToData() {
   document.querySelectorAll("[data-equip]").forEach(el => {
     const key = el.dataset.equip;
     const day = el.dataset.eday;
-    if (week[key]) {
-      week[key][day] = el.value === "" ? null : el.value;
+    if (!week[key]) return;
+    if (el.value === "") {
+      week[key][day] = null;
+    } else {
+      const num = Number(el.value);
+      week[key][day] = isNaN(num) ? el.value : num;
     }
   });
 }
@@ -1778,7 +1800,14 @@ function saveElecFormToData() {
     const day = el.dataset.eday;
     if (!week || !week[day]) return;
     if (el.tagName === "INPUT") {
-      week[day][key] = el.value === "" ? null : el.value;
+      if (el.value === "") {
+        week[day][key] = null;
+      } else if (el.type === "number") {
+        const num = Number(el.value);
+        week[day][key] = isNaN(num) ? el.value : num;
+      } else {
+        week[day][key] = el.value;
+      }
     } else {
       // toggle button
       week[day][key] = el.dataset.val || null;
@@ -1864,8 +1893,16 @@ function saveMechFormToData() {
     const day = el.dataset.mday;
     if (!week || !week[day]) return;
     if (el.tagName === "INPUT") {
-      week[day][key] = el.value === "" ? null : el.value;
+      if (el.value === "") {
+        week[day][key] = null;
+      } else if (el.type === "number") {
+        const num = Number(el.value);
+        week[day][key] = isNaN(num) ? el.value : num;
+      } else {
+        week[day][key] = el.value;
+      }
     } else {
+      // toggle button
       week[day][key] = el.dataset.val || null;
     }
   });
@@ -1971,6 +2008,73 @@ async function checkConnection() {
   }
 }
 
+// ===== オートアドバンス機能 =====
+
+// 指定要素を画面の上から1/3位置にスクロール
+function scrollToTopThird(el) {
+  if (!el) return;
+  const rect = el.getBoundingClientRect();
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+  const targetY = viewportHeight / 3;
+  const currentY = rect.top;
+  const scrollBy = currentY - targetY;
+  window.scrollBy({ top: scrollBy, left: 0, behavior: 'smooth' });
+}
+
+// 次のフィールドを選ぶ（縦方向）
+// 現在のシートに応じてフィールドリストを生成
+function getAdvanceableFields() {
+  if (currentSheet === "water") {
+    // 水質: DOM順に [data-field] を取得（input と button を含む）
+    return Array.from(document.querySelectorAll('#waterPanel input[data-field], #waterPanel button[data-field].toggle-btn'));
+  } else if (currentSheet === "equip") {
+    // 機器: 縦方向（同じ曜日を機器順に）
+    const result = [];
+    const days = ["mon", "tue", "wed", "thu", "fri"];
+    days.forEach(d => {
+      document.querySelectorAll('#equipPanel input[data-equip][data-eday="' + d + '"]').forEach(el => result.push(el));
+    });
+    return result;
+  } else if (currentSheet === "elec") {
+    // 電気: 縦方向（同じ曜日を項目順に）
+    const result = [];
+    const days = ["mon", "tue", "wed", "thu", "fri"];
+    days.forEach(d => {
+      document.querySelectorAll('#elecPanel input[data-elec][data-eday="' + d + '"], #elecPanel button[data-elec][data-eday="' + d + '"].toggle-btn').forEach(el => result.push(el));
+    });
+    return result;
+  } else if (currentSheet === "mech") {
+    // 機械: 縦方向（同じ曜日を項目順に）
+    const result = [];
+    const days = ["mon", "wed", "thu", "fri"]; // 機械は火曜なし
+    days.forEach(d => {
+      document.querySelectorAll('#mechPanel input[data-mech][data-mday="' + d + '"], #mechPanel button[data-mech][data-mday="' + d + '"].toggle-btn').forEach(el => result.push(el));
+    });
+    return result;
+  }
+  return [];
+}
+
+// 次のフィールドに進む
+function advanceToNextField(currentEl) {
+  const fields = getAdvanceableFields();
+  const idx = fields.indexOf(currentEl);
+  if (idx < 0) return;
+
+  const next = fields[idx + 1];
+  if (next) {
+    next.focus();
+    setTimeout(() => scrollToTopThird(next), 50);
+    // input の場合、既存値を全選択
+    if (next.tagName === 'INPUT' && (next.type === 'number' || next.type === 'text')) {
+      try { next.select(); } catch(e) {}
+    }
+  } else {
+    // 最後まで到達したら停止
+    currentEl.blur();
+  }
+}
+
 // ===== フォーム <-> データ =====
 
 function saveFormToData() {
@@ -1981,7 +2085,13 @@ function saveFormToData() {
       // トグルボタン: data-val から値を取得
       day[key] = el.dataset.val || null;
     } else if (el.type === "number") {
-      day[key] = el.value === "" ? null : el.value;
+      // 数値型は Number に変換（空文字は null）
+      if (el.value === "") {
+        day[key] = null;
+      } else {
+        const num = Number(el.value);
+        day[key] = isNaN(num) ? el.value : num;
+      }
     } else {
       day[key] = el.value;
     }
@@ -2379,12 +2489,11 @@ const DAY_JP_TO_CODE = { "月": "mon", "火": "tue", "水": "wed", "木": "thu",
 
 // サーバーデータをマージ
 function mergeServerData(serverData) {
-  if (!serverData) return false;
-  let merged = false;
+  const summary = { water_days: 0, equipment_weeks: 0, electrical_days: 0, mechanical_days: 0, merged: false };
+  if (!serverData) return summary;
 
   // water (日常水質)
   if (serverData.water && typeof serverData.water === "object") {
-    // サーバーは { week: { day: { field: val } } } 形式
     Object.keys(serverData.water).forEach(w => {
       if (!weeklyData.weeks[w]) weeklyData.weeks[w] = emptyWeek();
       const wData = serverData.water[w];
@@ -2393,16 +2502,17 @@ function mergeServerData(serverData) {
           const dayCode = DAY_JP_TO_CODE[d] || d;
           if (weeklyData.weeks[w][dayCode]) {
             Object.assign(weeklyData.weeks[w][dayCode], wData[d]);
+            summary.water_days++;
           }
         });
       }
     });
-    merged = true;
+    summary.merged = true;
   }
   // weeks直接形式（従来互換）
   if (serverData.weeks && typeof serverData.weeks === "object" && Object.keys(serverData.weeks).length > 0) {
     weeklyData.weeks = serverData.weeks;
-    merged = true;
+    summary.merged = true;
   }
 
   // equipment (機器運転時間)
@@ -2411,6 +2521,7 @@ function mergeServerData(serverData) {
       if (!weeklyData.equipment[w]) weeklyData.equipment[w] = emptyEquipWeek();
       const wData = serverData.equipment[w];
       if (wData && typeof wData === "object") {
+        let weekMerged = false;
         Object.keys(wData).forEach(nameOrKey => {
           const key = EQUIP_NAME_TO_KEY[nameOrKey] || nameOrKey;
           if (weeklyData.equipment[w][key]) {
@@ -2420,14 +2531,16 @@ function mergeServerData(serverData) {
                 const dayCode = DAY_JP_TO_CODE[d] || d;
                 if (dayCode in weeklyData.equipment[w][key]) {
                   weeklyData.equipment[w][key][dayCode] = dayData[d];
+                  weekMerged = true;
                 }
               });
             }
           }
         });
+        if (weekMerged) summary.equipment_weeks++;
       }
     });
-    merged = true;
+    summary.merged = true;
   }
 
   // electrical (電気設備)
@@ -2440,11 +2553,12 @@ function mergeServerData(serverData) {
           const dayCode = DAY_JP_TO_CODE[d] || d;
           if (weeklyData.electrical[w][dayCode] && typeof wData[d] === "object") {
             Object.assign(weeklyData.electrical[w][dayCode], wData[d]);
+            summary.electrical_days++;
           }
         });
       }
     });
-    merged = true;
+    summary.merged = true;
   }
 
   // mechanical (機械設備)
@@ -2457,27 +2571,28 @@ function mergeServerData(serverData) {
           const dayCode = DAY_JP_TO_CODE[d] || d;
           if (weeklyData.mechanical[w][dayCode] && typeof wData[d] === "object") {
             Object.assign(weeklyData.mechanical[w][dayCode], wData[d]);
+            summary.mechanical_days++;
           }
         });
       }
     });
-    merged = true;
+    summary.merged = true;
   }
 
-  // startDateはサーバーから受け取った値を使わず、常に対象月から自動計算する
-  // （古い不正な startDate がサーバーに残っている場合の防衛策）
+  // startDateは常に対象月から自動計算
   weeklyData.startDate = estimateStartDate(weeklyData.targetMonth);
-  // UIも更新
   const startDateEl = document.getElementById("startDate");
   if (startDateEl) startDateEl.value = weeklyData.startDate || "";
   ensureWeeklyStructure();
   localStorage.setItem(storageKey(), JSON.stringify(weeklyData));
-  return merged;
+  return summary;
 }
 
 // バックグラウンドでサーバーから取得
 async function syncFromServer() {
   try {
+    const totalSummary = { water_days: 0, equipment_weeks: 0, electrical_days: 0, mechanical_days: 0, merged: false };
+
     // メインの対象月からデータ取得
     var data = await loadFromServer(weeklyData.targetMonth);
 
@@ -2485,24 +2600,41 @@ async function syncFromServer() {
     var ym = weeklyData.targetMonth.split("-");
     var year = parseInt(ym[0]);
     var month = parseInt(ym[1]);
-
-    // 前月
     var prevMonth = month === 1 ? (year - 1) + "-12" : year + "-" + String(month - 1).padStart(2, "0");
-    // 翌月
     var nextMonth = month === 12 ? (year + 1) + "-01" : year + "-" + String(month + 1).padStart(2, "0");
 
     try {
       var prevData = await loadFromServer(prevMonth);
-      if (prevData) mergeServerData(prevData);
+      if (prevData) {
+        const s = mergeServerData(prevData);
+        totalSummary.water_days += s.water_days;
+        totalSummary.equipment_weeks += s.equipment_weeks;
+        totalSummary.electrical_days += s.electrical_days;
+        totalSummary.mechanical_days += s.mechanical_days;
+        if (s.merged) totalSummary.merged = true;
+      }
     } catch(e) {}
 
     try {
       var nextData = await loadFromServer(nextMonth);
-      if (nextData) mergeServerData(nextData);
+      if (nextData) {
+        const s = mergeServerData(nextData);
+        totalSummary.water_days += s.water_days;
+        totalSummary.equipment_weeks += s.equipment_weeks;
+        totalSummary.electrical_days += s.electrical_days;
+        totalSummary.mechanical_days += s.mechanical_days;
+        if (s.merged) totalSummary.merged = true;
+      }
     } catch(e) {}
 
     if (data && (data.weeks || data.water || data.equipment || data.electrical || data.mechanical)) {
-      mergeServerData(data);
+      const s = mergeServerData(data);
+      totalSummary.water_days += s.water_days;
+      totalSummary.equipment_weeks += s.equipment_weeks;
+      totalSummary.electrical_days += s.electrical_days;
+      totalSummary.mechanical_days += s.mechanical_days;
+      totalSummary.merged = true;
+
       document.getElementById("startDate").value = weeklyData.startDate || "";
       updateDayTabs();
       if (currentSheet === "water") loadDataToForm();
@@ -2510,13 +2642,77 @@ async function syncFromServer() {
       else if (currentSheet === "elec") loadElecDataToForm();
       else if (currentSheet === "mech") loadMechDataToForm();
       setConnectionStatus(true);
-      return true;
+      return totalSummary;
     }
     setConnectionStatus(true);
-    return false;
+    return totalSummary;
   } catch (e) {
     setConnectionStatus(false);
-    return false;
+    throw e;
+  }
+}
+
+// ===== 強制更新（キャッシュクリア + リロード）=====
+async function forceRefresh() {
+  const btn = document.getElementById('btnForceRefresh');
+
+  // 未保存データがある場合は強めの警告
+  if (typeof isDirty !== 'undefined' && isDirty) {
+    const okUnsaved = confirm(
+      '⚠️ 未保存のデータがあります ⚠️\n\n' +
+      'このまま更新すると、未保存の入力内容は失われます。\n\n' +
+      '・未保存分を保存してから更新する場合は「キャンセル」\n' +
+      '・未保存分を破棄して更新する場合は「OK」\n\n' +
+      '本当に更新しますか？'
+    );
+    if (!okUnsaved) return;
+  } else {
+    const ok = confirm(
+      'アプリを最新版に更新します。\n\n' +
+      '・画面が一度真っ白になります\n' +
+      '・通信が発生します(Wi-Fi環境推奨)\n' +
+      '・ローカル保存データ(入力済みデータ)は消えません\n\n' +
+      '続行しますか？'
+    );
+    if (!ok) return;
+  }
+
+  if (btn) {
+    btn.classList.add('refreshing');
+    btn.textContent = '更新中...';
+    btn.disabled = true;
+  }
+
+  try {
+    // 1. Service Worker の全キャッシュを削除
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(name => caches.delete(name)));
+      console.log('[forceRefresh] キャッシュ削除:', cacheNames);
+    }
+
+    // 2. Service Worker の登録解除
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(reg => reg.unregister()));
+      console.log('[forceRefresh] SW登録解除:', regs.length, '件');
+    }
+
+    // 3. 少し待機してからリロード
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // 4. キャッシュを迂回する形で強制リロード
+    const url = new URL(window.location.href);
+    url.searchParams.set('_refresh', Date.now());
+    window.location.replace(url.toString());
+  } catch(e) {
+    console.error('[forceRefresh] error:', e);
+    alert('更新に失敗しました: ' + (e.message || e) + '\n\nブラウザを閉じて再度開いてください。');
+    if (btn) {
+      btn.classList.remove('refreshing');
+      btn.textContent = '⟳ 更新';
+      btn.disabled = false;
+    }
   }
 }
 
@@ -2546,6 +2742,15 @@ function showToast(msg, type) {
   toastTimer = setTimeout(() => {
     t.className = "toast";
   }, 3000);
+}
+
+// シートキーを日本語名に変換
+function getSheetLabel(sheet) {
+  return sheet === 'water' ? '水質'
+       : sheet === 'equip' ? '機器運転時間'
+       : sheet === 'elec' ? '電気設備'
+       : sheet === 'mech' ? '機械設備'
+       : sheet;
 }
 
 // ===== イベントハンドラ =====
@@ -2695,7 +2900,7 @@ function bindEvents() {
     loadDataToForm();
     showToast("対象月を " + newMonth + " に変更しました");
     // バックグラウンドでサーバーからも取得
-    syncFromServer();
+    syncFromServer().catch(() => {});
   });
 
   // 開始日変更
@@ -2901,14 +3106,19 @@ function bindEvents() {
     btnSave.textContent = "送信中...";
     btnSave.disabled = true;
 
+    const sheetLabel = getSheetLabel(currentSheet);
+    const scope = currentSheet === 'water'
+      ? '第' + currentWeek + '週' + currentDay + '曜日【' + sheetLabel + '】'
+      : '第' + currentWeek + '週【' + sheetLabel + '】';
+
     try {
       await saveCurrentToServer();
       setConnectionStatus(true);
-      showToast("保存しました（サーバー同期完了）");
+      showToast(scope + "を保存しました(サーバーへ送信完了)");
       markClean();
     } catch (e) {
       setConnectionStatus(false);
-      showToast("端末に保存しました（サーバー同期に失敗。後で再試行してください）", "warn");
+      showToast("端末に" + scope + "を保存しました。サーバー送信失敗:" + (e.message || 'ネットワークエラー') + "(後で同期してください)", "warn");
     } finally {
       btnSave.textContent = "保存";
       btnSave.disabled = false;
@@ -2921,30 +3131,54 @@ function bindEvents() {
   // 全同期ボタン（サーバーからダウンロードのみ）
   document.getElementById("btnSync").addEventListener("click", async () => {
     const btnSync = document.getElementById("btnSync");
+
+    // 未保存データがある場合は警告
+    if (typeof isDirty !== 'undefined' && isDirty) {
+      const ok = confirm(
+        '未保存のデータがあります。\n\n' +
+        '同期するとサーバーのデータで上書きされ、未保存分は失われる可能性があります。\n\n' +
+        '続行しますか？\n\n' +
+        '（中止 → 先に「保存」ボタンを押してから「同期」してください）'
+      );
+      if (!ok) return;
+    }
+
     btnSync.disabled = true;
     btnSync.textContent = "取得中...";
 
     try {
-      var success = await syncFromServer();
-      if (success) {
+      const summary = await syncFromServer();
+      if (summary && summary.merged) {
         // 現在表示中のシートを再描画
         if (currentSheet === "water") loadDataToForm();
         else if (currentSheet === "equip") loadEquipDataToForm();
         else if (currentSheet === "elec") loadElecDataToForm();
         else if (currentSheet === "mech") loadMechDataToForm();
         saveToStorage();
-        showToast("サーバーからデータを取得しました");
+
+        // 詳細トースト生成
+        const parts = [];
+        if (summary.water_days > 0) parts.push('水質' + summary.water_days + '日分');
+        if (summary.equipment_weeks > 0) parts.push('機器運転' + summary.equipment_weeks + '週分');
+        if (summary.electrical_days > 0) parts.push('電気' + summary.electrical_days + '日分');
+        if (summary.mechanical_days > 0) parts.push('機械' + summary.mechanical_days + '日分');
+        const detail = parts.length > 0 ? '（' + parts.join('、') + 'を更新）' : '';
+        showToast('サーバーから最新データを取得しました' + detail);
       } else {
         showToast("サーバーにデータがありません", "warn");
       }
     } catch (e) {
       setConnectionStatus(false);
-      showToast("同期エラー: " + e.message, "error");
+      showToast("同期エラー: " + (e.message || e), "error");
     }
 
     btnSync.textContent = "同期";
     btnSync.disabled = false;
   });
+
+  // 強制更新ボタン
+  const btnForceRefresh = document.getElementById('btnForceRefresh');
+  if (btnForceRefresh) btnForceRefresh.addEventListener('click', forceRefresh);
 
   // Excel出力ボタンはtemplate.js読込後に登録
 }
@@ -2967,6 +3201,13 @@ async function init() {
 async function continueInit() {
   hideLoginScreen();
   updateUserInfoUI();
+
+  // 強制更新後のクエリパラメータを掃除
+  if (window.location.search.includes('_refresh=')) {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('_refresh');
+    window.history.replaceState({}, '', url.toString());
+  }
 
   // 対象月：前回保存 or 現在月
   const savedMonth = localStorage.getItem("shibaki_current_month");
@@ -2992,7 +3233,7 @@ async function continueInit() {
   loadDataToForm();
 
   // b. バックグラウンドでGASからデータ取得（接続確認を兼ねる）
-  syncFromServer();
+  syncFromServer().catch(() => {});
   // 祝日リストもバックグラウンド取得
   fetchHolidaysFromServer();
 }
@@ -3092,17 +3333,25 @@ document.addEventListener("focusin", function(e) {
   }
 });
 
-// PCのEnterキーで次のinputに移動（テーブルなら縦方向）
+// PCのEnterキーで次のフィールドへ自動進行（縦方向）
 document.addEventListener("keydown", function(e) {
-  if (e.key === "Enter" && e.target.tagName === "INPUT") {
+  if (e.key !== "Enter") return;
+  var el = e.target;
+  if (!el || el.tagName !== "INPUT") return;
+  // data-field/data-equip/data-elec/data-mech のいずれかを持つ場合は advanceToNextField を使用
+  if (el.dataset && (el.dataset.field || el.dataset.equip || el.dataset.elec || el.dataset.mech)) {
     e.preventDefault();
-    var next = getNextInput(e.target);
-    if (next) {
-      next.focus();
-      next.select();
-    } else {
-      e.target.blur();
-    }
+    advanceToNextField(el);
+    return;
+  }
+  // それ以外は従来ロジック（フォールバック）
+  e.preventDefault();
+  var next = getNextInput(el);
+  if (next) {
+    next.focus();
+    next.select();
+  } else {
+    el.blur();
   }
 });
 
