@@ -1208,7 +1208,7 @@ const ELEC_SECTIONS = [
   { title: "放流流量計", fields: [
     { key: "flowLook", label: "外観の確認", type: "toggle", options: ["○","△","×"] },
     { key: "flowStatus", label: "指示状況の確認", type: "toggle", options: ["○","△","×"] },
-    { key: "flowReading", label: "流量計の読み", type: "number", step: "0.01", unit: "㎥/h" },
+    { key: "flowReading", label: "流量計の読み", type: "text", inputmode: "decimal", placeholder: "数値 または -", unit: "㎥/h" },
   ]},
   { title: "汚濁負荷量計(放流水UV)", fields: [
     { key: "uvLook", label: "外観の確認", type: "toggle", options: ["○","△","×"] },
@@ -1762,6 +1762,10 @@ function buildElecTable() {
       EQUIP_DAYS.forEach(d => {
         if (f.type === "number") {
           html += '<td><input type="number" inputmode="decimal" step="' + f.step + '" data-elec="' + f.key + '" data-eday="' + d + '"></td>';
+        } else if (f.type === "text") {
+          var imode = f.inputmode || "text";
+          var ph = f.placeholder || "";
+          html += '<td><input type="text" inputmode="' + imode + '" placeholder="' + ph + '" data-elec="' + f.key + '" data-eday="' + d + '" style="text-align:right"></td>';
         } else {
           // toggle button
           html += '<td><button type="button" class="toggle-btn" data-elec="' + f.key + '" data-eday="' + d + '" data-options=\'' + JSON.stringify(f.options) + '\'></button></td>';
@@ -4099,6 +4103,28 @@ function fillElecSheet(wb, yyyy, mm, monthLabel) {
         var row = elecRowMap[fieldKey];
         var val = dayData[fieldKey];
         setCell(ws, row + offset, col, val);
+      }
+    }
+
+    // ===== 水質タブの余剰汚泥流量を電気設備シートの29行目（余剰汚泥積算）に転記 =====
+    // Excelテンプレートに返送汚泥（25行目）の数式はあるが、余剰汚泥（29行目）の数式が
+    // 欠落しているため、ここでJavaScript側から直接値を書き込む
+    var wqDays = ["mon", "tue", "wed", "thu", "fri"];
+    var waterWeek = weeklyData.weeks[w];
+    if (waterWeek) {
+      for (var wqi = 0; wqi < wqDays.length; wqi++) {
+        var wqDayKey = wqDays[wqi];
+        var wqDateObj = getActualDate(w, wqDayKey);
+        var wqCol = dayColElec[wqDayKey];
+        var wqInTarget = wqDateObj && wqDateObj.getFullYear() === yyyy && (wqDateObj.getMonth() + 1) === mm;
+        var wqIsHoliday = wqDateObj && holidaySet.has(dateToStr(wqDateObj));
+        if (!wqInTarget || wqIsHoliday) {
+          ws.getCell(29 + offset, wqCol).value = null;
+          continue;
+        }
+        var wqDayData = waterWeek[wqDayKey];
+        if (!wqDayData) continue;
+        setCell(ws, 29 + offset, wqCol, wqDayData.yojouOdei);
       }
     }
   }
