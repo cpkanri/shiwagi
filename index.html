@@ -3628,10 +3628,10 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
   const ws = wb.getWorksheet(1); // 日常水質
   if (!ws) return;
 
-  // DAYSマッピング: mon=I(9), tue=J(10), wed=K(11), thu=L(12), nextMon=N(14)
-  const dayColMap = { mon: 9, tue: 10, wed: 11, thu: 12, nextMon: 14 };
-  // 水質データの入力列（測定者行以降）: J(10), K(11), L(12), M(13), N(14)
-  const dayColMapWQ = { mon: 10, tue: 11, wed: 12, thu: 13, nextMon: 14 };
+  // DAYSマッピング: mon=I(9), tue=J(10), wed=K(11), thu=L(12), fri=M(13), N(14)=次週最初の点検日
+  const dayColMap = { mon: 9, tue: 10, wed: 11, thu: 12, nextMon: 13 };
+  // 水質データの入力列: I(9), J(10), K(11), L(12), M(13), N(14)=次週最初の点検日
+  const dayColMapWQ = { mon: 9, tue: 10, wed: 11, thu: 12, nextMon: 13 };
 
   // 週ブロックオフセット（各週44行）
   const weekOffsets = { 1: 0, 2: 44, 3: 88, 4: 132, 5: 176 };
@@ -3658,39 +3658,28 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
     setCell(ws, 1 + offset, 14, reiwaYear);
 
     // 日付行（Row3のI列以降）= 各曜日の日付を文字列で設定
+    // I(9)=月, J(10)=火, K(11)=水, L(12)=木, M(13)=金, N(14)=次週最初の点検日
     var waterDayKeys2 = ["mon", "tue", "wed", "thu", "nextMon"];
-    var waterDayCols2 = { mon: 9, tue: 10, wed: 11, thu: 12, nextMon: 14 };
-    // 金曜(M列=13)の日付も追加（木曜+1日）
+    var waterDayCols2 = { mon: 9, tue: 10, wed: 11, thu: 12, nextMon: 13 };
     for (var wdi = 0; wdi < waterDayKeys2.length; wdi++) {
       var wdKey = waterDayKeys2[wdi];
-      if (wdKey === "nextMon") {
-        // N列は「次週の最初の平日」（祝日・土日を除く）
-        var thuObj = getActualDate(w, "thu");
-        var friObj = null;
-        if (thuObj) {
-          friObj = new Date(thuObj);
-          friObj.setDate(friObj.getDate() + 1);
-        }
-        var nextWorkday = getNextWeekFirstWorkday(friObj, holidaySet);
-        if (nextWorkday) {
-          setCell(ws, 3 + offset, 14, formatDateJP(nextWorkday));
-        }
-      } else {
-        var wdObj = getActualDate(w, wdKey);
-        if (wdObj) {
-          setCell(ws, 3 + offset, waterDayCols2[wdKey], formatDateJP(wdObj));
-          // 木曜の次に金曜の日付をM列に追加
-          if (wdKey === "thu") {
-            var friObj = new Date(wdObj);
-            friObj.setDate(friObj.getDate() + 1);
-            setCell(ws, 3 + offset, 13, formatDateJP(friObj));
-          }
-        }
+      var wdObj = getActualDate(w, wdKey);
+      if (wdObj) {
+        setCell(ws, 3 + offset, waterDayCols2[wdKey], formatDateJP(wdObj));
+      }
+    }
+    // N列(14): 次週の最初の点検日（通常は翌週月曜、祝日なら火→水...）
+    var friObjForNext = getActualDate(w, "nextMon"); // 金曜
+    if (friObjForNext) {
+      var nextWorkday = getNextWeekFirstWorkday(friObjForNext, holidaySet);
+      if (nextWorkday) {
+        setCell(ws, 3 + offset, 14, formatDateJP(nextWorkday));
       }
     }
 
-    // 測定者行（Row12のJ-N列）= 各曜日のinspectorを設定（祝日はスキップ）
-    var inspColMap = { mon: 10, tue: 11, wed: 12, thu: 13, nextMon: 14 };
+    // 測定者行（Row12のI-N列）= 各曜日のinspectorを設定（祝日はスキップ）
+    // I(9)=月, J(10)=火, K(11)=水, L(12)=木, M(13)=金, N(14)=次週最初の点検日
+    var inspColMap = { mon: 9, tue: 10, wed: 11, thu: 12, nextMon: 13 };
     for (var idi = 0; idi < waterDayKeys2.length; idi++) {
       var idKey = waterDayKeys2[idi];
       var idDate = getActualDate(w, idKey);
@@ -3698,9 +3687,30 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
       if (!isHolidayInsp && weekData[idKey] && weekData[idKey].inspector) {
         setCell(ws, 12 + offset, inspColMap[idKey], weekData[idKey].inspector);
       } else {
-        // 祝日 or データ無しの場合は null でクリア
         ws.getCell(12 + offset, inspColMap[idKey]).value = null;
       }
+    }
+    // N列(14)の測定者: 次週最初の点検日の測定者
+    var nextWeekData = weeklyData.weeks[w + 1];
+    if (nextWeekData) {
+      var nextKeys = ["mon", "tue", "wed", "thu", "nextMon"];
+      var foundInspector = null;
+      for (var nki = 0; nki < nextKeys.length; nki++) {
+        var nk = nextKeys[nki];
+        var nkDate = getActualDate(w + 1, nk);
+        var nkIsHoliday = nkDate && holidaySet.has(dateToStr(nkDate));
+        if (!nkIsHoliday && nextWeekData[nk] && nextWeekData[nk].inspector) {
+          foundInspector = nextWeekData[nk].inspector;
+          break;
+        }
+      }
+      if (foundInspector) {
+        setCell(ws, 12 + offset, 14, foundInspector);
+      } else {
+        ws.getCell(12 + offset, 14).value = null;
+      }
+    } else {
+      ws.getCell(12 + offset, 14).value = null;
     }
 
     // 各曜日のデータ埋め込み
@@ -3776,6 +3786,62 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
 
       // 備考
       // 備考はRow35、1列目にまとめて（最初の曜日のみ）
+    }
+
+    // ===== N列(14): 次週の最初の点検日のデータを転記 =====
+    var nextWeekDataN = weeklyData.weeks[w + 1];
+    if (nextWeekDataN) {
+      var nextKeysN = ["mon", "tue", "wed", "thu", "nextMon"];
+      var targetNextKey = null;
+      for (var nki2 = 0; nki2 < nextKeysN.length; nki2++) {
+        var nk2 = nextKeysN[nki2];
+        var nk2Date = getActualDate(w + 1, nk2);
+        var nk2IsHoliday = nk2Date && holidaySet.has(dateToStr(nk2Date));
+        if (!nk2IsHoliday && nextWeekDataN[nk2]) {
+          targetNextKey = nk2;
+          break;
+        }
+      }
+      if (targetNextKey) {
+        var nextDayData = nextWeekDataN[targetNextKey];
+        if (nextDayData) {
+          setCell(ws, 4 + offset, 14, nextDayData.denryoku200v);
+          setCell(ws, 5 + offset, 14, nextDayData.denryoku100v);
+          setCell(ws, 6 + offset, 14, nextDayData.keiyu);
+          setCell(ws, 7 + offset, 14, nextDayData.hensouOdei);
+          setCell(ws, 8 + offset, 14, nextDayData.yojouOdei);
+          setCell(ws, 9 + offset, 14, nextDayData.houryuuRyuuryou);
+
+          setCell(ws, 13 + offset, 14, nextDayData.tempRyunyu);
+          setCell(ws, 14 + offset, 14, nextDayData.tempDitch);
+          setCell(ws, 15 + offset, 14, nextDayData.tempHouryuu);
+          setCell(ws, 16 + offset, 14, nextDayData.gaikanRyunyu);
+          setCell(ws, 17 + offset, 14, nextDayData.gaikanDitch);
+          setCell(ws, 18 + offset, 14, nextDayData.gaikanHouryuu);
+          setCell(ws, 19 + offset, 14, nextDayData.toushidoRyunyu);
+          setCell(ws, 20 + offset, 14, nextDayData.toushidoHouryuu);
+          setCell(ws, 21 + offset, 14, nextDayData.shukiRyunyu);
+          setCell(ws, 22 + offset, 14, nextDayData.shukiDitch);
+          setCell(ws, 23 + offset, 14, nextDayData.shukiHouryuu);
+          setCell(ws, 24 + offset, 14, nextDayData.phRyunyu);
+          setCell(ws, 25 + offset, 14, nextDayData.phDitch);
+          setCell(ws, 26 + offset, 14, nextDayData.phHouryuu);
+          setCell(ws, 27 + offset, 14, nextDayData.sv10);
+          setCell(ws, 28 + offset, 14, nextDayData.sv20);
+          setCell(ws, 29 + offset, 14, nextDayData.sv30);
+          setCell(ws, 30 + offset, 14, nextDayData.sv24h);
+          setCell(ws, 31 + offset, 14, nextDayData.mlss);
+          setCell(ws, 32 + offset, 14, nextDayData.odeiKaimen);
+          setCell(ws, 33 + offset, 14, nextDayData.zanryuuEnso);
+          setCell(ws, 34 + offset, 14, nextDayData.ensoTounyuu);
+        }
+      } else {
+        for (var rN = 4; rN <= 9; rN++) ws.getCell(rN + offset, 14).value = null;
+        for (var rN2 = 13; rN2 <= 34; rN2++) ws.getCell(rN2 + offset, 14).value = null;
+      }
+    } else {
+      for (var rNx = 4; rNx <= 9; rNx++) ws.getCell(rNx + offset, 14).value = null;
+      for (var rNx2 = 13; rNx2 <= 34; rNx2++) ws.getCell(rNx2 + offset, 14).value = null;
     }
   }
 
