@@ -1245,7 +1245,7 @@ const ELEC_SECTIONS = [
 // 全電気フィールドキーのフラットリスト
 const ALL_ELEC_KEYS = ELEC_SECTIONS.flatMap(s => s.fields.map(f => f.key));
 
-// 機械設備の曜日（火曜なし）
+// 機械設備の曜日（月〜金の5日）
 const MECH_DAYS = ["mon", "tue", "wed", "thu", "fri"];
 
 // 機械設備項目定義
@@ -1461,7 +1461,7 @@ function emptyMechDay() {
   return d;
 }
 
-// 空の機械設備1週分データ（月水木金の4日）
+// 空の機械設備1週分データ（月〜金の5日）
 function emptyMechWeek() {
   const w = {};
   MECH_DAYS.forEach(d => { w[d] = emptyMechDay(); });
@@ -2044,9 +2044,9 @@ function getAdvanceableFields() {
     });
     return result;
   } else if (currentSheet === "mech") {
-    // 機械: 縦方向（同じ曜日を項目順に）
+    // 機械: 縦方向（同じ曜日を項目順に）※月〜金の5日すべて対応
     const result = [];
-    const days = ["mon", "wed", "thu", "fri"]; // 機械は火曜なし
+    const days = ["mon", "tue", "wed", "thu", "fri"];
     days.forEach(d => {
       document.querySelectorAll('#mechPanel input[data-mech][data-mday="' + d + '"], #mechPanel button[data-mech][data-mday="' + d + '"].toggle-btn').forEach(el => result.push(el));
     });
