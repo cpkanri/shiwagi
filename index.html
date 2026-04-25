@@ -3789,7 +3789,7 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
   if (firstMondayDate) {
     var prevLast = getPrevMonthLastDayData(weeklyData.targetMonth, firstMondayDate, holidaySet);
     if (prevLast) {
-      setCell(ws, 3, 9, prevLast.date);
+      setCell(ws, 3, 9, toExcelDate(prevLast.date));
       setCell(ws, 4, 9, prevLast.data.denryoku200v);
       setCell(ws, 5, 9, prevLast.data.denryoku100v);
       setCell(ws, 6, 9, prevLast.data.keiyu);
@@ -3819,7 +3819,7 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
       var wdKey = waterDayKeys2[wdi];
       var wdObj = getActualDate(w, wdKey);
       if (wdObj) {
-        setCell(ws, 3 + offset, waterDayCols2[wdKey], wdObj);
+        setCell(ws, 3 + offset, waterDayCols2[wdKey], toExcelDate(wdObj));
       }
     }
     // N列(14): 次週の最初の点検日（通常は翌週月曜、祝日なら火→水...）
@@ -3827,7 +3827,7 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
     if (friObjForNext) {
       var nextWorkday = getNextWeekFirstWorkday(friObjForNext, holidaySet);
       if (nextWorkday) {
-        setCell(ws, 3 + offset, 14, nextWorkday);
+        setCell(ws, 3 + offset, 14, toExcelDate(nextWorkday));
       }
     }
 
@@ -4243,7 +4243,7 @@ function fillElecSheet(wb, yyyy, mm, monthLabel) {
       var isTarget = dateObj && dateObj.getFullYear() === yyyy && (dateObj.getMonth() + 1) === mm;
       var isHoliday = dateObj && holidaySet.has(dateToStr(dateObj));
       if (isTarget && !isHoliday) {
-        setCell(ws, 2 + offset, ecol, dateObj);
+        setCell(ws, 2 + offset, ecol, toExcelDate(dateObj));
       } else {
         // 対象月外 or 祝日は空に
         ws.getCell(2 + offset, ecol).value = null;
@@ -4428,7 +4428,7 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
         var inTargetM = mdateObj && mdateObj.getFullYear() === yyyy && (mdateObj.getMonth() + 1) === mm;
         var isHolidayM = mdateObj && holidaySet.has(dateToStr(mdateObj));
         if (inTargetM && !isHolidayM) {
-          setCell(ws, dateRow, mcol, mdateObj);
+          setCell(ws, dateRow, mcol, toExcelDate(mdateObj));
           var wKey = waterDayMap[mdayKey];
           if (weeklyData.weeks[w] && weeklyData.weeks[w][wKey] && weeklyData.weeks[w][wKey].inspector) {
             setCell(ws, inspRow, mcol, weeklyData.weeks[w][wKey].inspector);
