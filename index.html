@@ -370,55 +370,68 @@ header h1 {
 }
 .equip-table {
   width: 100%;
-  min-width: 420px;
+  min-width: 0;
   border-collapse: collapse;
   background: #fff;
   border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  font-size: 13px;
+  font-size: 12px;
+  table-layout: fixed;
 }
 .equip-table thead th {
   background: #eef5f1;
   color: #0d4f34;
   font-weight: 600;
-  padding: 8px 4px;
+  padding: 6px 2px;
   text-align: center;
   border-bottom: 1px solid #dde8e2;
   position: sticky;
   top: 0;
   z-index: 5;
+  font-size: 12px;
+  word-break: keep-all;
 }
 .equip-table thead th:first-child {
   text-align: left;
-  padding-left: 10px;
-  min-width: 120px;
+  padding-left: 6px;
+  width: 28%;
+  min-width: 90px;
+}
+.equip-table thead th:not(:first-child) {
+  width: 14.4%;
 }
 .equip-table tbody td {
-  padding: 4px;
+  padding: 3px 2px;
   border-bottom: 1px solid #f0f0f0;
   text-align: center;
 }
 .equip-table tbody td:first-child {
   text-align: left;
-  padding-left: 10px;
-  font-size: 12px;
+  padding-left: 6px;
+  font-size: 11px;
   color: #333;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .equip-table tbody tr:last-child td { border-bottom: none; }
-.equip-table input[type="number"] {
-  width: 64px;
-  height: 44px;
-  padding: 6px 4px;
+.equip-table input[type="number"],
+.equip-table input[type="text"] {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  height: 38px;
+  padding: 4px 2px;
   border: 1px solid #ccd;
-  border-radius: 6px;
-  font-size: 16px;
+  border-radius: 5px;
+  font-size: 14px;
   text-align: right;
   font-family: inherit;
   background: #fafbfc;
 }
-.equip-table input[type="number"]:focus {
+.equip-table input[type="number"]:focus,
+.equip-table input[type="text"]:focus {
   outline: none;
   border-color: #0d4f34;
   background: #fff;
@@ -502,6 +515,16 @@ header h1 {
   padding: 0 4px;
   line-height: 44px;
   text-align: center;
+}
+.equip-table .toggle-btn {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  height: 38px;
+  line-height: 38px;
+  font-size: 14px;
+  padding: 0 2px;
 }
 .toggle-btn[data-val="○"] { background: #c8e6c9; color: #2e7d32; border-color: #a5d6a7; }
 .toggle-btn[data-val="△"] { background: #fff9c4; color: #f9a825; border-color: #fff176; }
@@ -1294,7 +1317,7 @@ const ELEC_SECTIONS = [
   { title: "放流流量計", fields: [
     { key: "flowLook", label: "外観の確認", type: "toggle", options: ["○","△","×"] },
     { key: "flowStatus", label: "指示状況の確認", type: "toggle", options: ["○","△","×"] },
-    { key: "flowReading", label: "流量計の読み", type: "text", inputmode: "decimal", placeholder: "数値 または -", unit: "㎥/h" },
+    { key: "flowReading", label: "流量計の読み", type: "text", inputmode: "decimal", placeholder: "-", unit: "㎥/h" },
   ]},
   { title: "汚濁負荷量計(放流水UV)", fields: [
     { key: "uvLook", label: "外観の確認", type: "toggle", options: ["○","△","×"] },
@@ -1305,12 +1328,12 @@ const ELEC_SECTIONS = [
   { title: "返送汚泥ポンプ流量計", fields: [
     { key: "retSludgeLook", label: "外観の確認", type: "toggle", options: ["○","△","×"] },
     { key: "retSludgeStatus", label: "指示状況の確認", type: "toggle", options: ["○","△","×"] },
-    { key: "retSludgeReading", label: "流量計の読み", type: "number", step: "0.01", unit: "㎥/h" },
+    { key: "retSludgeReading", label: "流量計の読み", type: "text", inputmode: "decimal", placeholder: "-", unit: "㎥/h" },
   ]},
   { title: "余剰汚泥ポンプ流量計", fields: [
     { key: "excessSludgeLook", label: "外観の確認", type: "toggle", options: ["○","△","×"] },
     { key: "excessSludgeStatus", label: "指示状況の確認", type: "toggle", options: ["○","△","×"] },
-    { key: "excessSludgeReading", label: "流量計の読み", type: "number", step: "0.01", unit: "㎥/h" },
+    { key: "excessSludgeReading", label: "流量計の読み", type: "text", inputmode: "decimal", placeholder: "-", unit: "㎥/h" },
   ]},
   { title: "圧力式液位計", fields: [
     { key: "pressureLook", label: "外観の確認", type: "toggle", options: ["○","△","×"] },
@@ -1907,12 +1930,21 @@ function saveElecFormToData() {
 
 function loadElecDataToForm() {
   const week = weeklyData.electrical[currentWeek];
+  const dashFields = ["flowReading", "retSludgeReading", "excessSludgeReading"];
   document.querySelectorAll("[data-elec]").forEach(el => {
     const key = el.dataset.elec;
     const day = el.dataset.eday;
     const v = (week && week[day]) ? week[day][key] : null;
     if (el.tagName === "INPUT") {
-      el.value = (v === null || v === undefined) ? "" : v;
+      if (v === null || v === undefined || v === "") {
+        if (el.type === "text" && dashFields.indexOf(key) >= 0) {
+          el.value = "-";
+        } else {
+          el.value = "";
+        }
+      } else {
+        el.value = v;
+      }
     } else {
       // toggle button
       const val = (v === null || v === undefined) ? "" : String(v);
