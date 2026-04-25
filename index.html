@@ -1294,6 +1294,9 @@ const WEEKS = [1, 2, 3, 4, 5];
 
 // 機器運転時間の曜日キー（data-eday属性と一致）
 const EQUIP_DAYS = ["mon", "tue", "wed", "thu", "fri"];
+// 電気・機械タブのキー(fri) → 水質タブのキー(nextMon) への変換マップ
+// 水質タブは nextMon を金曜の意味で使っているため、両者を変換する必要がある
+const APP_KEY_MAP = { mon: "mon", tue: "tue", wed: "wed", thu: "thu", fri: "nextMon" };
 // 機器キー（data-equip属性と一致）
 const EQUIP_KEYS = [
   "screenUnit", "thickSludgePump", "sludgeMixer", "excessPump",
@@ -4335,15 +4338,12 @@ function fillElecSheet(wb, yyyy, mm, monthLabel) {
     // ===== 水質タブの余剰汚泥流量を電気設備シートの29行目（余剰汚泥積算）に転記 =====
     // Excelテンプレートに返送汚泥（25行目）の数式はあるが、余剰汚泥（29行目）の数式が
     // 欠落しているため、ここでJavaScript側から直接値を書き込む
-    // 注意: 水質タブのデータキーは「nextMon」(金曜) で保存されているが、
-    //       電気タブの列マッピング(dayColElec)は「fri」キーを使うため、両者を変換する
     var wqDays = ["mon", "tue", "wed", "thu", "fri"];
-    var wqKeyMap = { mon: "mon", tue: "tue", wed: "wed", thu: "thu", fri: "nextMon" };
     var waterWeek = weeklyData.weeks[w];
     if (waterWeek) {
       for (var wqi = 0; wqi < wqDays.length; wqi++) {
         var wqDayKey = wqDays[wqi];                  // "fri" などの電気タブキー
-        var waterDataKey = wqKeyMap[wqDayKey];       // "nextMon" などの水質タブキー
+        var waterDataKey = APP_KEY_MAP[wqDayKey];    // "nextMon" などの水質タブキー
         var wqDateObj = getActualDate(w, waterDataKey); // 日付計算は水質タブのキーで行う
         var wqCol = dayColElec[wqDayKey];            // 書き込み先列は電気タブの列マッピング
         var wqInTarget = wqDateObj && wqDateObj.getFullYear() === yyyy && (wqDateObj.getMonth() + 1) === mm;
@@ -4473,7 +4473,6 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
     var MECH_DATE_ROWS = [3, 65];
     var mechDayKeysMap = {mon: 5, tue: 6, wed: 7, thu: 8, fri: 9};
     var mechDayLabels = ["mon", "tue", "wed", "thu", "fri"];
-    var waterDayMap = {mon: "mon", tue: "tue", wed: "wed", thu: "thu", fri: "nextMon"};
 
     for (var pi = 0; pi < MECH_DATE_ROWS.length; pi++) {
       var dateRow = MECH_DATE_ROWS[pi] + offset;
@@ -4488,7 +4487,7 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
           // 対象月内なら祝日でも日付ヘッダーを表示
           setCell(ws, dateRow, mcol, toExcelDate(mdateObj));
           // 点検者は祝日でなければ書き込み、祝日は空
-          var wKey = waterDayMap[mdayKey];
+          var wKey = APP_KEY_MAP[mdayKey];
           if (!isHolidayM && weeklyData.weeks[w] && weeklyData.weeks[w][wKey] && weeklyData.weeks[w][wKey].inspector) {
             setCell(ws, inspRow, mcol, weeklyData.weeks[w][wKey].inspector);
           } else {
