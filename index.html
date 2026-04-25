@@ -4314,20 +4314,24 @@ function fillElecSheet(wb, yyyy, mm, monthLabel) {
     // ===== 水質タブの余剰汚泥流量を電気設備シートの29行目（余剰汚泥積算）に転記 =====
     // Excelテンプレートに返送汚泥（25行目）の数式はあるが、余剰汚泥（29行目）の数式が
     // 欠落しているため、ここでJavaScript側から直接値を書き込む
+    // 注意: 水質タブのデータキーは「nextMon」(金曜) で保存されているが、
+    //       電気タブの列マッピング(dayColElec)は「fri」キーを使うため、両者を変換する
     var wqDays = ["mon", "tue", "wed", "thu", "fri"];
+    var wqKeyMap = { mon: "mon", tue: "tue", wed: "wed", thu: "thu", fri: "nextMon" };
     var waterWeek = weeklyData.weeks[w];
     if (waterWeek) {
       for (var wqi = 0; wqi < wqDays.length; wqi++) {
-        var wqDayKey = wqDays[wqi];
-        var wqDateObj = getActualDate(w, wqDayKey);
-        var wqCol = dayColElec[wqDayKey];
+        var wqDayKey = wqDays[wqi];                  // "fri" などの電気タブキー
+        var waterDataKey = wqKeyMap[wqDayKey];       // "nextMon" などの水質タブキー
+        var wqDateObj = getActualDate(w, waterDataKey); // 日付計算は水質タブのキーで行う
+        var wqCol = dayColElec[wqDayKey];            // 書き込み先列は電気タブの列マッピング
         var wqInTarget = wqDateObj && wqDateObj.getFullYear() === yyyy && (wqDateObj.getMonth() + 1) === mm;
         var wqIsHoliday = wqDateObj && holidaySet.has(dateToStr(wqDateObj));
         if (!wqInTarget || wqIsHoliday) {
           ws.getCell(29 + offset, wqCol).value = null;
           continue;
         }
-        var wqDayData = waterWeek[wqDayKey];
+        var wqDayData = waterWeek[waterDataKey];     // 水質タブのキーでデータ取得
         if (!wqDayData) continue;
         setCell(ws, 29 + offset, wqCol, wqDayData.yojouOdei);
       }
