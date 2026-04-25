@@ -97,16 +97,12 @@ header h1 {
   border-bottom-color: #0d4f34;
   background: #f8fcfa;
 }
-.week-tabs button .week-date {
+.equip-table thead th .col-date {
   display: block;
   font-size: 10px;
-  font-weight: 400;
-  color: #999;
-  margin-top: 2px;
-  letter-spacing: 0;
-}
-.week-tabs button.active .week-date {
   color: #4a8a6a;
+  font-weight: 400;
+  margin-bottom: 2px;
 }
 .week-tabs button .pct, .day-tabs button .pct {
   display: block;
@@ -939,11 +935,11 @@ header > .conn-status { display: none; }
     <thead>
       <tr>
         <th>機器名称</th>
-        <th>月<br><span class="equip-unit">hr</span><br><button type="button" class="col-copy-btn" data-copy-day="mon" data-copy-table="equip">←</button><button type="button" class="col-clear-btn" data-clear-day="mon" data-clear-table="equip">×</button></th>
-        <th>火<br><span class="equip-unit">hr</span><br><button type="button" class="col-copy-btn" data-copy-day="tue" data-copy-table="equip">←</button><button type="button" class="col-clear-btn" data-clear-day="tue" data-clear-table="equip">×</button></th>
-        <th>水<br><span class="equip-unit">hr</span><br><button type="button" class="col-copy-btn" data-copy-day="wed" data-copy-table="equip">←</button><button type="button" class="col-clear-btn" data-clear-day="wed" data-clear-table="equip">×</button></th>
-        <th>木<br><span class="equip-unit">hr</span><br><button type="button" class="col-copy-btn" data-copy-day="thu" data-copy-table="equip">←</button><button type="button" class="col-clear-btn" data-clear-day="thu" data-clear-table="equip">×</button></th>
-        <th>金<br><span class="equip-unit">hr</span><br><button type="button" class="col-copy-btn" data-copy-day="fri" data-copy-table="equip">←</button><button type="button" class="col-clear-btn" data-clear-day="fri" data-clear-table="equip">×</button></th>
+        <th>月<br><span class="col-date" data-hday="mon"></span><button type="button" class="col-copy-btn" data-copy-day="mon" data-copy-table="equip">←</button><button type="button" class="col-clear-btn" data-clear-day="mon" data-clear-table="equip">×</button></th>
+        <th>火<br><span class="col-date" data-hday="tue"></span><button type="button" class="col-copy-btn" data-copy-day="tue" data-copy-table="equip">←</button><button type="button" class="col-clear-btn" data-clear-day="tue" data-clear-table="equip">×</button></th>
+        <th>水<br><span class="col-date" data-hday="wed"></span><button type="button" class="col-copy-btn" data-copy-day="wed" data-copy-table="equip">←</button><button type="button" class="col-clear-btn" data-clear-day="wed" data-clear-table="equip">×</button></th>
+        <th>木<br><span class="col-date" data-hday="thu"></span><button type="button" class="col-copy-btn" data-copy-day="thu" data-copy-table="equip">←</button><button type="button" class="col-clear-btn" data-clear-day="thu" data-clear-table="equip">×</button></th>
+        <th>金<br><span class="col-date" data-hday="fri"></span><button type="button" class="col-copy-btn" data-copy-day="fri" data-copy-table="equip">←</button><button type="button" class="col-clear-btn" data-clear-day="fri" data-clear-table="equip">×</button></th>
       </tr>
     </thead>
     <tbody>
@@ -981,11 +977,11 @@ header > .conn-status { display: none; }
     <thead>
       <tr>
         <th>項目</th>
-        <th>月<br><button type="button" class="col-copy-btn" data-copy-day="mon" data-copy-table="elec">←</button><button type="button" class="col-clear-btn" data-clear-day="mon" data-clear-table="elec">×</button></th>
-        <th>火<br><button type="button" class="col-copy-btn" data-copy-day="tue" data-copy-table="elec">←</button><button type="button" class="col-clear-btn" data-clear-day="tue" data-clear-table="elec">×</button></th>
-        <th>水<br><button type="button" class="col-copy-btn" data-copy-day="wed" data-copy-table="elec">←</button><button type="button" class="col-clear-btn" data-clear-day="wed" data-clear-table="elec">×</button></th>
-        <th>木<br><button type="button" class="col-copy-btn" data-copy-day="thu" data-copy-table="elec">←</button><button type="button" class="col-clear-btn" data-clear-day="thu" data-clear-table="elec">×</button></th>
-        <th>金<br><button type="button" class="col-copy-btn" data-copy-day="fri" data-copy-table="elec">←</button><button type="button" class="col-clear-btn" data-clear-day="fri" data-clear-table="elec">×</button></th>
+        <th>月<br><span class="col-date" data-hday="mon"></span><button type="button" class="col-copy-btn" data-copy-day="mon" data-copy-table="elec">←</button><button type="button" class="col-clear-btn" data-clear-day="mon" data-clear-table="elec">×</button></th>
+        <th>火<br><span class="col-date" data-hday="tue"></span><button type="button" class="col-copy-btn" data-copy-day="tue" data-copy-table="elec">←</button><button type="button" class="col-clear-btn" data-clear-day="tue" data-clear-table="elec">×</button></th>
+        <th>水<br><span class="col-date" data-hday="wed"></span><button type="button" class="col-copy-btn" data-copy-day="wed" data-copy-table="elec">←</button><button type="button" class="col-clear-btn" data-clear-day="wed" data-clear-table="elec">×</button></th>
+        <th>木<br><span class="col-date" data-hday="thu"></span><button type="button" class="col-copy-btn" data-copy-day="thu" data-copy-table="elec">←</button><button type="button" class="col-clear-btn" data-clear-day="thu" data-clear-table="elec">×</button></th>
+        <th>金<br><span class="col-date" data-hday="fri"></span><button type="button" class="col-copy-btn" data-copy-day="fri" data-copy-table="elec">←</button><button type="button" class="col-clear-btn" data-clear-day="fri" data-clear-table="elec">×</button></th>
       </tr>
     </thead>
     <tbody id="elecBody">
@@ -1011,11 +1007,11 @@ header > .conn-status { display: none; }
     <thead>
       <tr>
         <th>項目</th>
-        <th>月<br><button type="button" class="col-copy-btn" data-copy-day="mon" data-copy-table="mech">←</button><button type="button" class="col-clear-btn" data-clear-day="mon" data-clear-table="mech">×</button></th>
-        <th>火<br><button type="button" class="col-copy-btn" data-copy-day="tue" data-copy-table="mech">←</button><button type="button" class="col-clear-btn" data-clear-day="tue" data-clear-table="mech">×</button></th>
-        <th>水<br><button type="button" class="col-copy-btn" data-copy-day="wed" data-copy-table="mech">←</button><button type="button" class="col-clear-btn" data-clear-day="wed" data-clear-table="mech">×</button></th>
-        <th>木<br><button type="button" class="col-copy-btn" data-copy-day="thu" data-copy-table="mech">←</button><button type="button" class="col-clear-btn" data-clear-day="thu" data-clear-table="mech">×</button></th>
-        <th>金<br><button type="button" class="col-copy-btn" data-copy-day="fri" data-copy-table="mech">←</button><button type="button" class="col-clear-btn" data-clear-day="fri" data-clear-table="mech">×</button></th>
+        <th>月<br><span class="col-date" data-hday="mon"></span><button type="button" class="col-copy-btn" data-copy-day="mon" data-copy-table="mech">←</button><button type="button" class="col-clear-btn" data-clear-day="mon" data-clear-table="mech">×</button></th>
+        <th>火<br><span class="col-date" data-hday="tue"></span><button type="button" class="col-copy-btn" data-copy-day="tue" data-copy-table="mech">←</button><button type="button" class="col-clear-btn" data-clear-day="tue" data-clear-table="mech">×</button></th>
+        <th>水<br><span class="col-date" data-hday="wed"></span><button type="button" class="col-copy-btn" data-copy-day="wed" data-copy-table="mech">←</button><button type="button" class="col-clear-btn" data-clear-day="wed" data-clear-table="mech">×</button></th>
+        <th>木<br><span class="col-date" data-hday="thu"></span><button type="button" class="col-copy-btn" data-copy-day="thu" data-copy-table="mech">←</button><button type="button" class="col-clear-btn" data-clear-day="thu" data-clear-table="mech">×</button></th>
+        <th>金<br><span class="col-date" data-hday="fri"></span><button type="button" class="col-copy-btn" data-copy-day="fri" data-copy-table="mech">←</button><button type="button" class="col-clear-btn" data-clear-day="fri" data-clear-table="mech">×</button></th>
       </tr>
     </thead>
     <tbody id="mechBody">
@@ -1853,45 +1849,26 @@ function loadEquipDataToForm() {
   });
 }
 
-// 週タブ用の日付範囲文字列を返す（例: "4/28〜5/2"）
-function getWeekDateRangeStr(w) {
-  const mon = getActualDate(w, "mon");
-  const fri = getActualDate(w, "fri");
-  if (!mon || !fri) return "";
-  const fmt = d => (d.getMonth() + 1) + "/" + d.getDate();
-  return fmt(mon) + "〜" + fmt(fri);
-}
-
-// 週タブのラベルとパーセントを更新する共通処理
-function updateWeekTabLabel(btn, w, tabType) {
-  let label = btn.querySelector(".week-label");
-  if (!label) {
-    label = document.createElement("span");
-    label.className = "week-label";
-    btn.insertBefore(label, btn.firstChild);
-  }
-  label.textContent = "第" + w + "週";
-
-  let dateSpan = btn.querySelector(".week-date");
-  if (!dateSpan) {
-    dateSpan = document.createElement("span");
-    dateSpan.className = "week-date";
-    label.after(dateSpan);
-  }
-  dateSpan.textContent = getWeekDateRangeStr(w);
-
-  let pct = btn.querySelector(".pct");
-  if (!pct) { pct = document.createElement("span"); pct.className = "pct"; btn.appendChild(pct); }
-  const p = getWeekPercent(tabType, w);
-  pct.textContent = p > 0 ? p + "%" : "";
+// 列ヘッダーの日付を現在の週に合わせて更新
+function updateColDateHeaders(tableId) {
+  const dayKeys = ["mon", "tue", "wed", "thu", "fri"];
+  document.querySelectorAll("#" + tableId + " thead .col-date").forEach(span => {
+    const dk = span.dataset.hday;
+    const d = getActualDate(currentWeek, dk);
+    span.textContent = d ? (d.getMonth() + 1) + "/" + d.getDate() : "";
+  });
 }
 
 function updateEquipWeekTabs() {
   document.querySelectorAll("#equipWeekTabs button").forEach(btn => {
     const w = Number(btn.dataset.week);
     btn.classList.toggle("active", w === currentWeek);
-    updateWeekTabLabel(btn, w, "equip");
+    let pct = btn.querySelector(".pct");
+    if (!pct) { pct = document.createElement("span"); pct.className = "pct"; btn.appendChild(pct); }
+    const p = getWeekPercent("equip", w);
+    pct.textContent = p > 0 ? p + "%" : "";
   });
+  updateColDateHeaders("equipTable");
 }
 
 // ===== 電気設備テーブル生成・トグルボタン =====
@@ -1999,8 +1976,12 @@ function updateElecWeekTabs() {
   document.querySelectorAll("#elecWeekTabs button").forEach(btn => {
     const w = Number(btn.dataset.week);
     btn.classList.toggle("active", w === currentWeek);
-    updateWeekTabLabel(btn, w, "elec");
+    let pct = btn.querySelector(".pct");
+    if (!pct) { pct = document.createElement("span"); pct.className = "pct"; btn.appendChild(pct); }
+    const p = getWeekPercent("elec", w);
+    pct.textContent = p > 0 ? p + "%" : "";
   });
+  updateColDateHeaders("elecTable");
 }
 
 // ===== 機械設備テーブル生成 =====
@@ -2088,8 +2069,12 @@ function updateMechWeekTabs() {
   document.querySelectorAll("#mechWeekTabs button").forEach(btn => {
     const w = Number(btn.dataset.week);
     btn.classList.toggle("active", w === currentWeek);
-    updateWeekTabLabel(btn, w, "mech");
+    let pct = btn.querySelector(".pct");
+    if (!pct) { pct = document.createElement("span"); pct.className = "pct"; btn.appendChild(pct); }
+    const p = getWeekPercent("mech", w);
+    pct.textContent = p > 0 ? p + "%" : "";
   });
+  updateColDateHeaders("mechTable");
 }
 
 // ===== パネル切替 =====
