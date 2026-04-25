@@ -640,6 +640,91 @@ body.login-active { overflow: hidden; }
 }
 .user-info .logout-btn:hover { background: rgba(255,255,255,0.25); }
 
+/* ヘッダー上部: タイトルとユーザー情報を横並び */
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.header-top h1 {
+  margin: 0;
+  font-size: 18px;
+  flex: 1 1 auto;
+  min-width: 200px;
+}
+/* インライン接続状態 */
+.conn-status-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.9);
+}
+.conn-status-inline .conn-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #888;
+  display: inline-block;
+}
+.conn-status-inline .conn-dot.online { background: #2ecc71; }
+.conn-status-inline .conn-dot.offline { background: #e74c3c; }
+.user-info .user-name {
+  font-size: 13px;
+  color: rgba(255,255,255,0.95);
+}
+/* ヘッダーアクションボタン横一列 */
+.header-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+.btn-header-action {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.18);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-align: center;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.btn-header-action:hover { background: rgba(255,255,255,0.28); }
+.btn-header-action:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-header-action.btn-excel-header {
+  background: rgba(46, 113, 195, 0.85);
+}
+.btn-header-action.btn-excel-header:hover {
+  background: rgba(46, 113, 195, 1);
+}
+/* 古い conn-status の表示を非表示にしておく（保険） */
+header > .conn-status { display: none; }
+/* スマホ対応 */
+@media (max-width: 480px) {
+  .header-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+  .btn-header-action.btn-excel-header {
+    grid-column: span 2;
+  }
+  .header-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .user-info {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
 /* 強制更新ボタン */
 #btnForceRefresh {
   background: rgba(255,180,80,0.25);
@@ -677,7 +762,17 @@ body.login-active { overflow: hidden; }
 
 <!-- ヘッダー -->
 <header>
-  <h1>柴木浄化センター 週報入力</h1>
+  <div class="header-top">
+    <h1>柴木浄化センター 週報入力</h1>
+    <div class="user-info" id="userInfo">
+      <div class="conn-status-inline" id="connStatus">
+        <span class="conn-dot" id="connDot"></span>
+        <span id="connLabel">接続確認中...</span>
+      </div>
+      <span class="user-name" id="userName"></span>
+      <button type="button" class="logout-btn" id="btnLogout">ログアウト</button>
+    </div>
+  </div>
   <div class="header-controls">
     <label>
       <span>対象年月</span>
@@ -688,14 +783,10 @@ body.login-active { overflow: hidden; }
       <input type="date" id="startDate" readonly style="opacity:0.8;pointer-events:none;">
     </label>
   </div>
-  <div class="user-info" id="userInfo">
-    <span class="user-name" id="userName"></span>
-    <button type="button" class="logout-btn" id="btnForceRefresh" title="アプリを最新版に更新" style="background:rgba(255,180,80,0.25); margin-right:8px;">⟳ 更新</button>
-    <button type="button" class="logout-btn" id="btnLogout">ログアウト</button>
-  </div>
-  <div class="conn-status" id="connStatus">
-    <span class="conn-dot" id="connDot"></span>
-    <span id="connLabel">接続確認中...</span>
+  <div class="header-actions">
+    <button type="button" class="btn-header-action" id="btnForceRefresh" title="アプリを最新版に更新">⟳ 更新</button>
+    <button type="button" class="btn-header-action" id="btnSyncHeader">同期</button>
+    <button type="button" class="btn-header-action btn-excel-header" id="btnExcelHeader">📥 Excel出力</button>
   </div>
 </header>
 
@@ -906,11 +997,6 @@ body.login-active { overflow: hidden; }
   <button type="button" class="btn-clear" id="btnClear">全クリア</button>
   <button type="button" class="btn-undo" id="btnUndo" disabled>↩ 戻す</button>
   <button type="button" class="btn-save" id="btnSave">保存</button>
-  <button type="button" class="btn-sync" id="btnSync">同期</button>
-</div>
-
-<div class="excel-wrap">
-  <button type="button" class="btn-excel" id="btnExcel">📥 Excel出力</button>
 </div>
 
 <div class="info-bar">データは端末に保存されます（localStorage）</div>
@@ -3133,8 +3219,8 @@ function bindEvents() {
   });
 
   // 全同期ボタン（サーバーからダウンロードのみ）
-  document.getElementById("btnSync").addEventListener("click", async () => {
-    const btnSync = document.getElementById("btnSync");
+  document.getElementById("btnSyncHeader").addEventListener("click", async () => {
+    const btnSync = document.getElementById("btnSyncHeader");
 
     // 未保存データがある場合は警告
     if (typeof isDirty !== 'undefined' && isDirty) {
@@ -3499,7 +3585,7 @@ function toExcelDate(date) {
 }
 
 async function exportExcel() {
-  var btnExcel = document.getElementById("btnExcel");
+  var btnExcel = document.getElementById("btnExcelHeader");
   btnExcel.textContent = "生成中...";
   btnExcel.disabled = true;
 
@@ -4547,7 +4633,7 @@ function buildDateMap() {
 }
 
 // Excel出力ボタンのイベントリスナー登録
-document.getElementById("btnExcel").addEventListener("click", exportExcel);
+document.getElementById("btnExcelHeader").addEventListener("click", exportExcel);
 
 </script>
 </body>
