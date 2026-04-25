@@ -4266,18 +4266,19 @@ function fillElecSheet(wb, yyyy, mm, monthLabel) {
     var offset = weekOffsets[w];
     var elecWeek = weeklyData.electrical[w];
 
-    // 日付行（Row2）に各曜日の日付を入れる（対象月内かつ祝日でない日のみ、それ以外はnull）
+    // 日付行（Row2）に各曜日の日付を入れる
+    // 対象月内なら祝日でも日付ヘッダーは表示する（点検データだけ祝日なら空にする）
     var elecDayKeys = ["mon", "tue", "wed", "thu", "fri"];
     for (var edi = 0; edi < elecDayKeys.length; edi++) {
       var edayKey = elecDayKeys[edi];
       var dateObj = getActualDate(w, edayKey);
       var ecol = dayColElec[edayKey];
       var isTarget = dateObj && dateObj.getFullYear() === yyyy && (dateObj.getMonth() + 1) === mm;
-      var isHoliday = dateObj && holidaySet.has(dateToStr(dateObj));
-      if (isTarget && !isHoliday) {
+      if (isTarget) {
+        // 対象月内なら祝日でも日付を表示
         setCell(ws, 2 + offset, ecol, toExcelDate(dateObj));
       } else {
-        // 対象月外 or 祝日は空に
+        // 対象月外は空に
         ws.getCell(2 + offset, ecol).value = null;
       }
     }
@@ -4307,7 +4308,12 @@ function fillElecSheet(wb, yyyy, mm, monthLabel) {
       for (var fieldKey in elecRowMap) {
         var row = elecRowMap[fieldKey];
         var val = dayData[fieldKey];
-        setCell(ws, row + offset, col, val);
+        // 「-」も含めて全ての値を書き込む（setCellの内部フィルターを回避するため直接書き込み）
+        if (val === null || val === undefined) {
+          ws.getCell(row + offset, col).value = null;
+        } else {
+          ws.getCell(row + offset, col).value = val;
+        }
       }
     }
 
@@ -4463,16 +4469,18 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
         var mcol = mechDayKeysMap[mdayKey];
         var inTargetM = mdateObj && mdateObj.getFullYear() === yyyy && (mdateObj.getMonth() + 1) === mm;
         var isHolidayM = mdateObj && holidaySet.has(dateToStr(mdateObj));
-        if (inTargetM && !isHolidayM) {
+        if (inTargetM) {
+          // 対象月内なら祝日でも日付ヘッダーを表示
           setCell(ws, dateRow, mcol, toExcelDate(mdateObj));
+          // 点検者は祝日でなければ書き込み、祝日は空
           var wKey = waterDayMap[mdayKey];
-          if (weeklyData.weeks[w] && weeklyData.weeks[w][wKey] && weeklyData.weeks[w][wKey].inspector) {
+          if (!isHolidayM && weeklyData.weeks[w] && weeklyData.weeks[w][wKey] && weeklyData.weeks[w][wKey].inspector) {
             setCell(ws, inspRow, mcol, weeklyData.weeks[w][wKey].inspector);
           } else {
             ws.getCell(inspRow, mcol).value = null;
           }
         } else {
-          // 対象月外 or 祝日は空に
+          // 対象月外は空に
           ws.getCell(dateRow, mcol).value = null;
           ws.getCell(inspRow, mcol).value = null;
         }
@@ -4502,17 +4510,25 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
       var dayData = mechWeek[dayKey];
       if (!dayData) continue;
 
-      // 1/2部分
+      // 1/2部分（「-」も含めて全ての値を書き込むため直接書き込み）
       for (var fieldKey in mechRowMap1) {
         var row = mechRowMap1[fieldKey] + offset;
         var val = dayData[fieldKey];
-        setCell(ws, row, col, val);
+        if (val === null || val === undefined) {
+          ws.getCell(row, col).value = null;
+        } else {
+          ws.getCell(row, col).value = val;
+        }
       }
-      // 2/2部分
+      // 2/2部分（同上）
       for (var fieldKey in mechRowMap2) {
         var row = mechRowMap2[fieldKey] + offset;
         var val = dayData[fieldKey];
-        setCell(ws, row, col, val);
+        if (val === null || val === undefined) {
+          ws.getCell(row, col).value = null;
+        } else {
+          ws.getCell(row, col).value = val;
+        }
       }
     }
   }
