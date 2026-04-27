@@ -1,12 +1,14 @@
 // 柴木浄化センター 週報 Service Worker
-const CACHE_NAME = 'shiwagi-v19';
+const CACHE_NAME = 'shiwagi-v20';
 const ASSETS = [
   './',
   './index.html',
   './template.js',
   './manifest.json',
-  './icon-192.png',
-  './icon-512.png'
+  './shibaki_icon_180.png',
+  './shibaki_icon_192.png',
+  './shibaki_icon_512.png',
+  './shibaki_maskable_512.png'
 ];
 
 self.addEventListener('install', (event) => {
