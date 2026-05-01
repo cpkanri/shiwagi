@@ -1646,7 +1646,7 @@ function ensureWeeklyStructure() {
 }
 
 function storageKey() {
-  return "shibaki_weekly_" + (weeklyData.targetMonth || "default");
+  return "shiwagi_weekly_" + (weeklyData.targetMonth || "default");
 }
 
 function currentYearMonth() {
@@ -2261,7 +2261,7 @@ function loadDataToForm() {
   });
   const inspEl = document.querySelector('[data-field="inspector"]');
   if (inspEl && !inspEl.value) {
-    const last = localStorage.getItem("shibaki_last_inspector") || "";
+    const last = localStorage.getItem("shiwagi_last_inspector") || "";
     if (last) {
       inspEl.value = last;
       day.inspector = last;
@@ -2297,6 +2297,202 @@ function updateDayTabs() {
   });
 }
 
+// ===== 共通ヘルパー: ネットワークエラー判定 =====
+// fetch 系の真のネットワークエラーのみ true を返す。
+// QuotaExceededError 等の localStorage 起因エラーで誤って「オフライン」表示するのを防ぐ。
+function isNetworkError(e) {
+  if (!e) return false;
+  const name = e.name || "";
+  const msg = (e.message || "").toLowerCase();
+  return name === "AbortError" ||
+         (name === "TypeError" && msg.includes("fetch")) ||
+         msg.includes("networkerror") ||
+         msg.includes("load failed") ||
+         msg.includes("failed to fetch");
+}
+
+// ===== 旧プレフィックス(shibaki_)からのマイグレーション =====
+// 柴木アプリの localStorage プレフィックスを shibaki_ → shiwagi_ に統一する。
+// 認証/祝日キーは既に shiwagi_ なので、対象は週報・現在月・最終点検者のみ。
+function migrateShibakiToShiwagi() {
+  const MIGRATION_FLAG = "shiwagi_migration_v1";
+  try { if (localStorage.getItem(MIGRATION_FLAG)) return; } catch(e) { return; }
+
+  // 直接1対1マッピング(認証/祝日は対象外、既に shiwagi_ になっている)
+  const DIRECT_MAPPINGS = [
+    ["shibaki_current_month",  "shiwagi_current_month"],
+    ["shibaki_last_inspector", "shiwagi_last_inspector"]
+  ];
+  let migrated = 0;
+  DIRECT_MAPPINGS.forEach(([from, to]) => {
+    try {
+      const v = localStorage.getItem(from);
+      if (v !== null) {
+        if (localStorage.getItem(to) === null) {
+          localStorage.setItem(to, v);
+        }
+        localStorage.removeItem(from);
+        migrated++;
+      }
+    } catch(e) {}
+  });
+
+  // パターン: shibaki_weekly_YYYY-MM → shiwagi_weekly_YYYY-MM
+  const weeklyKeys = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith("shibaki_weekly_")) weeklyKeys.push(k);
+    }
+  } catch(e) {}
+  weeklyKeys.forEach(oldKey => {
+    try {
+      const ym = oldKey.substring("shibaki_weekly_".length);
+      const newKey = "shiwagi_weekly_" + ym;
+      const v = localStorage.getItem(oldKey);
+      if (v !== null && localStorage.getItem(newKey) === null) {
+        localStorage.setItem(newKey, v);
+      }
+      localStorage.removeItem(oldKey);
+      migrated++;
+    } catch(e) {}
+  });
+
+  try { localStorage.setItem(MIGRATION_FLAG, new Date().toISOString()); } catch(e) {}
+  if (migrated > 0) {
+    console.log("[migration] shibaki_ → shiwagi_ 完了:", migrated, "件");
+  }
+}
+// 起動時に即実行
+try { migrateShibakiToShiwagi(); } catch(e) { console.warn("migration error:", e); }
+
+// ===== 横断ストレージ管理 =====
+// 4アプリ(吉和/上殿/柴木/加計)が cpkanri.github.io 配下で localStorage 5MB を共有するため、
+// 容量超過時は全アプリ横断で最古月のデータを削除する。
+// 移行期間中は旧プレフィックス(uedono_/shibaki_)も削除対象に含める。
+const STORAGE_APP_PREFIXES = [
+  { prefix: "yoshiwa_",  label: "吉和" },
+  { prefix: "kamitono_", label: "上殿" },
+  { prefix: "uedono_",   label: "上殿(旧)" },
+  { prefix: "shiwagi_",  label: "柴木" },
+  { prefix: "shibaki_",  label: "柴木(旧)" },
+  { prefix: "kake_",     label: "加計" }
+];
+const STORAGE_MONTH_KEY_TYPES = [
+  "weekly_",       // 週報データ (全アプリ)
+  "aeration_",     // エアレーション (吉和)
+  "mlss_return_"   // MLSS返送汚泥 (吉和)
+];
+
+function isQuotaErrorCommon(e) {
+  if (!e) return false;
+  const name = e.name || "";
+  const code = e.code;
+  const msg = String(e.message || "");
+  return name === "QuotaExceededError" ||
+         name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+         code === 22 || code === 1014 ||
+         /quota/i.test(msg);
+}
+
+function listAllMonthKeys() {
+  const items = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (!k) continue;
+    for (const app of STORAGE_APP_PREFIXES) {
+      if (!k.startsWith(app.prefix)) continue;
+      const remainder = k.substring(app.prefix.length);
+      for (const type of STORAGE_MONTH_KEY_TYPES) {
+        if (!remainder.startsWith(type)) continue;
+        const ym = remainder.substring(type.length);
+        if (!/^\d{4}-\d{2}$/.test(ym)) break;
+        let bytes = 0;
+        try { bytes = (localStorage.getItem(k) || "").length + k.length; } catch(e) {}
+        items.push({ app: app.label, prefix: app.prefix, type, ym, key: k, bytes });
+        break;
+      }
+      break;
+    }
+  }
+  return items;
+}
+
+function getProtectedMonthSet() {
+  const protectedSet = new Set();
+  for (const app of STORAGE_APP_PREFIXES) {
+    const cur = localStorage.getItem(app.prefix + "current_month");
+    if (cur && /^\d{4}-\d{2}$/.test(cur)) {
+      protectedSet.add(app.prefix + cur);
+      const ym = cur.split("-");
+      const y = parseInt(ym[0], 10), m = parseInt(ym[1], 10);
+      const prevY = m === 1 ? y - 1 : y;
+      const prevM = m === 1 ? 12 : m - 1;
+      const prev = prevY + "-" + String(prevM).padStart(2, "0");
+      protectedSet.add(app.prefix + prev);
+    }
+  }
+  return protectedSet;
+}
+
+function recordPruneHistory(deletedItems) {
+  if (!deletedItems || deletedItems.length === 0) return;
+  try {
+    const HISTORY_KEY = "shiwagi_save_history";
+    let history = [];
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      if (raw) history = JSON.parse(raw) || [];
+    } catch(e) {}
+    const detail = deletedItems.map(it => it.app + it.ym).join(", ");
+    history.unshift({
+      ts: new Date().toISOString(),
+      type: "prune",
+      detail: "容量確保のため削除: " + detail
+    });
+    if (history.length > 50) history = history.slice(0, 50);
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); } catch(e) {}
+  } catch(e) {}
+}
+
+function safeSetItem(key, value) {
+  const deleted = [];
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      localStorage.setItem(key, value);
+      if (deleted.length > 0) {
+        recordPruneHistory(deleted);
+        try {
+          if (typeof showToast === "function") {
+            const detail = deleted.map(d => d.app + d.ym).join(", ");
+            showToast("容量確保のため削除: " + detail, "warn");
+          }
+        } catch(e) {}
+      }
+      return { ok: true, deleted };
+    } catch (e) {
+      if (!isQuotaErrorCommon(e)) return { ok: false, error: e, deleted };
+      const protectedSet = getProtectedMonthSet();
+      const candidates = listAllMonthKeys().filter(it =>
+        !protectedSet.has(it.prefix + it.ym)
+      );
+      if (candidates.length === 0) {
+        return { ok: false, error: e, deleted, quotaExhausted: true };
+      }
+      candidates.sort((a, b) => a.ym.localeCompare(b.ym));
+      const oldestYm = candidates[0].ym;
+      const toDelete = candidates.filter(it => it.ym === oldestYm);
+      toDelete.forEach(it => {
+        try {
+          localStorage.removeItem(it.key);
+          deleted.push({ app: it.app, ym: it.ym, key: it.key });
+        } catch(e2) {}
+      });
+    }
+  }
+  return { ok: false, error: new Error("retry limit exceeded"), deleted, quotaExhausted: true };
+}
+
 // ===== localStorage保存・読込 =====
 
 // ===== localStorage 容量対策 =====
@@ -2311,8 +2507,8 @@ function pruneOldMonthData(currentMonth) {
     var keysToDelete = [];
     for (var i = 0; i < localStorage.length; i++) {
       var k = localStorage.key(i);
-      if (!k || k.indexOf("shibaki_weekly_") !== 0) continue;
-      var ym = k.replace("shibaki_weekly_", "");
+      if (!k || k.indexOf("shiwagi_weekly_") !== 0) continue;
+      var ym = k.replace("shiwagi_weekly_", "");
       var m = ym.match(/^(\d{4})-(\d{2})$/);
       if (!m) continue;
       var y = parseInt(m[1]), mm = parseInt(m[2]);
@@ -2333,42 +2529,20 @@ function saveToStorage() {
     weeklyData.targetMonth = document.getElementById("targetMonth").value || weeklyData.targetMonth;
     weeklyData.startDate = document.getElementById("startDate").value || weeklyData.startDate;
 
-    var json = JSON.stringify(weeklyData);
-    try {
-      localStorage.setItem(storageKey(), json);
-    } catch (quotaErr) {
-      // QuotaExceededError 等: 古い月データを削除して再試行
-      var pruned = pruneOldMonthData(weeklyData.targetMonth);
-      console.warn("ストレージ容量超過のため古い月データを削除:", pruned, "件");
-      try {
-        // Undoスタックもクリア
-        if (typeof undoStack !== "undefined" && undoStack.length) undoStack.length = 0;
-        localStorage.setItem(storageKey(), json);
-      } catch (quotaErr2) {
-        // それでもダメなら shibaki_ 関連の古いキーを更に強制削除
-        var allKeys = [];
-        for (var i = 0; i < localStorage.length; i++) {
-          var k = localStorage.key(i);
-          if (k && k.indexOf("shibaki_weekly_") === 0 && k !== storageKey()) allKeys.push(k);
-        }
-        // 古い順で削除（キー名が shibaki_weekly_YYYY-MM なのでソートで古い順）
-        allKeys.sort();
-        for (var j = 0; j < allKeys.length; j++) {
-          localStorage.removeItem(allKeys[j]);
-          try {
-            localStorage.setItem(storageKey(), json);
-            console.warn("古い月データ削除で復旧:", allKeys.slice(0, j + 1));
-            break;
-          } catch (e3) { /* 続けて削除 */ }
-        }
-      }
+    // 容量超過対応の safeSetItem で保存
+    const res = safeSetItem(storageKey(), JSON.stringify(weeklyData));
+    if (!res.ok) {
+      console.error('saveToStorage error:', res.error, 'quotaExhausted:', res.quotaExhausted);
+      window.__lastSaveError = res.error;
+      return false;
     }
+
     const inspEl = document.querySelector('[data-field="inspector"]');
     if (inspEl && inspEl.value) {
-      try { localStorage.setItem("shibaki_last_inspector", inspEl.value); } catch(e) {}
+      try { localStorage.setItem("shiwagi_last_inspector", inspEl.value); } catch(e) {}
     }
     if (weeklyData.targetMonth) {
-      try { localStorage.setItem("shibaki_current_month", weeklyData.targetMonth); } catch(e) {}
+      try { localStorage.setItem("shiwagi_current_month", weeklyData.targetMonth); } catch(e) {}
     }
     return true;
   } catch (e) {
@@ -2794,7 +2968,9 @@ async function syncFromServer() {
     setConnectionStatus(true);
     return totalSummary;
   } catch (e) {
-    setConnectionStatus(false);
+    // ネットワーク起因のエラー時のみオフライン表示する。
+    // localStorage QuotaExceededError 等は接続状態と無関係なので維持する。
+    if (isNetworkError(e)) setConnectionStatus(false);
     throw e;
   }
 }
@@ -3019,7 +3195,7 @@ function bindEvents() {
   document.getElementById("targetMonth").addEventListener("change", (e) => {
     saveToStorage();
     const newMonth = e.target.value;
-    const raw = localStorage.getItem("shibaki_weekly_" + newMonth);
+    const raw = localStorage.getItem("shiwagi_weekly_" + newMonth);
     if (raw) {
       try { weeklyData = JSON.parse(raw); } catch (err) {
         weeklyData = { targetMonth: newMonth, startDate: "", weeks: {}, equipment: {}, electrical: {}, mechanical: {} };
@@ -3039,7 +3215,7 @@ function bindEvents() {
     weeklyData.startDate = estimateStartDate(newMonth);
     ensureWeeklyStructure();
     document.getElementById("startDate").value = weeklyData.startDate || "";
-    localStorage.setItem("shibaki_current_month", newMonth);
+    localStorage.setItem("shiwagi_current_month", newMonth);
     currentWeek = 1;
     currentDay = "mon";
     updateWeekTabs();
@@ -3236,7 +3412,7 @@ function bindEvents() {
     const uiMonth = document.getElementById("targetMonth").value;
     if (uiMonth && uiMonth !== weeklyData.targetMonth) {
       weeklyData.targetMonth = uiMonth;
-      localStorage.setItem("shibaki_current_month", uiMonth);
+      localStorage.setItem("shiwagi_current_month", uiMonth);
     }
     // startDateは常に対象月から自動計算
     weeklyData.startDate = estimateStartDate(weeklyData.targetMonth);
@@ -3264,7 +3440,8 @@ function bindEvents() {
       showToast(scope + "を保存しました(サーバーへ送信完了)");
       markClean();
     } catch (e) {
-      setConnectionStatus(false);
+      // ネットワーク起因のエラー時のみオフライン表示する
+      if (isNetworkError(e)) setConnectionStatus(false);
       showToast("端末に" + scope + "を保存しました。サーバー送信失敗:" + (e.message || 'ネットワークエラー') + "(後で同期してください)", "warn");
     } finally {
       btnSave.textContent = "保存";
@@ -3315,7 +3492,9 @@ function bindEvents() {
         showToast("サーバーにデータがありません", "warn");
       }
     } catch (e) {
-      setConnectionStatus(false);
+      // ネットワーク起因のエラー時のみオフライン表示する。
+      // localStorage QuotaExceededError 等の場合はサーバー接続自体は生きているので維持する。
+      if (isNetworkError(e)) setConnectionStatus(false);
       showToast("同期エラー: " + (e.message || e), "error");
     }
 
@@ -3357,7 +3536,7 @@ async function continueInit() {
   }
 
   // 対象月：前回保存 or 現在月
-  const savedMonth = localStorage.getItem("shibaki_current_month");
+  const savedMonth = localStorage.getItem("shiwagi_current_month");
   const ym = savedMonth || currentYearMonth();
   weeklyData.targetMonth = ym;
 
@@ -3370,7 +3549,7 @@ async function continueInit() {
 
   document.getElementById("targetMonth").value = weeklyData.targetMonth;
   document.getElementById("startDate").value = weeklyData.startDate;
-  localStorage.setItem("shibaki_current_month", weeklyData.targetMonth);
+  localStorage.setItem("shiwagi_current_month", weeklyData.targetMonth);
 
   bindEvents();
 
@@ -3777,7 +3956,7 @@ function getPrevMonthLastDayData(targetMonth, firstMonday, holidaySet) {
   var prevMonth = month === 1 ? (year - 1) + "-12" : year + "-" + String(month - 1).padStart(2, "0");
 
   var rawPrev = null;
-  try { rawPrev = localStorage.getItem("shibaki_weekly_" + prevMonth); } catch(e) { return null; }
+  try { rawPrev = localStorage.getItem("shiwagi_weekly_" + prevMonth); } catch(e) { return null; }
   if (!rawPrev) return null;
   var prevWeekly;
   try { prevWeekly = JSON.parse(rawPrev); } catch(e) { return null; }
