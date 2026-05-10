@@ -1372,54 +1372,54 @@ const MECH_DAYS = ["mon", "tue", "wed", "thu", "fri"];
 // 機械設備項目定義
 const MECH_SECTIONS = [
   { title: "ポンプ井", fields: [
-    { key: "pumpWellStatus", label: "内部状況確認", type: "toggle", options: ["○","△","×"] },
+    { key: "pumpWellStatus", label: "内部状況確認", type: "toggle", options: ["○","△","×","－"] },
   ]},
   { title: "主ポンプNo.1", fields: [
     { key: "mainPump1Current", label: "電流値", type: "number", step: "0.1", unit: "A" },
     { key: "mainPump1Pressure", label: "吐出圧力", type: "number", step: "0.01", unit: "Mpa" },
-    { key: "mainPump1Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
+    { key: "mainPump1Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×","－"] },
   ]},
   { title: "主ポンプNo.2", fields: [
     { key: "mainPump2Current", label: "電流値", type: "number", step: "0.1", unit: "A" },
     { key: "mainPump2Pressure", label: "吐出圧力", type: "number", step: "0.01", unit: "Mpa" },
-    { key: "mainPump2Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
+    { key: "mainPump2Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×","－"] },
   ]},
   { title: "主ポンプ共通", fields: [
     { key: "mainPumpMode", label: "モード確認", type: "toggle", options: ["自動","手動"] },
     { key: "mainPumpPriority", label: "優先機選択", type: "toggle", options: ["交互","No.1","No.2"] },
   ]},
   { title: "スクリーンユニット", fields: [
-    { key: "screenVibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
-    { key: "screenResidue", label: "し渣量の確認", type: "toggle", options: ["○","△","×"] },
-    { key: "screenOperation", label: "運転動作", type: "toggle", options: ["○","△","×"] },
+    { key: "screenVibration", label: "異音・振動", type: "toggle", options: ["○","△","×","－"] },
+    { key: "screenResidue", label: "し渣量の確認", type: "toggle", options: ["○","△","×","－"] },
+    { key: "screenOperation", label: "運転動作", type: "toggle", options: ["○","△","×","－"] },
   ]},
   { title: "エアレーション装置No.1", fields: [
     { key: "aeration1Current", label: "電流値", type: "number", step: "0.1", unit: "A" },
-    { key: "aeration1Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
+    { key: "aeration1Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×","－"] },
     { key: "aeration1Mode", label: "モード確認", type: "toggle", options: ["自動","手動","切"] },
   ]},
   { title: "エアレーション装置No.2", fields: [
     { key: "aeration2Current", label: "電流値", type: "number", step: "0.1", unit: "A" },
-    { key: "aeration2Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
+    { key: "aeration2Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×","－"] },
     { key: "aeration2Mode", label: "モード確認", type: "toggle", options: ["自動","手動","切"] },
   ]},
   { title: "消泡装置", fields: [
-    { key: "defoamNozzle", label: "消泡ノズル", type: "toggle", options: ["○","△","×"] },
-    { key: "defoamStatus", label: "消泡状態", type: "toggle", options: ["○","△","×"] },
+    { key: "defoamNozzle", label: "消泡ノズル", type: "toggle", options: ["○","△","×","－"] },
+    { key: "defoamStatus", label: "消泡状態", type: "toggle", options: ["○","△","×","－"] },
   ]},
   { title: "終沈汚泥掻寄機", fields: [
     { key: "finalScraperCurrent", label: "電流値", type: "number", step: "0.01", unit: "A" },
-    { key: "finalScraperVibration", label: "異音・振動等", type: "toggle", options: ["○","△","×"] },
+    { key: "finalScraperVibration", label: "異音・振動等", type: "toggle", options: ["○","△","×","－"] },
     { key: "finalScraperMode", label: "モード確認", type: "toggle", options: ["運転","停止"] },
   ]},
   { title: "スカムスキマー", fields: [
-    { key: "skimmerOperation", label: "動作状況", type: "toggle", options: ["○","△","×"] },
-    { key: "skimmerScum", label: "スカムの状況", type: "toggle", options: ["○","△","×"] },
+    { key: "skimmerOperation", label: "動作状況", type: "toggle", options: ["○","△","×","－"] },
+    { key: "skimmerScum", label: "スカムの状況", type: "toggle", options: ["○","△","×","－"] },
   ]},
   { title: "返送汚泥ポンプNo.1", fields: [
     { key: "retPump1Current", label: "電流値", type: "number", step: "0.1", unit: "A" },
     { key: "retPump1Pressure", label: "吐出圧力", type: "number", step: "0.01", unit: "Mpa" },
-    { key: "retPump1Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
+    { key: "retPump1Vibration", label: "異音・振動", type: "toggle", options: ["○","△","×","－"] },
   ]},
   { title: "返送汚泥ポンプNo.2", fields: [
     { key: "retPump2Current", label: "電流値", type: "number", step: "0.1", unit: "A" },
@@ -1445,16 +1445,16 @@ const MECH_SECTIONS = [
   { title: "床排水ポンプ", fields: [
     { key: "floorDrainCurrent", label: "電流値", type: "number", step: "0.1", unit: "A" },
     { key: "floorDrainPressure", label: "吐出圧力", type: "number", step: "0.01", unit: "Mpa" },
-    { key: "floorDrainVibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
+    { key: "floorDrainVibration", label: "異音・振動", type: "toggle", options: ["○","△","×","－"] },
     { key: "floorDrainMode", label: "モード確認", type: "toggle", options: ["自動","手動"] },
   ]},
   { title: "濃縮汚泥掻寄機", fields: [
     { key: "thickScraperCurrent", label: "電流値", type: "number", step: "0.01", unit: "A" },
-    { key: "thickScraperVibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
+    { key: "thickScraperVibration", label: "異音・振動", type: "toggle", options: ["○","△","×","－"] },
     { key: "thickScraperMode", label: "モード確認", type: "toggle", options: ["運転","停止"] },
   ]},
   { title: "スカムスキマー(濃縮)", fields: [
-    { key: "thickSkimmerOperation", label: "動作状況", type: "toggle", options: ["○","△","×"] },
+    { key: "thickSkimmerOperation", label: "動作状況", type: "toggle", options: ["○","△","×","－"] },
   ]},
   { title: "汚泥貯留槽攪拌機", fields: [
     { key: "sludgeMixerCurrent", label: "電流値", type: "number", step: "0.1", unit: "A" },
@@ -1479,14 +1479,14 @@ const MECH_SECTIONS = [
     { key: "pressureTankPressure", label: "吐出圧力", type: "number", step: "0.01", unit: "Mpa" },
   ]},
   { title: "塩素接触装置", fields: [
-    { key: "chlorineRemain", label: "薬剤残量確認", type: "toggle", options: ["○","△","×"] },
+    { key: "chlorineRemain", label: "薬剤残量確認", type: "toggle", options: ["○","△","×","－"] },
   ]},
   { title: "オートストレーナー型", fields: [
     { key: "strainerRawPressure", label: "原水側圧力", type: "number", step: "0.01", unit: "Mpa" },
     { key: "strainerTreatPressure", label: "処理水側圧力", type: "number", step: "0.01", unit: "Mpa" },
   ]},
   { title: "自家発室給気ファン", fields: [
-    { key: "genSupplyFanVibration", label: "異音・振動", type: "toggle", options: ["○","△","×"] },
+    { key: "genSupplyFanVibration", label: "異音・振動", type: "toggle", options: ["○","△","×","－"] },
     { key: "genSupplyFanMode", label: "モード確認", type: "toggle", options: ["連動","手動","切"] },
   ]},
   { title: "脱水機室給気ファン", fields: [
@@ -2004,7 +2004,8 @@ function buildMechTable() {
       let html = '<td>' + f.label + (f.unit ? ' <span style="color:#888;font-size:10px">(' + f.unit + ')</span>' : '') + '</td>';
       MECH_DAYS.forEach(d => {
         if (f.type === "number") {
-          html += '<td><input type="number" inputmode="decimal" step="' + f.step + '" data-mech="' + f.key + '" data-mday="' + d + '"></td>';
+          // Phase 12: 「-」と全角ハイフン入力を許容するため type="text" + 正規化バリデーション
+          html += '<td><input type="text" inputmode="decimal" data-elec-mech-numeric="1" placeholder="-" data-mech="' + f.key + '" data-mday="' + d + '"></td>';
         } else {
           html += '<td><button type="button" class="toggle-btn" data-mech="' + f.key + '" data-mday="' + d + '" data-options=\'' + JSON.stringify(f.options) + '\'></button></td>';
         }
@@ -2030,6 +2031,25 @@ function buildMechTable() {
       markDirty();
     });
   });
+  // Phase 12: mech 数値テキスト入力に正規化バリデーションを追加
+  tbody.querySelectorAll('input[data-mech][data-elec-mech-numeric="1"]').forEach(el => {
+    el.addEventListener('input', () => {
+      const normalized = normalizeElecMechValue(el.value);
+      if (normalized !== el.value) el.value = normalized;
+      if (!isValidElecMechValue(el.value)) {
+        el.value = el.dataset.previousValidValue != null ? el.dataset.previousValidValue : '';
+        return;
+      }
+      el.dataset.previousValidValue = el.value;
+      el.classList.remove('copied');
+      markDirty();
+    });
+    el.addEventListener('focusin', () => {
+      if (el.dataset.previousValidValue == null || el.dataset.previousValidValue === '') {
+        el.dataset.previousValidValue = isValidElecMechValue(el.value) ? el.value : '';
+      }
+    });
+  });
 }
 
 function saveMechFormToData() {
@@ -2041,6 +2061,15 @@ function saveMechFormToData() {
     if (el.tagName === "INPUT") {
       if (el.value === "") {
         week[day][key] = null;
+      } else if (el.dataset.elecMechNumeric === '1') {
+        // Phase 12: 「-」は文字列のまま、それ以外は数値化トライ
+        const v = el.value.trim();
+        if (v === '-') {
+          week[day][key] = '-';
+        } else {
+          const num = Number(v);
+          week[day][key] = isNaN(num) ? v : num;
+        }
       } else if (el.type === "number") {
         const num = Number(el.value);
         week[day][key] = isNaN(num) ? el.value : num;
@@ -2492,6 +2521,28 @@ function safeSetItem(key, value) {
     }
   }
   return { ok: false, error: new Error("retry limit exceeded"), deleted, quotaExhausted: true };
+}
+
+// Phase 12: 機械設備の数値+「-」入力用バリデーション
+// 全角ハイフン類 (ー / − / – / — / － / ―) を半角に正規化、前後の空白を除去
+function normalizeElecMechValue(value) {
+  if (value == null) return '';
+  return String(value)
+    .replace(/[ー−–—－―]/g, '-')
+    .replace(/[　\s]+$/g, '')
+    .replace(/^[　\s]+/g, '');
+}
+
+// Phase 12: 「数値 or `-` or 空文字」のみ許容
+function isValidElecMechValue(value) {
+  if (value == null) return true;
+  let v = String(value)
+    .replace(/[ー−–—－―]/g, '-')
+    .replace(/[　\s]+$/g, '')
+    .replace(/^[　\s]+/g, '');
+  if (v === '' || v === '-') return true;
+  if (v === '.' || v === '-.') return false;
+  return /^-?\d*\.?\d*$/.test(v);
 }
 
 // ===== localStorage保存・読込 =====
