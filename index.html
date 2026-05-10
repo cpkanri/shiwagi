@@ -4003,6 +4003,13 @@ function setCell(ws, row, col, val) {
   }
 }
 
+// Phase 13a: Excel 数式をセルに書き込むヘルパー
+function setFormula(ws, row, col, formula) {
+  if (!formula) return;
+  const f = String(formula).replace(/^=/, '');
+  ws.getCell(row, col).value = { formula: f };
+}
+
 // ===== 前月最終点検日のデータを取得するヘルパー =====
 // 対象月の第1週月曜の「前の点検日」（平日・非祝日）のデータを前月のlocalStorageから探して返す
 function getPrevMonthLastDayData(targetMonth, firstMonday, holidaySet) {
@@ -4872,11 +4879,10 @@ function fillQualityReportSheet(wb, yyyy, mm) {
   }
 }
 
-// ===== 運転管理月報シート =====
+// ===== 運転管理月報シート（Phase 13a 改修） =====
 function fillOperationReportSheet(wb, yyyy, mm) {
   const ws = wb.getWorksheet(6); // 運転管理月報
   if (!ws) return;
-
 
   const reiwa = yyyy - 2018;
   const monthLabel = "令和" + reiwa + "年" + mm + "月分";
@@ -4886,6 +4892,27 @@ function fillOperationReportSheet(wb, yyyy, mm) {
   var dayNames = ["日","月","火","水","木","金","土"];
   var dateMap = buildDateMap();
   const holidaySet = getHolidaySetFromCache();
+
+  // ===== Phase 13a: 月初差分用の前月末データ取得 =====
+  // 第1週月曜日が分かれば前月最終営業日のデータを取得できる
+  var prevHensou = null; // 直前日の返送汚泥流量(累積値)
+  var prevYojou = null;  // 直前日の余剰汚泥流量(累積値)
+  try {
+    var firstMondayDate = (typeof getActualDate === 'function') ? getActualDate(1, "mon") : null;
+    if (firstMondayDate) {
+      var prevLast = getPrevMonthLastDayData(weeklyData.targetMonth, firstMondayDate, holidaySet);
+      if (prevLast && prevLast.data) {
+        if (prevLast.data.hensouOdei != null && prevLast.data.hensouOdei !== "" && prevLast.data.hensouOdei !== "-") {
+          var pH = Number(prevLast.data.hensouOdei);
+          if (!isNaN(pH)) prevHensou = pH;
+        }
+        if (prevLast.data.yojouOdei != null && prevLast.data.yojouOdei !== "" && prevLast.data.yojouOdei !== "-") {
+          var pY = Number(prevLast.data.yojouOdei);
+          if (!isNaN(pY)) prevYojou = pY;
+        }
+      }
+    }
+  } catch (e) { console.warn("月報: 前月末データ取得失敗", e); }
 
   for (var d = 1; d <= daysInMonth; d++) {
     var dateObj = new Date(yyyy, mm - 1, d);
@@ -4899,6 +4926,7 @@ function fillOperationReportSheet(wb, yyyy, mm) {
 
     var dateKey = yyyy + "-" + String(mm).padStart(2, "0") + "-" + String(d).padStart(2, "0");
     // 祝日の行はデータ書き込みをスキップ（A列の日付・曜日は残す）
+    // ただし累積値の前日値追跡は維持(祝日でも累積値は持ち越し)
     if (holidaySet.has(dateKey)) continue;
     var dayData = dateMap[dateKey];
     if (!dayData) continue;
@@ -4907,11 +4935,67 @@ function fillOperationReportSheet(wb, yyyy, mm) {
     setCell(ws, row, 3, dayData.denryoku200v);
     setCell(ws, row, 4, dayData.denryoku100v);
 
-    // E=固形塩素使用量(=ensoTounyuu), H=返送汚泥流量, J=余剰汚泥流量, L=放流流量
+    // E=固形塩素使用量
     setCell(ws, row, 5, dayData.ensoTounyuu);
-    setCell(ws, row, 8, dayData.hensouOdei);
-    setCell(ws, row, 10, dayData.yojouOdei);
-    setCell(ws, row, 12, dayData.houryuuRyuuryou);
+
+    // ===== H=返送汚泥流量(累積), I=1日差分 =====
+    var curH = (dayData.hensouOdei != null && dayData.hensouOdei !== "" && dayData.hensouOdei !== "-") ? Number(dayData.hensouOdei) : null;
+    if (curH != null && !isNaN(curH)) {
+      setCell(ws, row, 8, curH);
+      // I 列: 当日の累積値 - 前日の累積値 (前日値があれば)
+      if (prevHensou != null) {
+        setCell(ws, row, 9, curH - prevHensou);
+      }
+      prevHensou = curH; // 次の差分計算のため更新
+    } else if (dayData.hensouOdei === "-") {
+      setCell(ws, row, 8, "-");
+      // 「-」は欠測扱いだが、累積値追跡は途切れる(prevHensou は維持)
+    }
+
+    // ===== J=余剰汚泥流量(累積), K=1日差分 =====
+    var curY = (dayData.yojouOdei != null && dayData.yojouOdei !== "" && dayData.yojouOdei !== "-") ? Number(dayData.yojouOdei) : null;
+    if (curY != null && !isNaN(curY)) {
+      setCell(ws, row, 10, curY);
+      // K 列: 当日の累積値 - 前日の累積値 (前日値があれば)
+      if (prevYojou != null) {
+        setCell(ws, row, 11, curY - prevYojou);
+      }
+      prevYojou = curY;
+    } else if (dayData.yojouOdei === "-") {
+      setCell(ws, row, 10, "-");
+    }
+
+    // L=放流流量: Phase 13a 削除 (別データから入力するため空欄)
+    // setCell(ws, row, 12, dayData.houryuuRyuuryou);
+  }
+
+  // ===== Phase 13a: 集計行(R37=最大、R38=平均、R39=最小、R40=合計) =====
+  // 数式列: C, D, E, I, K (1日値・読み値で 4 式すべて意味がある列)
+  // MAX/MIN のみ列: H, J (累積値で AVG/SUM は意味がない列)
+  // 既存「-」維持列: F, G (脱水ケーキ発生量・搬出量、入力フィールドが無いため固定)
+  // 空欄列: L (放流流量、別データから入力)
+  const ALPHA = ['','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P'];
+  const cols4 = [3, 4, 5, 9, 11]; // C, D, E, I, K
+  const cols2 = [8, 10];          // H, J (MAX/MIN のみ)
+
+  cols4.forEach(function(c) {
+    var L = ALPHA[c];
+    setFormula(ws, 37, c, 'IFERROR(MAX('  + L + '6:' + L + '36),"")');
+    setFormula(ws, 38, c, 'IFERROR(AVERAGE(' + L + '6:' + L + '36),"")');
+    setFormula(ws, 39, c, 'IFERROR(MIN('  + L + '6:' + L + '36),"")');
+    setFormula(ws, 40, c, 'IFERROR(SUM('  + L + '6:' + L + '36),"")');
+  });
+  cols2.forEach(function(c) {
+    var L = ALPHA[c];
+    setFormula(ws, 37, c, 'IFERROR(MAX(' + L + '6:' + L + '36),"")');
+    setFormula(ws, 39, c, 'IFERROR(MIN(' + L + '6:' + L + '36),"")');
+    // 38(平均), 40(合計) は累積値では意味がないので明示的に "-" を残す
+    ws.getCell(38, c).value = "-";
+    ws.getCell(40, c).value = "-";
+  });
+  // L列(放流流量) の集計セル R37-R40 は空欄にする
+  for (var r = 37; r <= 40; r++) {
+    ws.getCell(r, 12).value = null;
   }
 }
 
