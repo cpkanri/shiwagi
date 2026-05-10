@@ -3834,6 +3834,13 @@ async function exportExcel() {
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(templateBytes.buffer);
 
+    // Excel 開封時の強制再計算（年月ラベルの数式参照セルが確実に更新されるため）
+    if (wb.calcProperties) {
+      wb.calcProperties.fullCalcOnLoad = true;
+    } else {
+      wb.calcProperties = { fullCalcOnLoad: true };
+    }
+
     // 年度・月の設定
     const ym = weeklyData.targetMonth || document.getElementById("targetMonth").value;
     const [yyyy, mm] = ym.split("-").map(Number);
@@ -3845,7 +3852,7 @@ async function exportExcel() {
     fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel);
 
     // ===== シート3: 日常電気設備 =====
-    fillElecSheet(wb, yyyy, mm, monthLabel);
+    fillElecSheet(wb, yyyy, mm);
 
     // ===== シート4: 日常機械設備 =====
     fillMechSheet(wb, yyyy, mm, monthLabel);
@@ -4412,7 +4419,7 @@ function fillEquipSheetData(ws, w, yyyy, mm, rowOffset) {
 }
 
 // ===== 日常電気設備シート =====
-function fillElecSheet(wb, yyyy, mm, monthLabel) {
+function fillElecSheet(wb, yyyy, mm) {
   const ws = wb.getWorksheet(4); // 日常電気設備
   if (!ws) return;
 
