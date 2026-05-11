@@ -3003,9 +3003,22 @@ const EQUIP_NAME_TO_KEY = {
 const DAY_JP_TO_CODE = { "月": "mon", "火": "tue", "水": "wed", "木": "thu", "金": "fri" };
 
 // サーバーデータをマージ
-function mergeServerData(serverData) {
+function mergeServerData(serverData, expectedMonth) {
   const summary = { water_days: 0, equipment_weeks: 0, electrical_days: 0, mechanical_days: 0, merged: false };
   if (!serverData) return summary;
+
+  // Phase 14: 月キー流入防止
+  // (1) 同期開始時の対象月と現在の対象月が違う(同期中にユーザーが月切替) → abort
+  if (expectedMonth && expectedMonth !== weeklyData.targetMonth) {
+    console.warn('[Sync] Target month changed during sync (expected=' + expectedMonth + ', current=' + weeklyData.targetMonth + '). Aborting merge.');
+    return summary;
+  }
+  // (2) レスポンスに月情報があり、対象月と一致しない → abort
+  const responseMonth = serverData.month || serverData.targetMonth || null;
+  if (responseMonth && responseMonth !== weeklyData.targetMonth) {
+    console.warn('[Sync] Month mismatch (targetMonth=' + weeklyData.targetMonth + ', response.month=' + responseMonth + '). Aborting merge.');
+    return summary;
+  }
 
   // water (日常水質)
   if (serverData.water && typeof serverData.water === "object") {
@@ -3108,42 +3121,18 @@ async function syncFromServer() {
   try {
     const totalSummary = { water_days: 0, equipment_weeks: 0, electrical_days: 0, mechanical_days: 0, merged: false };
 
+    // Phase 14: 同期開始時の対象月をローカルに固定（同期完了までユーザーが月切替しても保護）
+    const requestedMonth = weeklyData.targetMonth;
+
     // メインの対象月からデータ取得
-    var data = await loadFromServer(weeklyData.targetMonth);
+    var data = await loadFromServer(requestedMonth);
 
-    // 前月と翌月も取得してマージ（月またぎ対応）
-    var ym = weeklyData.targetMonth.split("-");
-    var year = parseInt(ym[0]);
-    var month = parseInt(ym[1]);
-    var prevMonth = month === 1 ? (year - 1) + "-12" : year + "-" + String(month - 1).padStart(2, "0");
-    var nextMonth = month === 12 ? (year + 1) + "-01" : year + "-" + String(month + 1).padStart(2, "0");
-
-    try {
-      var prevData = await loadFromServer(prevMonth);
-      if (prevData) {
-        const s = mergeServerData(prevData);
-        totalSummary.water_days += s.water_days;
-        totalSummary.equipment_weeks += s.equipment_weeks;
-        totalSummary.electrical_days += s.electrical_days;
-        totalSummary.mechanical_days += s.mechanical_days;
-        if (s.merged) totalSummary.merged = true;
-      }
-    } catch(e) {}
-
-    try {
-      var nextData = await loadFromServer(nextMonth);
-      if (nextData) {
-        const s = mergeServerData(nextData);
-        totalSummary.water_days += s.water_days;
-        totalSummary.equipment_weeks += s.equipment_weeks;
-        totalSummary.electrical_days += s.electrical_days;
-        totalSummary.mechanical_days += s.mechanical_days;
-        if (s.merged) totalSummary.merged = true;
-      }
-    } catch(e) {}
+    // Phase 14: 旧バージョンには前月・翌月のデータも mergeServerData する処理があったが、
+    // weeklyData (現在月コンテキスト) に他月の実データが流入し、storageKey() (現在月キー)
+    // に保存されるバグの根本原因だったため削除。月またぎ表示は別途検討。
 
     if (data && (data.weeks || data.water || data.equipment || data.electrical || data.mechanical)) {
-      const s = mergeServerData(data);
+      const s = mergeServerData(data, requestedMonth);
       totalSummary.water_days += s.water_days;
       totalSummary.equipment_weeks += s.equipment_weeks;
       totalSummary.electrical_days += s.electrical_days;
