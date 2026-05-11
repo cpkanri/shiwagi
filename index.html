@@ -2890,7 +2890,9 @@ async function saveSheetToServer(sheetType) {
         if (!date) return;
         var monthStr = getMonthStr(date);
         if (!monthGroups[monthStr]) monthGroups[monthStr] = {};
-        monthGroups[monthStr][dayKey] = days[dayKey];
+        // Phase 15: 内部キー 'nextMon' は GAS 側では 'fri' として保存されるためキー変換
+        var gasKey = (dayKey === "nextMon") ? "fri" : dayKey;
+        monthGroups[monthStr][gasKey] = days[dayKey];
       });
       var monthKeys = Object.keys(monthGroups);
       for (var i = 0; i < monthKeys.length; i++) {
