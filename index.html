@@ -4935,24 +4935,24 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
       var dayData = mechWeek[dayKey];
       if (!dayData) continue;
 
-      // 1/2部分（「-」も含めて全ての値を書き込むため直接書き込み）
+      // 1/2部分（Phase 12 補追3: setCell 経由で formatHyphenForOutput を適用し、「-」は「ー」(U+30FC)に統一）
       for (var fieldKey in mechRowMap1) {
         var row = mechRowMap1[fieldKey] + offset;
         var val = dayData[fieldKey];
-        if (val === null || val === undefined) {
+        if (val === null || val === undefined || val === "") {
           ws.getCell(row, col).value = null;
         } else {
-          ws.getCell(row, col).value = val;
+          setCell(ws, row, col, val);
         }
       }
       // 2/2部分（同上）
       for (var fieldKey in mechRowMap2) {
         var row = mechRowMap2[fieldKey] + offset;
         var val = dayData[fieldKey];
-        if (val === null || val === undefined) {
+        if (val === null || val === undefined || val === "") {
           ws.getCell(row, col).value = null;
         } else {
-          ws.getCell(row, col).value = val;
+          setCell(ws, row, col, val);
         }
       }
     }
