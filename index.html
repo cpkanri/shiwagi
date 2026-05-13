@@ -2720,7 +2720,6 @@ function saveToStorage() {
     else if (currentSheet === "equip") saveEquipFormToData();
     else if (currentSheet === "elec") saveElecFormToData();
     else if (currentSheet === "mech") saveMechFormToData();
-    weeklyData.targetMonth = document.getElementById("targetMonth").value || weeklyData.targetMonth;
     weeklyData.startDate = document.getElementById("startDate").value || weeklyData.startDate;
 
     // 容量超過対応の safeSetItem で保存
