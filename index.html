@@ -890,10 +890,6 @@ header > .conn-status { display: none; }
       <input type="month" id="targetMonth" style="display:none">
       <button type="button" id="btnTargetMonth" class="btn-header-action">📅 ----</button>
     </label>
-    <label>
-      <span>第1週 月曜日</span>
-      <input type="date" id="startDate" readonly style="opacity:0.8;pointer-events:none;">
-    </label>
   </div>
   <div class="header-actions">
     <!-- Phase 11-F-CSS-2: 更新ボタンに 🔄、同期ボタンに 🔃 アイコン追加（他ボタンと統一） -->
@@ -2787,7 +2783,7 @@ function saveToStorage() {
     else if (currentSheet === "equip") saveEquipFormToData();
     else if (currentSheet === "elec") saveElecFormToData();
     else if (currentSheet === "mech") saveMechFormToData();
-    weeklyData.startDate = document.getElementById("startDate").value || weeklyData.startDate;
+    weeklyData.startDate = estimateStartDate(weeklyData.targetMonth);
 
     // 容量超過対応の safeSetItem で保存
     const res = safeSetItem(storageKey(), JSON.stringify(weeklyData));
@@ -3177,8 +3173,6 @@ function mergeServerData(serverData, expectedMonth) {
 
   // startDateは常に対象月から自動計算
   weeklyData.startDate = estimateStartDate(weeklyData.targetMonth);
-  const startDateEl = document.getElementById("startDate");
-  if (startDateEl) startDateEl.value = weeklyData.startDate || "";
   ensureWeeklyStructure();
   localStorage.setItem(storageKey(), JSON.stringify(weeklyData));
   return summary;
@@ -3207,7 +3201,6 @@ async function syncFromServer() {
       totalSummary.mechanical_days += s.mechanical_days;
       totalSummary.merged = true;
 
-      document.getElementById("startDate").value = weeklyData.startDate || "";
       updateDayTabs();
       if (currentSheet === "water") loadDataToForm();
       else if (currentSheet === "equip") loadEquipDataToForm();
@@ -3567,7 +3560,6 @@ function bindEvents() {
     // startDateを常に自動計算（1日を含む週の月曜日）
     weeklyData.startDate = estimateStartDate(newMonth);
     ensureWeeklyStructure();
-    document.getElementById("startDate").value = weeklyData.startDate || "";
     localStorage.setItem("shiwagi_current_month", newMonth);
     currentWeek = 1;
     currentDay = "mon";
@@ -3577,12 +3569,6 @@ function bindEvents() {
     showToast("対象月を " + newMonth + " に変更しました");
     // バックグラウンドでサーバーからも取得
     syncFromServer().catch(() => {});
-  });
-
-  // 開始日変更
-  document.getElementById("startDate").addEventListener("change", (e) => {
-    weeklyData.startDate = e.target.value;
-    updateDayTabs();
   });
 
   // 前日コピー（全タブ対応・空日スキップ）
@@ -3769,7 +3755,6 @@ function bindEvents() {
     }
     // startDateは常に対象月から自動計算
     weeklyData.startDate = estimateStartDate(weeklyData.targetMonth);
-    document.getElementById("startDate").value = weeklyData.startDate || "";
 
     // a. まずlocalStorageに全データ保存
     const ok = saveToStorage();
@@ -3914,7 +3899,6 @@ async function continueInit() {
   weeklyData.startDate = estimateStartDate(weeklyData.targetMonth);
 
   document.getElementById("targetMonth").value = weeklyData.targetMonth;
-  document.getElementById("startDate").value = weeklyData.startDate;
   localStorage.setItem("shiwagi_current_month", weeklyData.targetMonth);
 
   bindEvents();
