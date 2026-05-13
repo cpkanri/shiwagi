@@ -3442,8 +3442,8 @@ function bindEvents() {
     });
   });
 
-  // === Phase 17f: カスタム月選択モーダル ===
-  (function setupTargetMonthModal() {
+  // === Phase 17f-fix: カスタム月選択モーダル（DOMContentLoaded 待ち） ===
+  function setupTargetMonthModal() {
     const targetMonthEl = document.getElementById("targetMonth");
     const btnTargetMonth = document.getElementById("btnTargetMonth");
     const modal = document.getElementById("targetMonthModal");
@@ -3535,8 +3535,14 @@ function bindEvents() {
       targetMonthEl.value = newValue;
       targetMonthEl.dispatchEvent(new Event('change', { bubbles: true }));
     });
-  })();
-  // === Phase 17f end ===
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupTargetMonthModal);
+  } else {
+    setupTargetMonthModal();
+  }
+  // === Phase 17f-fix end ===
 
   // 対象月変更
   document.getElementById("targetMonth").addEventListener("change", (e) => {
