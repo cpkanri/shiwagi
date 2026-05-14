@@ -4071,7 +4071,9 @@ async function continueInit() {
   // startDateは常に対象年月から自動計算（1日を含む週の月曜日）
   weeklyData.startDate = estimateStartDate(weeklyData.targetMonth);
 
-  document.getElementById("targetMonth").value = weeklyData.targetMonth;
+  // Phase 19-D: localStorage 由来の値に ISO タイムスタンプが残存していても
+  // <input type="month"> がパースエラーを出さないよう YYYY-MM に正規化
+  document.getElementById("targetMonth").value = String(weeklyData.targetMonth).slice(0, 7);
   localStorage.setItem("shiwagi_current_month", weeklyData.targetMonth);
 
   bindEvents();
