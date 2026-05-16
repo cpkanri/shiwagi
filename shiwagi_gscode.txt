@@ -1,0 +1,498 @@
+// =====================================================================
+// shiwagi GAS バックエンド スナップショット (Phase 21-B)
+// 取得日: 2026-05-16
+// 取得方法: clasp clone <scriptId>
+// .gs ファイル数: 1 件
+// 内訳:
+//   コード.js   (元: コード.gs)   487 行 / 18693 bytes
+// scriptId / マニフェスト / .clasp.json は同ディレクトリの .clasp.json と appsscript.json を参照
+// =====================================================================
+
+// ===== コード.gs =====
+// ===== 柴木浄化センター 週報入力アプリ GAS API =====
+// スプレッドシートID
+var SS_ID = '1FUPrSapHEGE-seOsJ6mA2Vw8Qre9porzbWcqJ2rtswI';
+
+function getSheet(name) {
+  return SpreadsheetApp.openById(SS_ID).getSheetByName(name);
+}
+
+function jsonOut(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function normalizeMonth(val) {
+  if (val && typeof val.getFullYear === 'function') {
+    var y = val.getFullYear();
+    var m = ('0' + (val.getMonth() + 1)).slice(-2);
+    return y + '-' + m;
+  }
+  return String(val || '');
+}
+
+function normalizeDate(val) {
+  if (val && typeof val.getFullYear === 'function') {
+    var y = val.getFullYear();
+    var m = ('0' + (val.getMonth() + 1)).slice(-2);
+    var d = ('0' + val.getDate()).slice(-2);
+    return y + '-' + m + '-' + d;
+  }
+  return String(val || '');
+}
+
+// ===== 祝日リスト =====
+function setupHolidays() {
+  var ss = SpreadsheetApp.openById(SS_ID);
+  var sheet = ss.getSheetByName('祝日リスト');
+  if (sheet) return '既に「祝日リスト」シートが存在します。';
+  sheet = ss.insertSheet('祝日リスト');
+  sheet.getRange(1, 1, 2, 2).setValues([['祝日一覧', ''], ['日付', '名称']]);
+  sheet.getRange(1, 1).setFontWeight('bold');
+  sheet.getRange(2, 1, 1, 2).setFontWeight('bold').setBackground('#e0f2e9');
+
+  var holidays = [
+    ['2025-04-29', '昭和の日'], ['2025-05-03', '憲法記念日'], ['2025-05-04', 'みどりの日'],
+    ['2025-05-05', 'こどもの日'], ['2025-05-06', '振替休日'], ['2025-07-21', '海の日'],
+    ['2025-08-11', '山の日'], ['2025-09-15', '敬老の日'], ['2025-09-23', '秋分の日'],
+    ['2025-10-13', 'スポーツの日'], ['2025-11-03', '文化の日'], ['2025-11-23', '勤労感謝の日'],
+    ['2025-11-24', '振替休日'], ['2026-01-01', '元日'], ['2026-01-02', '振替休日'],
+    ['2026-01-12', '成人の日'], ['2026-02-11', '建国記念の日'], ['2026-02-23', '天皇誕生日'],
+    ['2026-03-20', '春分の日'], ['2026-04-29', '昭和の日'], ['2026-05-03', '憲法記念日'],
+    ['2026-05-04', 'みどりの日'], ['2026-05-05', 'こどもの日'], ['2026-05-06', '振替休日'],
+    ['2026-07-20', '海の日'], ['2026-08-11', '山の日'], ['2026-09-21', '敬老の日'],
+    ['2026-09-23', '秋分の日'], ['2026-10-12', 'スポーツの日'], ['2026-11-03', '文化の日'],
+    ['2026-11-23', '勤労感謝の日'], ['2027-01-01', '元日'], ['2027-01-11', '成人の日'],
+    ['2027-02-11', '建国記念の日'], ['2027-02-23', '天皇誕生日'], ['2027-03-21', '春分の日'],
+    ['2027-03-22', '振替休日'], ['2027-04-29', '昭和の日'], ['2027-05-03', '憲法記念日'],
+    ['2027-05-04', 'みどりの日'], ['2027-05-05', 'こどもの日'], ['2027-07-19', '海の日'],
+    ['2027-08-11', '山の日'], ['2027-09-20', '敬老の日'], ['2027-09-23', '秋分の日'],
+    ['2027-10-11', 'スポーツの日'], ['2027-11-03', '文化の日'], ['2027-11-23', '勤労感謝の日'],
+    ['2028-01-01', '元日'], ['2028-01-10', '成人の日'], ['2028-02-11', '建国記念の日'],
+    ['2028-02-23', '天皇誕生日'], ['2028-03-20', '春分の日'], ['2028-04-29', '昭和の日'],
+    ['2028-05-03', '憲法記念日'], ['2028-05-04', 'みどりの日'], ['2028-05-05', 'こどもの日'],
+    ['2028-07-17', '海の日'], ['2028-08-11', '山の日'], ['2028-09-18', '敬老の日'],
+    ['2028-09-22', '秋分の日'], ['2028-10-09', 'スポーツの日'], ['2028-11-03', '文化の日'],
+    ['2028-11-23', '勤労感謝の日']
+  ];
+  var rows = holidays.map(function(h) {
+    var parts = h[0].split('-').map(Number);
+    return [new Date(parts[0], parts[1] - 1, parts[2]), h[1]];
+  });
+  sheet.getRange(3, 1, rows.length, 2).setValues(rows);
+  sheet.getRange(3, 1, rows.length, 1).setNumberFormat('yyyy-mm-dd');
+  sheet.setColumnWidth(1, 120);
+  sheet.setColumnWidth(2, 200);
+  return '「祝日リスト」シートを作成しました（' + rows.length + '件）。';
+}
+
+function getHolidays() {
+  try {
+    var ss = SpreadsheetApp.openById(SS_ID);
+    var sheet = ss.getSheetByName('祝日リスト');
+    if (!sheet) return jsonOut({holidays: []});
+    var lastRow = sheet.getLastRow();
+    if (lastRow < 3) return jsonOut({holidays: []});
+    var data = sheet.getRange(3, 1, lastRow - 2, 2).getValues();
+    var result = [];
+    for (var i = 0; i < data.length; i++) {
+      var d = data[i][0];
+      if (!d) continue;
+      if (d instanceof Date) {
+        var y = d.getFullYear();
+        var m = ('0' + (d.getMonth() + 1)).slice(-2);
+        var day = ('0' + d.getDate()).slice(-2);
+        result.push({date: y + '-' + m + '-' + day, name: data[i][1] || ''});
+      }
+    }
+    return jsonOut({holidays: result});
+  } catch (err) {
+    return jsonOut({error: err.message});
+  }
+}
+
+// ===== 認証システム =====
+var PUBLIC_ACTIONS = { 'ping':1, 'login':1, 'verifyToken':1 };
+
+function setupAuth() {
+  var ss = SpreadsheetApp.openById(SS_ID);
+  var sheet = ss.getSheetByName('ユーザー管理');
+  if (!sheet) {
+    sheet = ss.insertSheet('ユーザー管理');
+    sheet.getRange(1, 1, 1, 5).setValues([['ユーザーID', 'パスワードハッシュ', '氏名', '権限', '有効']]);
+    sheet.getRange(1, 1, 1, 5).setFontWeight('bold').setBackground('#e0f2e9');
+    sheet.setColumnWidth(1, 120);
+    sheet.setColumnWidth(2, 300);
+    sheet.setColumnWidth(3, 120);
+    sheet.setColumnWidth(4, 80);
+    sheet.setColumnWidth(5, 60);
+  }
+  var props = PropertiesService.getScriptProperties();
+  if (!props.getProperty('AUTH_SALT')) {
+    var salt = Utilities.getUuid() + Utilities.getUuid();
+    props.setProperty('AUTH_SALT', salt);
+  }
+  return '認証システムセットアップ完了。setAdminPassword("cpkanri", "パスワード") で管理者追加。';
+}
+
+function setAdminPassword(userId, password) {
+  if (!userId || !password) throw new Error('userIdとpasswordが必要です');
+  var hash = hashPassword(password);
+  var sheet = getSheet('ユーザー管理');
+  if (!sheet) throw new Error('ユーザー管理シートが存在しません。setupAuth()を先に実行してください。');
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === userId) {
+      sheet.getRange(i + 1, 2).setValue(hash);
+      sheet.getRange(i + 1, 4).setValue('admin');
+      sheet.getRange(i + 1, 5).setValue(true);
+      return userId + ' のパスワードを更新しました。';
+    }
+  }
+  sheet.appendRow([userId, hash, userId, 'admin', true]);
+  return userId + ' を管理者として追加しました。';
+}
+
+function setUserPassword(userId, password, name) {
+  if (!userId || !password) throw new Error('userIdとpasswordが必要です');
+  var hash = hashPassword(password);
+  var sheet = getSheet('ユーザー管理');
+  if (!sheet) throw new Error('ユーザー管理シートが存在しません');
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === userId) {
+      sheet.getRange(i + 1, 2).setValue(hash);
+      if (name) sheet.getRange(i + 1, 3).setValue(name);
+      sheet.getRange(i + 1, 5).setValue(true);
+      return userId + ' のパスワードを更新しました。';
+    }
+  }
+  sheet.appendRow([userId, hash, name || userId, 'user', true]);
+  return userId + ' をユーザーとして追加しました。';
+}
+
+function hashPassword(password) {
+  var salt = PropertiesService.getScriptProperties().getProperty('AUTH_SALT') || '';
+  var raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password + salt, Utilities.Charset.UTF_8);
+  var hex = '';
+  for (var i = 0; i < raw.length; i++) {
+    var b = raw[i];
+    if (b < 0) b += 256;
+    var h = b.toString(16);
+    hex += (h.length === 1 ? '0' : '') + h;
+  }
+  return hex;
+}
+
+function login(data) {
+  try {
+    var userId = data.userId;
+    var password = data.password;
+    if (!userId || !password) return jsonOut({error: 'IDとパスワードを入力してください'});
+    var sheet = getSheet('ユーザー管理');
+    if (!sheet) return jsonOut({error: '認証システムが未セットアップです'});
+    var rows = sheet.getDataRange().getValues();
+    var expectedHash = hashPassword(password);
+    for (var i = 1; i < rows.length; i++) {
+      if (String(rows[i][0]) === userId) {
+        if (!rows[i][4]) return jsonOut({error: 'このユーザーは無効化されています'});
+        if (String(rows[i][1]) !== expectedHash) return jsonOut({error: 'IDまたはパスワードが違います'});
+        var token = issueToken(userId);
+        return jsonOut({
+          token: token, userId: userId,
+          userName: rows[i][2] || userId,
+          expires: Date.now() + 30 * 24 * 60 * 60 * 1000
+        });
+      }
+    }
+    return jsonOut({error: 'IDまたはパスワードが違います'});
+  } catch (err) {
+    return jsonOut({error: err.message});
+  }
+}
+
+function issueToken(userId) {
+  var token = 'TK_' + Utilities.getUuid().replace(/-/g, '');
+  var exp = Date.now() + 30 * 24 * 60 * 60 * 1000;
+  PropertiesService.getScriptProperties().setProperty(token, JSON.stringify({userId: userId, expires: exp}));
+  cleanupExpiredTokens();
+  return token;
+}
+
+function cleanupExpiredTokens() {
+  var props = PropertiesService.getScriptProperties();
+  var all = props.getProperties();
+  var now = Date.now();
+  for (var key in all) {
+    if (key.indexOf('TK_') === 0) {
+      try {
+        var v = JSON.parse(all[key]);
+        if (v.expires && v.expires < now) props.deleteProperty(key);
+      } catch (e) { props.deleteProperty(key); }
+    }
+  }
+}
+
+function verifyToken(token) {
+  if (!token) return null;
+  var props = PropertiesService.getScriptProperties();
+  var raw = props.getProperty(token);
+  if (!raw) return null;
+  try {
+    var v = JSON.parse(raw);
+    if (!v.expires || v.expires < Date.now()) {
+      props.deleteProperty(token);
+      return null;
+    }
+    var sheet = getSheet('ユーザー管理');
+    if (sheet) {
+      var rows = sheet.getDataRange().getValues();
+      for (var i = 1; i < rows.length; i++) {
+        if (String(rows[i][0]) === v.userId) {
+          if (!rows[i][4]) return null;
+          return { userId: v.userId, userName: rows[i][2] || v.userId };
+        }
+      }
+      return null;
+    }
+    return { userId: v.userId };
+  } catch (e) { return null; }
+}
+
+function logout(data) {
+  try {
+    var token = data.token;
+    if (token) PropertiesService.getScriptProperties().deleteProperty(token);
+    return jsonOut({ok: true});
+  } catch (err) { return jsonOut({error: err.message}); }
+}
+
+function verifyTokenApi(token) {
+  var user = verifyToken(token);
+  if (!user) return jsonOut({valid: false});
+  return jsonOut({valid: true, userId: user.userId, userName: user.userName});
+}
+
+function requireAuth(action, token) {
+  if (PUBLIC_ACTIONS[action]) return true;
+  return verifyToken(token) !== null;
+}
+
+// ===== GET =====
+function doGet(e) {
+  try {
+    var action = e.parameter.action;
+    var token = e.parameter.token;
+
+    if (!requireAuth(action, token)) {
+      return jsonOut({error: '認証が必要です', authRequired: true});
+    }
+
+    if (action === 'ping') return jsonOut({ status: 'ok' });
+    if (action === 'verifyToken') return verifyTokenApi(token);
+    if (action === 'getAllData') {
+      var month = e.parameter.month || '';
+      return jsonOut(getAllData(month));
+    }
+    if (action === 'getHolidays') return getHolidays();
+    if (action === 'exportExcel') return jsonOut({ status: 'stub' });
+
+    return jsonOut({ status: 'error', message: 'Unknown action: ' + action });
+  } catch (err) {
+    return jsonOut({ status: 'error', message: err.message });
+  }
+}
+
+// ===== POST =====
+function doPost(e) {
+  try {
+    var body = JSON.parse(e.postData.contents);
+    var action = body.action;
+    var token = body.token;
+
+    if (action === 'login') return login(body);
+    if (action === 'logout') return logout(body);
+
+    if (!requireAuth(action, token)) {
+      return jsonOut({error: '認証が必要です', authRequired: true});
+    }
+
+    if (action === 'saveWeek') return jsonOut(saveWeek(body));
+    if (action === 'saveAll') return jsonOut(saveAll(body));
+    if (action === 'saveEquipment') return jsonOut(saveEquipment(body));
+    if (action === 'saveElectrical') return jsonOut(saveElectrical(body));
+    if (action === 'saveMechanical') return jsonOut(saveMechanical(body));
+
+    return jsonOut({ status: 'error', message: 'Unknown action: ' + action });
+  } catch (err) {
+    return jsonOut({ status: 'error', message: err.message });
+  }
+}
+
+// ===== 全データ取得 =====
+function getAllData(month) {
+  var result = { water: {}, equipment: {}, electrical: {}, mechanical: {}, startDate: '' };
+
+  var ws = getSheet('日常水質');
+  if (ws) {
+    var data = ws.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      var row = data[i];
+      var m = normalizeMonth(row[0]);
+      if (m !== month) continue;
+      var week = String(row[1] || '');
+      var day = String(row[2] || '');
+      var jsonStr = String(row[3] || '');
+      if (!week || !day) continue;
+      if (!result.water[week]) result.water[week] = {};
+      try { result.water[week][day] = JSON.parse(jsonStr); } catch (e) { result.water[week][day] = {}; }
+    }
+    for (var j = 1; j < data.length; j++) {
+      if (normalizeMonth(data[j][0]) === month && data[j][4]) {
+        result.startDate = normalizeDate(data[j][4]);
+        break;
+      }
+    }
+  }
+
+  var ws2 = getSheet('機器運転時間');
+  if (ws2) {
+    var data2 = ws2.getDataRange().getValues();
+    for (var i = 1; i < data2.length; i++) {
+      var row = data2[i];
+      if (normalizeMonth(row[0]) !== month) continue;
+      var week = String(row[1] || ''); if (!week) continue;
+      try { result.equipment[week] = JSON.parse(String(row[2] || '')); } catch (e) { result.equipment[week] = {}; }
+    }
+  }
+
+  var ws3 = getSheet('日常電気設備');
+  if (ws3) {
+    var data3 = ws3.getDataRange().getValues();
+    for (var i = 1; i < data3.length; i++) {
+      var row = data3[i];
+      if (normalizeMonth(row[0]) !== month) continue;
+      var week = String(row[1] || ''); if (!week) continue;
+      try { result.electrical[week] = JSON.parse(String(row[2] || '')); } catch (e) { result.electrical[week] = {}; }
+    }
+  }
+
+  var ws4 = getSheet('日常機械設備');
+  if (ws4) {
+    var data4 = ws4.getDataRange().getValues();
+    for (var i = 1; i < data4.length; i++) {
+      var row = data4[i];
+      if (normalizeMonth(row[0]) !== month) continue;
+      var week = String(row[1] || ''); if (!week) continue;
+      try { result.mechanical[week] = JSON.parse(String(row[2] || '')); } catch (e) { result.mechanical[week] = {}; }
+    }
+  }
+
+  return result;
+}
+
+function saveWeek(body) {
+  var month = body.month;
+  var week = String(body.week);
+  var startDate = body.startDate || '';
+  var days = body.days || {};
+  var ws = getSheet('日常水質');
+  if (!ws) return { status: 'error', message: 'Sheet not found' };
+  if (ws.getLastRow() === 0) ws.appendRow(['month', 'week', 'day', 'data', 'startDate']);
+  var dayKeys = Object.keys(days);
+  dayKeys.forEach(function(dayKey) {
+    var found = false;
+    var data = ws.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (normalizeMonth(data[i][0]) === month && String(data[i][1]) === week && String(data[i][2]) === dayKey) {
+        ws.getRange(i + 1, 4).setValue(JSON.stringify(days[dayKey]));
+        if (startDate) ws.getRange(i + 1, 5).setValue(startDate);
+        found = true;
+        break;
+      }
+    }
+    if (!found) ws.appendRow([month, week, dayKey, JSON.stringify(days[dayKey]), startDate]);
+  });
+  return { status: 'ok', saved: dayKeys.length };
+}
+
+function saveAll(body) {
+  var month = body.month;
+  var startDate = body.startDate || '';
+  var weeks = body.weeks || {};
+  var count = 0;
+  Object.keys(weeks).forEach(function(week) {
+    var result = saveWeek({ month: month, week: week, startDate: startDate, days: weeks[week] });
+    count += (result.saved || 0);
+  });
+  return { status: 'ok', saved: count };
+}
+
+function saveEquipment(body) {
+  var month = body.month;
+  var equipment = body.equipment || {};
+  var ws = getSheet('機器運転時間');
+  if (!ws) return { status: 'error', message: 'Sheet not found' };
+  if (ws.getLastRow() === 0) ws.appendRow(['month', 'week', 'data']);
+  var count = 0;
+  Object.keys(equipment).forEach(function(week) {
+    var found = false;
+    var data = ws.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (normalizeMonth(data[i][0]) === month && String(data[i][1]) === String(week)) {
+        ws.getRange(i + 1, 3).setValue(JSON.stringify(equipment[week]));
+        found = true;
+        break;
+      }
+    }
+    if (!found) ws.appendRow([month, String(week), JSON.stringify(equipment[week])]);
+    count++;
+  });
+  return { status: 'ok', saved: count };
+}
+
+function saveElectrical(body) {
+  var month = body.month;
+  var electrical = body.electrical || {};
+  var ws = getSheet('日常電気設備');
+  if (!ws) return { status: 'error', message: 'Sheet not found' };
+  if (ws.getLastRow() === 0) ws.appendRow(['month', 'week', 'data']);
+  var count = 0;
+  Object.keys(electrical).forEach(function(week) {
+    var found = false;
+    var data = ws.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (normalizeMonth(data[i][0]) === month && String(data[i][1]) === String(week)) {
+        ws.getRange(i + 1, 3).setValue(JSON.stringify(electrical[week]));
+        found = true;
+        break;
+      }
+    }
+    if (!found) ws.appendRow([month, String(week), JSON.stringify(electrical[week])]);
+    count++;
+  });
+  return { status: 'ok', saved: count };
+}
+
+function saveMechanical(body) {
+  var month = body.month;
+  var mechanical = body.mechanical || {};
+  var ws = getSheet('日常機械設備');
+  if (!ws) return { status: 'error', message: 'Sheet not found' };
+  if (ws.getLastRow() === 0) ws.appendRow(['month', 'week', 'data']);
+  var count = 0;
+  Object.keys(mechanical).forEach(function(week) {
+    var found = false;
+    var data = ws.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (normalizeMonth(data[i][0]) === month && String(data[i][1]) === String(week)) {
+        ws.getRange(i + 1, 3).setValue(JSON.stringify(mechanical[week]));
+        found = true;
+        break;
+      }
+    }
+    if (!found) ws.appendRow([month, String(week), JSON.stringify(mechanical[week])]);
+    count++;
+  });
+  return { status: 'ok', saved: count };
+}
