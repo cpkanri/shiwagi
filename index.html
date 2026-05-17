@@ -4621,6 +4621,25 @@ function formatHyphenForOutput(value) {
   return value;
 }
 
+// Phase 22: 機械設備の数値型フィールドキー集合（MECH_SECTIONS から type==="number" を抽出）
+const MECH_NUMERIC_KEYS = (function() {
+  const set = new Set();
+  MECH_SECTIONS.forEach(function(sec) {
+    sec.fields.forEach(function(f) {
+      if (f.type === "number") set.add(f.key);
+    });
+  });
+  return set;
+})();
+
+// Phase 22: 数値型機械フィールドの未入力セルへ「ー」を出力する判定
+// 数値型 + 未入力 → "ー"、それ以外（トグル等 or 値あり） → null（既存どおり空）
+function getMechEmptyValue(fieldKey, value) {
+  if (!MECH_NUMERIC_KEYS.has(fieldKey)) return null;
+  if (value === null || value === undefined || value === "") return "ー";
+  return null;
+}
+
 // セル値設定ヘルパー（数値は数値型、Dateはそのまま、それ以外はそのまま）
 function setCell(ws, row, col, val) {
   if (val === null || val === undefined || val === "") return;
@@ -5406,11 +5425,12 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
       if (!dayData) continue;
 
       // 1/2部分（Phase 12 補追3: setCell 経由で formatHyphenForOutput を適用し、「-」は「ー」(U+30FC)に統一）
+      // Phase 22: 数値型フィールドの未入力セルは「ー」を出力（トグル系は従来どおり空）
       for (var fieldKey in mechRowMap1) {
         var row = mechRowMap1[fieldKey] + offset;
         var val = dayData[fieldKey];
         if (val === null || val === undefined || val === "") {
-          ws.getCell(row, col).value = null;
+          ws.getCell(row, col).value = getMechEmptyValue(fieldKey, val);
         } else {
           setCell(ws, row, col, val);
         }
@@ -5420,7 +5440,7 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
         var row = mechRowMap2[fieldKey] + offset;
         var val = dayData[fieldKey];
         if (val === null || val === undefined || val === "") {
-          ws.getCell(row, col).value = null;
+          ws.getCell(row, col).value = getMechEmptyValue(fieldKey, val);
         } else {
           setCell(ws, row, col, val);
         }
