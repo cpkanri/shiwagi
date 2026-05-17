@@ -4646,7 +4646,19 @@ function getMechEmptyValue(fieldKey, value) {
 // 元セル書式が数値書式 ("0.0"/"0.00" 等) のままだと文字列ハイフンがレンダリング崩れを起こすため、
 // value 設定後に numFmt="@" (テキスト形式) を付与する。null 書き込み時は numFmt を触らない。
 // Phase 22 補追 2: 出力文字を U+002D "-" に変更
-function writeMechEmptyCell(ws, row, col, fieldKey, val) {
+// Phase 22 補追 3: date 引数受取り、祝日セルは null（空欄）維持で「-」を出力しない
+//   shiwagi では上流で `if (!inTargetM2 || isHolidayM2) → null + continue` 済のため
+//   実質到達しないが、防御コード兼 5 アプリ統一インタフェースとして実装
+function writeMechEmptyCell(ws, row, col, fieldKey, val, date) {
+  if (date) {
+    try {
+      var hs = getHolidaySetFromCache();
+      if (hs && hs.has(dateToStr(date))) {
+        ws.getCell(row, col).value = null;
+        return;
+      }
+    } catch (e) { /* キャッシュ取得失敗時は既存挙動（"-"出力）にフォールバック */ }
+  }
   var emptyVal = getMechEmptyValue(fieldKey, val);
   var cell = ws.getCell(row, col);
   cell.value = emptyVal;
@@ -5440,11 +5452,12 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
       // 1/2部分（Phase 12 補追3: setCell 経由で formatHyphenForOutput を適用し、「-」は「ー」(U+30FC)に統一）
       // Phase 22: 数値型フィールドの未入力セルは「ー」を出力（トグル系は従来どおり空）
       // Phase 22 補追: 「ー」書込時は numFmt="@" を付与（テキスト書式に統一、表示崩れ防止）
+      // Phase 22 補追 3: writeMechEmptyCell に date を渡し、祝日セルは空欄維持
       for (var fieldKey in mechRowMap1) {
         var row = mechRowMap1[fieldKey] + offset;
         var val = dayData[fieldKey];
         if (val === null || val === undefined || val === "") {
-          writeMechEmptyCell(ws, row, col, fieldKey, val);
+          writeMechEmptyCell(ws, row, col, fieldKey, val, mdateCheck);
         } else {
           setCell(ws, row, col, val);
         }
@@ -5454,7 +5467,7 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
         var row = mechRowMap2[fieldKey] + offset;
         var val = dayData[fieldKey];
         if (val === null || val === undefined || val === "") {
-          writeMechEmptyCell(ws, row, col, fieldKey, val);
+          writeMechEmptyCell(ws, row, col, fieldKey, val, mdateCheck);
         } else {
           setCell(ws, row, col, val);
         }
