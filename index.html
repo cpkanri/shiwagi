@@ -4640,6 +4640,16 @@ function getMechEmptyValue(fieldKey, value) {
   return null;
 }
 
+// Phase 22 補追: 数値型未入力セルへ「ー」を書く専用ヘルパー
+// 元セル書式が数値書式 ("0.0"/"0.00" 等) のままだと文字列「ー」がレンダリング崩れを起こすため、
+// value 設定後に numFmt="@" (テキスト形式) を付与する。null 書き込み時は numFmt を触らない。
+function writeMechEmptyCell(ws, row, col, fieldKey, val) {
+  var emptyVal = getMechEmptyValue(fieldKey, val);
+  var cell = ws.getCell(row, col);
+  cell.value = emptyVal;
+  if (emptyVal === "ー") cell.numFmt = "@";
+}
+
 // セル値設定ヘルパー（数値は数値型、Dateはそのまま、それ以外はそのまま）
 function setCell(ws, row, col, val) {
   if (val === null || val === undefined || val === "") return;
@@ -5426,11 +5436,12 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
 
       // 1/2部分（Phase 12 補追3: setCell 経由で formatHyphenForOutput を適用し、「-」は「ー」(U+30FC)に統一）
       // Phase 22: 数値型フィールドの未入力セルは「ー」を出力（トグル系は従来どおり空）
+      // Phase 22 補追: 「ー」書込時は numFmt="@" を付与（テキスト書式に統一、表示崩れ防止）
       for (var fieldKey in mechRowMap1) {
         var row = mechRowMap1[fieldKey] + offset;
         var val = dayData[fieldKey];
         if (val === null || val === undefined || val === "") {
-          ws.getCell(row, col).value = getMechEmptyValue(fieldKey, val);
+          writeMechEmptyCell(ws, row, col, fieldKey, val);
         } else {
           setCell(ws, row, col, val);
         }
@@ -5440,7 +5451,7 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
         var row = mechRowMap2[fieldKey] + offset;
         var val = dayData[fieldKey];
         if (val === null || val === undefined || val === "") {
-          ws.getCell(row, col).value = getMechEmptyValue(fieldKey, val);
+          writeMechEmptyCell(ws, row, col, fieldKey, val);
         } else {
           setCell(ws, row, col, val);
         }
