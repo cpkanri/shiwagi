@@ -2999,6 +2999,19 @@ function _renameKeysInDay(obj, mapping) {
   return n;
 }
 
+// Phase 21-D 補追: 機器運転時間 1 週分が全日 null/空かどうか
+// (ensureWeeklyStructure が新キーで空オブジェクト {mon:null,...} を作るため、
+//  単純な null/undefined 判定だと空でも「有効」と誤判定して旧キー値が破棄される)
+function _isEmptyEquipDay(equipWeek) {
+  if (!equipWeek || typeof equipWeek !== "object") return true;
+  const keys = Object.keys(equipWeek);
+  if (keys.length === 0) return true;
+  return keys.every(function (d) {
+    const v = equipWeek[d];
+    return v === null || v === undefined || v === "";
+  });
+}
+
 function migrateOldFieldNames(wd) {
   if (!wd || typeof wd !== "object") return 0;
   let total = 0;
@@ -3031,21 +3044,32 @@ function migrateOldFieldNames(wd) {
     });
   }
   // electrical (電気設備): 名称差なし。pumpWellStatus は ELEC ではそのまま維持
-  // equipment (機器運転時間)
+  // equipment (機器運転時間) — Phase 21-D 補追: 空オブジェクト判定で正しく migrate
   if (wd.equipment && typeof wd.equipment === "object") {
     Object.keys(wd.equipment).forEach(function (w) {
       const week = wd.equipment[w];
       if (!week || typeof week !== "object") return;
       // equipment の構造は { weekIdx: { equipKey: { mon:val, tue:val, ... } } }
       Object.keys(OLD_TO_NEW_EQUIP).forEach(function (oldKey) {
-        if (oldKey in week) {
-          const newKey = OLD_TO_NEW_EQUIP[oldKey];
-          if (!(newKey in week) || week[newKey] === null || week[newKey] === undefined) {
-            week[newKey] = week[oldKey];
-          }
-          delete week[oldKey];
-          total++;
+        if (!(oldKey in week)) return;
+        const newKey = OLD_TO_NEW_EQUIP[oldKey];
+        const oldData = week[oldKey];
+        const newData = week[newKey];
+        if (!newData || _isEmptyEquipDay(newData)) {
+          // 新キーが未定義 or 空オブジェクト → 旧キー値を丸ごと移動
+          week[newKey] = oldData;
+        } else if (oldData && typeof oldData === "object") {
+          // 新キーに有効値あり → 旧キーの非 null 日のみ補完マージ
+          Object.keys(oldData).forEach(function (d) {
+            const oldVal = oldData[d];
+            if (oldVal !== null && oldVal !== undefined && oldVal !== "" &&
+                (newData[d] === null || newData[d] === undefined || newData[d] === "")) {
+              newData[d] = oldVal;
+            }
+          });
         }
+        delete week[oldKey];
+        total++;
       });
     });
   }
@@ -3303,7 +3327,9 @@ function mergeServerData(serverData, expectedMonth) {
       if (wData && typeof wData === "object") {
         let weekMerged = false;
         Object.keys(wData).forEach(nameOrKey => {
-          const key = EQUIP_NAME_TO_KEY[nameOrKey] || nameOrKey;
+          // Phase 21-D 補追: 日本語名 → 新キー、旧英字キー → 新キー の両方に対応
+          let key = EQUIP_NAME_TO_KEY[nameOrKey] || nameOrKey;
+          if (OLD_TO_NEW_EQUIP && OLD_TO_NEW_EQUIP[key]) key = OLD_TO_NEW_EQUIP[key];
           if (weeklyData.equipment[w][key]) {
             const dayData = wData[nameOrKey];
             if (dayData && typeof dayData === "object") {
@@ -4403,9 +4429,9 @@ try { migrateBikouCleanup(); } catch (e) { console.warn("bikou migration error:"
 
 // ===== Phase 21-D: 旧フィールド名 (Romaji) → 新フィールド名 (English) 起動時 migration =====
 // 全 shiwagi_weekly_* キーを走査して migrateOldFieldNames を適用。
-// shiwagi_migration_fieldname_v1 フラグで二重実行防止 (migrateBikouCleanup パターン踏襲)。
+// shiwagi_migration_fieldname_v2 フラグで二重実行防止 (migrateBikouCleanup パターン踏襲)。
 function migrateFieldNameCleanup() {
-  const MIGRATION_FLAG = "shiwagi_migration_fieldname_v1";
+  const MIGRATION_FLAG = "shiwagi_migration_fieldname_v2";
   try { if (localStorage.getItem(MIGRATION_FLAG)) return; } catch (e) { return; }
 
   let scanned = 0, totalRenamed = 0;
@@ -5577,14 +5603,14 @@ function fillOperationReportSheet(wb, yyyy, mm) {
     // setCell(ws, row, 12, dayData.discharge);
   }
 
-  // ===== Phase 13a: 集計行(R37=最大、R38=平均、R39=最小、R40=合計) =====
-  // 数式列: C, D, E, I, K (1日値・読み値で 4 式すべて意味がある列)
-  // MAX/MIN のみ列: H, J (累積値で AVG/SUM は意味がない列)
+  // ===== Phase 13a / Phase 21-D 補追: 集計行(R37=最大、R38=平均、R39=最小、R40=合計) =====
+  // 4 式すべて集計する列: E (固形塩素), I (返送汚泥差分), K (余剰汚泥差分)
+  // 全行「ー」表示列: C (200V累積), D (100V累積), H (返送累積), J (余剰累積)
   // 既存「-」維持列: F, G (脱水ケーキ発生量・搬出量、入力フィールドが無いため固定)
   // 空欄列: L (放流流量、別データから入力)
   const ALPHA = ['','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P'];
-  const cols4 = [3, 4, 5, 9, 11]; // C, D, E, I, K
-  const cols2 = [8, 10];          // H, J (MAX/MIN のみ)
+  const cols4 = [5, 9, 11];        // E, I, K
+  const colsNone = [3, 4, 8, 10];  // C, D, H, J (全行「ー」)
 
   cols4.forEach(function(c) {
     var L = ALPHA[c];
@@ -5593,13 +5619,11 @@ function fillOperationReportSheet(wb, yyyy, mm) {
     setFormula(ws, 39, c, 'IFERROR(MIN('  + L + '6:' + L + '36),"")');
     setFormula(ws, 40, c, 'IFERROR(SUM('  + L + '6:' + L + '36),"")');
   });
-  cols2.forEach(function(c) {
-    var L = ALPHA[c];
-    setFormula(ws, 37, c, 'IFERROR(MAX(' + L + '6:' + L + '36),"")');
-    setFormula(ws, 39, c, 'IFERROR(MIN(' + L + '6:' + L + '36),"")');
-    // 38(平均), 40(合計) は累積値では意味がないので明示的に "-" を残す
-    ws.getCell(38, c).value = "-";
-    ws.getCell(40, c).value = "-";
+  colsNone.forEach(function(c) {
+    ws.getCell(37, c).value = "-"; // 最大
+    ws.getCell(38, c).value = "-"; // 平均
+    ws.getCell(39, c).value = "-"; // 最小
+    ws.getCell(40, c).value = "-"; // 合計
   });
   // L列(放流流量) の集計セル R37-R40 は空欄にする
   for (var r = 37; r <= 40; r++) {
