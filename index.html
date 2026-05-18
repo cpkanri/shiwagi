@@ -5566,6 +5566,30 @@ function fillQualityReportSheet(wb, yyyy, mm) {
     // 備考 (J)
     setCell(ws, dataRow2, 10, dayData.bikou);
   }
+
+  // ===== Phase 23-A: 集計式書込 (MAX/AVG/MIN) =====
+  // 1/2 ページ: データ Row8-38、集計 Row39(最大)/40(平均)/41(最小)
+  //   水温 C-F (3-6) と PH O-R (15-18) を集計
+  //   外観 G-J / 臭気 K-N はテンプレ既存「－」表示を維持(書込みなし)
+  // 2/2 ページ: データ Row50-80、集計 Row81/82/83
+  //   透視度 C-E (3-5), MLSS F(6), MLDO G(7), SV30 H(8), 残留塩素 I(9) を集計
+  //   備考 J(10) は集計対象外
+  const ALPHA = ['','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R'];
+  const PAGE1_COLS = [3, 4, 5, 6, 15, 16, 17, 18];
+  const PAGE2_COLS = [3, 4, 5, 6, 7, 8, 9];
+
+  PAGE1_COLS.forEach(function(c) {
+    var L = ALPHA[c];
+    setFormula(ws, 39, c, 'IFERROR(MAX('     + L + '8:'  + L + '38),"")');
+    setFormula(ws, 40, c, 'IFERROR(AVERAGE(' + L + '8:'  + L + '38),"")');
+    setFormula(ws, 41, c, 'IFERROR(MIN('     + L + '8:'  + L + '38),"")');
+  });
+  PAGE2_COLS.forEach(function(c) {
+    var L = ALPHA[c];
+    setFormula(ws, 81, c, 'IFERROR(MAX('     + L + '50:' + L + '80),"")');
+    setFormula(ws, 82, c, 'IFERROR(AVERAGE(' + L + '50:' + L + '80),"")');
+    setFormula(ws, 83, c, 'IFERROR(MIN('     + L + '50:' + L + '80),"")');
+  });
 }
 
 // ===== 運転管理月報シート（Phase 13a 改修） =====
