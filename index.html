@@ -5592,7 +5592,29 @@ function fillQualityReportSheet(wb, yyyy, mm) {
   });
 }
 
-// ===== 運転管理月報シート（Phase 13a 改修） =====
+// Phase 23-A 補追: 累計値 reading 列から日次値を均等按分するヘルパー
+// 入力: { day: cumulativeValue, ... } (reading 不在日は省略 or null)
+// 出力: { day: dailyValue, ... } (按分結果。reading 間の非 reading 日にも値を持つ)
+function distributeDaily(cumValuesByDay) {
+  var dailyByDay = {};
+  var readingDays = Object.keys(cumValuesByDay)
+    .map(Number)
+    .filter(function(d) { return cumValuesByDay[d] != null && cumValuesByDay[d] !== ''; })
+    .sort(function(a, b) { return a - b; });
+  for (var i = 1; i < readingDays.length; i++) {
+    var prev = readingDays[i - 1];
+    var curr = readingDays[i];
+    var span = curr - prev;
+    var delta = Number(cumValuesByDay[curr]) - Number(cumValuesByDay[prev]);
+    var daily = delta / span;
+    for (var d = prev + 1; d <= curr; d++) {
+      dailyByDay[d] = daily;
+    }
+  }
+  return dailyByDay;
+}
+
+// ===== 運転管理月報シート（Phase 13a 改修 / Phase 23-A 補追） =====
 function fillOperationReportSheet(wb, yyyy, mm) {
   const ws = wb.getWorksheet(6); // 運転管理月報
   if (!ws) return;
@@ -5606,26 +5628,26 @@ function fillOperationReportSheet(wb, yyyy, mm) {
   var dateMap = buildDateMap();
   const holidaySet = getHolidaySetFromCache();
 
-  // ===== Phase 13a: 月初差分用の前月末データ取得 =====
-  // 第1週月曜日が分かれば前月最終営業日のデータを取得できる
-  var prevHensou = null; // 直前日の返送汚泥流量(累積値)
-  var prevYojou = null;  // 直前日の余剰汚泥流量(累積値)
-  try {
-    var firstMondayDate = (typeof getActualDate === 'function') ? getActualDate(1, "mon") : null;
-    if (firstMondayDate) {
-      var prevLast = getPrevMonthLastDayData(weeklyData.targetMonth, firstMondayDate, holidaySet);
-      if (prevLast && prevLast.data) {
-        if (prevLast.data.returnSludge != null && prevLast.data.returnSludge !== "" && prevLast.data.returnSludge !== "-") {
-          var pH = Number(prevLast.data.returnSludge);
-          if (!isNaN(pH)) prevHensou = pH;
-        }
-        if (prevLast.data.excessSludge != null && prevLast.data.excessSludge !== "" && prevLast.data.excessSludge !== "-") {
-          var pY = Number(prevLast.data.excessSludge);
-          if (!isNaN(pY)) prevYojou = pY;
-        }
-      }
+  // Phase 23-A 補追: H(返送累計)/J(余剰累計) の reading 値を当月日毎に収集 → 均等按分
+  // 仕様: 前月読み値は引き込まない / 1 つ目の reading day は I/K 空欄維持
+  var cumH = {};
+  var cumJ = {};
+  for (var pd = 1; pd <= daysInMonth; pd++) {
+    var pKey = yyyy + "-" + String(mm).padStart(2, "0") + "-" + String(pd).padStart(2, "0");
+    if (holidaySet.has(pKey)) continue;
+    var pData = dateMap[pKey];
+    if (!pData) continue;
+    if (pData.returnSludge != null && pData.returnSludge !== "" && pData.returnSludge !== "-") {
+      var nH = Number(pData.returnSludge);
+      if (!isNaN(nH)) cumH[pd] = nH;
     }
-  } catch (e) { console.warn("月報: 前月末データ取得失敗", e); }
+    if (pData.excessSludge != null && pData.excessSludge !== "" && pData.excessSludge !== "-") {
+      var nJ = Number(pData.excessSludge);
+      if (!isNaN(nJ)) cumJ[pd] = nJ;
+    }
+  }
+  var dailyI = distributeDaily(cumH);
+  var dailyK = distributeDaily(cumJ);
 
   for (var d = 1; d <= daysInMonth; d++) {
     var dateObj = new Date(yyyy, mm - 1, d);
@@ -5637,9 +5659,12 @@ function fillOperationReportSheet(wb, yyyy, mm) {
     cellA.numFmt = 'd';
     setCell(ws, row, 2, dayNames[dateObj.getDay()]);
 
+    // Phase 23-A 補追: I/K (日次差) は祝日にも按分値を出すため holiday スキップの前に書込む
+    if (dailyI[d] != null) setCell(ws, row, 9, dailyI[d]);
+    if (dailyK[d] != null) setCell(ws, row, 11, dailyK[d]);
+
     var dateKey = yyyy + "-" + String(mm).padStart(2, "0") + "-" + String(d).padStart(2, "0");
-    // 祝日の行はデータ書き込みをスキップ（A列の日付・曜日は残す）
-    // ただし累積値の前日値追跡は維持(祝日でも累積値は持ち越し)
+    // 祝日の行は H/J 等の累計・データ書込みをスキップ（A列の日付・曜日と I/K 按分値は残す）
     if (holidaySet.has(dateKey)) continue;
     var dayData = dateMap[dateKey];
     if (!dayData) continue;
@@ -5651,35 +5676,23 @@ function fillOperationReportSheet(wb, yyyy, mm) {
     // E=固形塩素使用量
     setCell(ws, row, 5, dayData.chlorineDose);
 
-    // ===== H=返送汚泥流量(累積), I=1日差分 =====
+    // H=返送汚泥流量(累積) ※ I は均等按分で先行書込み済
     var curH = (dayData.returnSludge != null && dayData.returnSludge !== "" && dayData.returnSludge !== "-") ? Number(dayData.returnSludge) : null;
     if (curH != null && !isNaN(curH)) {
       setCell(ws, row, 8, curH);
-      // I 列: 当日の累積値 - 前日の累積値 (前日値があれば)
-      if (prevHensou != null) {
-        setCell(ws, row, 9, curH - prevHensou);
-      }
-      prevHensou = curH; // 次の差分計算のため更新
     } else if (dayData.returnSludge === "-") {
-      setCell(ws, row, 8, "-");
-      // 「-」は欠測扱いだが、累積値追跡は途切れる(prevHensou は維持)
+      setCell(ws, row, 8, "-"); // 欠測表示
     }
 
-    // ===== J=余剰汚泥流量(累積), K=1日差分 =====
+    // J=余剰汚泥流量(累積) ※ K は均等按分で先行書込み済
     var curY = (dayData.excessSludge != null && dayData.excessSludge !== "" && dayData.excessSludge !== "-") ? Number(dayData.excessSludge) : null;
     if (curY != null && !isNaN(curY)) {
       setCell(ws, row, 10, curY);
-      // K 列: 当日の累積値 - 前日の累積値 (前日値があれば)
-      if (prevYojou != null) {
-        setCell(ws, row, 11, curY - prevYojou);
-      }
-      prevYojou = curY;
     } else if (dayData.excessSludge === "-") {
       setCell(ws, row, 10, "-");
     }
 
     // L=放流流量: Phase 13a 削除 (別データから入力するため空欄)
-    // setCell(ws, row, 12, dayData.discharge);
   }
 
   // ===== Phase 13a / Phase 21-D 補追: 集計行(R37=最大、R38=平均、R39=最小、R40=合計) =====
