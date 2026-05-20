@@ -5315,9 +5315,12 @@ function fillElecSheet(wb, yyyy, mm) {
       }
     }
 
-    // ===== 水質タブの余剰汚泥流量を電気設備シートの29行目（余剰汚泥積算）に転記 =====
-    // Excelテンプレートに返送汚泥（25行目）の数式はあるが、余剰汚泥（29行目）の数式が
-    // 欠落しているため、ここでJavaScript側から直接値を書き込む
+    // ===== Phase 30: 水質タブの流量データを電気設備シートの積算行に転記 =====
+    // テンプレ sheet4 の row17 (放流流量計積算), row25 (返送汚泥積算), row29 (余剰汚泥積算)
+    // のいずれにも数式/セルが存在しないため、JS で水質タブから直接書き込む。
+    //   row17 ← weeklyData.weeks[w][dayKey].discharge      (放流流量)
+    //   row25 ← weeklyData.weeks[w][dayKey].returnSludge   (返送汚泥流量)
+    //   row29 ← weeklyData.weeks[w][dayKey].excessSludge   (余剰汚泥流量) [Phase 13e 既存]
     var wqDays = ["mon", "tue", "wed", "thu", "fri"];
     var waterWeek = weeklyData.weeks[w];
     if (waterWeek) {
@@ -5329,12 +5332,16 @@ function fillElecSheet(wb, yyyy, mm) {
         var wqInTarget = wqDateObj && wqDateObj.getFullYear() === yyyy && (wqDateObj.getMonth() + 1) === mm;
         var wqIsHoliday = wqDateObj && holidaySet.has(dateToStr(wqDateObj));
         if (!wqInTarget || wqIsHoliday) {
+          ws.getCell(17 + offset, wqCol).value = null;
+          ws.getCell(25 + offset, wqCol).value = null;
           ws.getCell(29 + offset, wqCol).value = null;
           continue;
         }
         var wqDayData = waterWeek[waterDataKey];     // 水質タブのキーでデータ取得
         if (!wqDayData) continue;
-        setCell(ws, 29 + offset, wqCol, wqDayData.excessSludge);
+        setCell(ws, 17 + offset, wqCol, wqDayData.discharge);     // 放流流量計積算
+        setCell(ws, 25 + offset, wqCol, wqDayData.returnSludge);  // 返送汚泥積算
+        setCell(ws, 29 + offset, wqCol, wqDayData.excessSludge);  // 余剰汚泥積算
       }
     }
   }
