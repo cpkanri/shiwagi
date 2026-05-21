@@ -5749,6 +5749,57 @@ function fillOperationReportSheet(wb, yyyy, mm) {
     // L=放流流量: Phase 13a 削除 (別データから入力するため空欄)
   }
 
+  // === Phase 23-A 補追3: 月初按分書込 ===
+  // 前月最終日の累積値と当月最初の reading 値の差を日数で按分し、
+  // 行 6 〜 当月最初の reading 行まで I/K 列の空セルにのみ書込む。
+  // 既存の月内差分ロジック (distributeDaily) の結果は上書きしない。
+  try {
+    var firstMondayDate3 = (typeof getActualDate === 'function') ? getActualDate(1, "mon") : null;
+    var prevLast3 = firstMondayDate3
+      ? getPrevMonthLastDayData(weeklyData.targetMonth, firstMondayDate3, holidaySet)
+      : null;
+
+    if (prevLast3 && prevLast3.date instanceof Date && prevLast3.data
+        && prevLast3.data.returnSludge != null && prevLast3.data.returnSludge !== "" && prevLast3.data.returnSludge !== "-"
+        && prevLast3.data.excessSludge != null && prevLast3.data.excessSludge !== "" && prevLast3.data.excessSludge !== "-") {
+
+      var prevReturnNum = Number(prevLast3.data.returnSludge);
+      var prevExcessNum = Number(prevLast3.data.excessSludge);
+
+      if (!isNaN(prevReturnNum) && !isNaN(prevExcessNum)) {
+        // 当月最初の reading day を検出 (返送・余剰どちらも入力ありが条件)
+        var firstReadingDay = null;
+        for (var fd = 1; fd <= daysInMonth; fd++) {
+          if (cumH[fd] != null && cumJ[fd] != null) { firstReadingDay = fd; break; }
+        }
+
+        if (firstReadingDay != null) {
+          var firstReadingDate = new Date(yyyy, mm - 1, firstReadingDay);
+          var msPerDay = 24 * 60 * 60 * 1000;
+          var daysDiff = Math.round((firstReadingDate.getTime() - prevLast3.date.getTime()) / msPerDay);
+
+          if (daysDiff > 0) {
+            var dailyReturn = (cumH[firstReadingDay] - prevReturnNum) / daysDiff;
+            var dailyExcess = (cumJ[firstReadingDay] - prevExcessNum) / daysDiff;
+
+            // 行 6 (=1日) 〜 当月最初の reading 行まで、空セルにのみ書込
+            for (var md = 1; md <= firstReadingDay; md++) {
+              var mRow = 5 + md;
+              var iCell3 = ws.getCell(mRow, 9);
+              var kCell3 = ws.getCell(mRow, 11);
+              if (iCell3.value == null || iCell3.value === "") iCell3.value = dailyReturn;
+              if (kCell3.value == null || kCell3.value === "") kCell3.value = dailyExcess;
+            }
+          }
+        }
+      }
+    }
+  } catch (e3) {
+    console.warn("Phase 23-A 補追3 月初按分書込でエラー:", e3);
+    // エラー時は I6/K6 空欄のまま (現状維持)
+  }
+  // === Phase 23-A 補追3 END ===
+
   // ===== Phase 13a / Phase 21-D 補追: 集計行(R37=最大、R38=平均、R39=最小、R40=合計) =====
   // 4 式すべて集計する列: E (固形塩素), I (返送汚泥差分), K (余剰汚泥差分)
   // 全行「ー」表示列: C (200V累積), D (100V累積), H (返送累積), J (余剰累積)
