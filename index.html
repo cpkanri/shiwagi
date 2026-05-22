@@ -4982,6 +4982,90 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
     }
   }
 
+  // === Phase 27-d-shiwagi (改): 日常水質 O 列 全 6 行 JS 計算+書込 ===
+  try {
+    const O_COL_27D = 15;
+    const I_COL_27D = 9;   // 月曜
+    const N_COL_27D = 14;  // 次週月曜
+    const WEEK_OFFSETS_27D = { 1: 0, 2: 44, 3: 88, 4: 132, 5: 176 };
+    const MS_PER_DAY_27D = 24 * 60 * 60 * 1000;
+
+    // 6 行の項目: offset と sign convention
+    // 'inc' = (end - start) / days  (累積メーター: 値が増えていく)
+    // 'dec' = (start - end) / days  (タンク残量: 減っていく分を消費量として正に)
+    const O_ITEMS_27D = [
+      { offset: 0, sign: 'inc' },  // 200V 電力
+      { offset: 1, sign: 'inc' },  // 100V 電力
+      { offset: 2, sign: 'dec' },  // 軽油 残量
+      { offset: 3, sign: 'inc' },  // 返送汚泥 流量計積算
+      { offset: 4, sign: 'inc' },  // 余剰汚泥 流量計積算
+      { offset: 5, sign: 'inc' },  // 放流 流量計積算
+    ];
+
+    for (const weekNum of [1, 2, 3, 4, 5]) {
+      const weekOffset = WEEK_OFFSETS_27D[weekNum];
+      const dateRow = 3 + weekOffset;
+
+      // 日付行の I-N 列から実日付を取得 (列 9〜14)
+      const dates = [];
+      for (let col = I_COL_27D; col <= N_COL_27D; col++) {
+        const v = ws.getCell(dateRow, col).value;
+        dates.push(v instanceof Date ? v : null);
+      }
+
+      for (const item of O_ITEMS_27D) {
+        const itemRow = 4 + weekOffset + item.offset;
+
+        // I-N 列の reading 取得 (数値以外は null 扱い)
+        const readings = [];
+        for (let col = I_COL_27D; col <= N_COL_27D; col++) {
+          const v = ws.getCell(itemRow, col).value;
+          if (v == null || v === '' || v === '-') {
+            readings.push(null);
+          } else {
+            const n = Number(v);
+            readings.push(isNaN(n) ? null : n);
+          }
+        }
+
+        // 祝日週フォールバック: 最初の非 null reading を起点に
+        let startIdx = -1;
+        for (let i = 0; i < readings.length; i++) {
+          if (readings[i] != null) { startIdx = i; break; }
+        }
+        if (startIdx < 0) continue; // 全 null → スキップ
+
+        // 最後の非 null reading を終点に (通常は N 列)
+        let endIdx = -1;
+        for (let i = readings.length - 1; i > startIdx; i--) {
+          if (readings[i] != null) { endIdx = i; break; }
+        }
+        if (endIdx < 0) continue; // 2 点未満 → スキップ
+
+        // 日数差 (起点と終点の実日付から)
+        const startDate = dates[startIdx];
+        const endDate = dates[endIdx];
+        if (!startDate || !endDate) continue;
+        const dayDiff = Math.round((endDate.getTime() - startDate.getTime()) / MS_PER_DAY_27D);
+        if (dayDiff <= 0) continue;
+
+        // 日量計算
+        const startReading = readings[startIdx];
+        const endReading = readings[endIdx];
+        const dailyRate = item.sign === 'dec'
+          ? (startReading - endReading) / dayDiff  // 軽油残量: 消費量として正の値
+          : (endReading - startReading) / dayDiff; // 累積メーター: 増加分
+
+        // O 列に書込
+        ws.getCell(itemRow, O_COL_27D).value = dailyRate;
+      }
+    }
+  } catch (e) {
+    console.warn('Phase 27-d-shiwagi O 列書込でエラー:', e);
+    // エラー時は O 列空欄維持 (テンプレも空なのでデグレなし)
+  }
+  // === Phase 27-d-shiwagi (改) END ===
+
 }
 
 // ===== 機器運転時間シート =====
