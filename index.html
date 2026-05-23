@@ -1854,104 +1854,6 @@ function estimateStartDate(ym) {
   return yy + "-" + mm + "-" + dd;
 }
 
-// === Phase 35-1: 跨ぎ月 (cross-month) ユーティリティ ===
-function formatPrevMonth(ym) {
-  if (!ym) return "";
-  const [y, m] = ym.split("-").map(Number);
-  const d = new Date(y, m - 2, 1);
-  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
-}
-function formatNextMonth(ym) {
-  if (!ym) return "";
-  const [y, m] = ym.split("-").map(Number);
-  const d = new Date(y, m, 1);
-  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
-}
-// startDate (W1 月曜) と targetMonth を比較し、跨ぎ週の有無 + 隣月名を返す
-function detectCrossMonthWeeks(targetMonth, startDate) {
-  const result = { needsPrev: false, needsNext: false, prevMonth: null, nextMonth: null };
-  if (!targetMonth || !startDate) return result;
-  const [yyyy, mm] = targetMonth.split("-").map(Number);
-  if (isNaN(yyyy) || isNaN(mm)) return result;
-  const targetMonthFirst = new Date(yyyy, mm - 1, 1);
-  const targetMonthLast = new Date(yyyy, mm, 0);
-  const w1Mon = new Date(startDate + "T00:00:00");
-  if (isNaN(w1Mon.getTime())) return result;
-  result.needsPrev = w1Mon < targetMonthFirst;
-  // W5 金曜 = W1 月曜 + 4*7 + 4 日
-  const w5Fri = new Date(w1Mon);
-  w5Fri.setDate(w1Mon.getDate() + 4 * 7 + 4);
-  result.needsNext = w5Fri > targetMonthLast;
-  if (result.needsPrev) result.prevMonth = formatPrevMonth(targetMonth);
-  if (result.needsNext) result.nextMonth = formatNextMonth(targetMonth);
-  return result;
-}
-// dateObj が targetMonth (yyyy/mm) または隣接月内なら true (跨ぎ週セル許可用)
-function _phase35_1_dateInScope(dateObj, yyyy, mm) {
-  if (!dateObj) return false;
-  const dy = dateObj.getFullYear();
-  const dm = dateObj.getMonth() + 1;
-  if (dy === yyyy && dm === mm) return true;
-  const prevY = mm === 1 ? yyyy - 1 : yyyy;
-  const prevM = mm === 1 ? 12 : mm - 1;
-  if (dy === prevY && dm === prevM) return true;
-  const nextY = mm === 12 ? yyyy + 1 : yyyy;
-  const nextM = mm === 12 ? 1 : mm + 1;
-  if (dy === nextY && dm === nextM) return true;
-  return false;
-}
-// localStorage 保存用に weeklyData を clone し、actualDate が targetMonth 以外のセルを空に
-// (隣月 supplement を storage に書き込まない設計 = Phase 14 storage 汚染バグ再発防止)
-function _phase35_1_stripCrossMonthForStorage() {
-  if (!weeklyData || !weeklyData.targetMonth || !weeklyData.startDate) {
-    return JSON.stringify(weeklyData);
-  }
-  const base = new Date(weeklyData.startDate + "T00:00:00");
-  if (isNaN(base.getTime())) return JSON.stringify(weeklyData);
-  const clone = JSON.parse(JSON.stringify(weeklyData));
-  const dayOffsetMap = { mon: 0, tue: 1, wed: 2, thu: 3, fri: 4, nextMon: 4 };
-  for (let w = 1; w <= 5; w++) {
-    // water keys: DAYS = mon/tue/wed/thu/nextMon
-    DAYS.forEach((dk) => {
-      const offsetDays = (w - 1) * 7 + dayOffsetMap[dk];
-      const d = new Date(base);
-      d.setDate(base.getDate() + offsetDays);
-      const dateMonth = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
-      if (dateMonth === clone.targetMonth) return;
-      if (clone.weeks && clone.weeks[w] && clone.weeks[w][dk]) {
-        const cell = clone.weeks[w][dk];
-        Object.keys(cell).forEach((k) => {
-          cell[k] = (k === "inspector") ? "" : null;
-        });
-      }
-    });
-    // equip/elec/mech keys: EQUIP_DAYS = mon/tue/wed/thu/fri
-    EQUIP_DAYS.forEach((dk) => {
-      const offsetDays = (w - 1) * 7 + dayOffsetMap[dk];
-      const d = new Date(base);
-      d.setDate(base.getDate() + offsetDays);
-      const dateMonth = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
-      if (dateMonth === clone.targetMonth) return;
-      if (clone.electrical && clone.electrical[w] && clone.electrical[w][dk]) {
-        const ec = clone.electrical[w][dk];
-        Object.keys(ec).forEach((k) => { ec[k] = null; });
-      }
-      if (clone.mechanical && clone.mechanical[w] && clone.mechanical[w][dk]) {
-        const mc = clone.mechanical[w][dk];
-        Object.keys(mc).forEach((k) => { mc[k] = null; });
-      }
-      if (clone.equipment && clone.equipment[w]) {
-        Object.keys(clone.equipment[w]).forEach((ek) => {
-          if (clone.equipment[w][ek] && dk in clone.equipment[w][ek]) {
-            clone.equipment[w][ek][dk] = null;
-          }
-        });
-      }
-    });
-  }
-  return JSON.stringify(clone);
-}
-
 function computeDate(weekIdx, dayKey) {
   if (!weeklyData.startDate) return "";
   const base = new Date(weeklyData.startDate + "T00:00:00");
@@ -2994,8 +2896,7 @@ function saveToStorage() {
     weeklyData.startDate = estimateStartDate(weeklyData.targetMonth);
 
     // 容量超過対応の safeSetItem で保存
-    // Phase 35-1: 隣月 supplement (一時メモリのみ) を storage に書き込まないため、跨ぎ日を strip した clone を保存
-    const res = safeSetItem(storageKey(), _phase35_1_stripCrossMonthForStorage());
+    const res = safeSetItem(storageKey(), JSON.stringify(weeklyData));
     if (!res.ok) {
       console.error('saveToStorage error:', res.error, 'quotaExhausted:', res.quotaExhausted);
       window.__lastSaveError = res.error;
@@ -3507,188 +3408,8 @@ function mergeServerData(serverData, expectedMonth) {
   ensureWeeklyStructure();
   // Phase 21-D: サーバー由来の旧キーを新キーへ移行してから保存
   try { migrateOldFieldNames(weeklyData); } catch (e) { console.warn("migrate after merge error:", e); }
-  // Phase 35-1: 隣月 supplement を storage に書き込まないため strip
-  localStorage.setItem(storageKey(), _phase35_1_stripCrossMonthForStorage());
+  localStorage.setItem(storageKey(), JSON.stringify(weeklyData));
   return summary;
-}
-
-// === Phase 35-1: cross-month supplement fetch & apply ===
-// 跨ぎ週がある場合、隣月の getAllData を追加で取得して返す (一時メモリのみ)
-async function fetchCrossMonthSupplement(targetMonth, startDate) {
-  const cross = detectCrossMonthWeeks(targetMonth, startDate);
-  const supplement = { prev: null, next: null, prevMonth: cross.prevMonth, nextMonth: cross.nextMonth };
-  if (cross.needsPrev && cross.prevMonth) {
-    try { supplement.prev = await loadFromServer(cross.prevMonth); }
-    catch (e) { console.warn("[Phase 35-1] prev month fetch failed:", cross.prevMonth, e && e.message); }
-  }
-  if (cross.needsNext && cross.nextMonth) {
-    try { supplement.next = await loadFromServer(cross.nextMonth); }
-    catch (e) { console.warn("[Phase 35-1] next month fetch failed:", cross.nextMonth, e && e.message); }
-  }
-  return supplement;
-}
-// 隣月 supplement を weeklyData の該当跨ぎセルにマージ (memory only - localStorage には書き込まない)
-// 競合解決: 対象月レコード優先 (= 既に値があれば上書きしない)
-function applyCrossMonthSupplement(supplement, targetMonth, startDate) {
-  if (!supplement || (!supplement.prev && !supplement.next)) return { water: 0, equipment: 0, electrical: 0, mechanical: 0 };
-  if (!targetMonth || !startDate) return { water: 0, equipment: 0, electrical: 0, mechanical: 0 };
-  const base = new Date(startDate + "T00:00:00");
-  if (isNaN(base.getTime())) return { water: 0, equipment: 0, electrical: 0, mechanical: 0 };
-
-  const dayOffsetMap = { mon: 0, tue: 1, wed: 2, thu: 3, fri: 4, nextMon: 4 };
-  const stats = { water: 0, equipment: 0, electrical: 0, mechanical: 0 };
-
-  function buildDateMap(monthData, monthStartDate) {
-    const map = {};
-    if (!monthData || !monthStartDate) return map;
-    const supBase = new Date(monthStartDate + "T00:00:00");
-    if (isNaN(supBase.getTime())) return map;
-    Object.keys(monthData).forEach((sw) => {
-      const wkData = monthData[sw];
-      if (!wkData || typeof wkData !== "object") return;
-      Object.keys(wkData).forEach((rawDay) => {
-        let eng = DAY_JP_TO_CODE[rawDay] || rawDay;
-        // Phase 32-b-1 整合: GAS 側 "fri" は水質では nextMon にあたるが、日付計算では fri offset を使う
-        const off = (eng === "nextMon") ? dayOffsetMap.fri : dayOffsetMap[eng];
-        if (typeof off !== "number") return;
-        const dd = new Date(supBase);
-        dd.setDate(supBase.getDate() + (parseInt(sw, 10) - 1) * 7 + off);
-        const iso = dd.getFullYear() + "-" + String(dd.getMonth() + 1).padStart(2, "0") + "-" + String(dd.getDate()).padStart(2, "0");
-        map[iso] = wkData[rawDay];
-      });
-    });
-    return map;
-  }
-
-  function buildEquipDateMap(equipMonthData, monthStartDate) {
-    const map = {};
-    if (!equipMonthData || !monthStartDate) return map;
-    const supBase = new Date(monthStartDate + "T00:00:00");
-    if (isNaN(supBase.getTime())) return map;
-    Object.keys(equipMonthData).forEach((sw) => {
-      const wkEquip = equipMonthData[sw];
-      if (!wkEquip || typeof wkEquip !== "object") return;
-      Object.keys(wkEquip).forEach((rawEquipKey) => {
-        let equipKey = EQUIP_NAME_TO_KEY[rawEquipKey] || rawEquipKey;
-        if (typeof OLD_TO_NEW_EQUIP !== "undefined" && OLD_TO_NEW_EQUIP && OLD_TO_NEW_EQUIP[equipKey]) equipKey = OLD_TO_NEW_EQUIP[equipKey];
-        const dayData = wkEquip[rawEquipKey];
-        if (!dayData || typeof dayData !== "object") return;
-        Object.keys(dayData).forEach((rawDay) => {
-          const eng = DAY_JP_TO_CODE[rawDay] || rawDay;
-          const off = dayOffsetMap[eng];
-          if (typeof off !== "number") return;
-          const dd = new Date(supBase);
-          dd.setDate(supBase.getDate() + (parseInt(sw, 10) - 1) * 7 + off);
-          const iso = dd.getFullYear() + "-" + String(dd.getMonth() + 1).padStart(2, "0") + "-" + String(dd.getDate()).padStart(2, "0");
-          if (!map[iso]) map[iso] = {};
-          map[iso][equipKey] = dayData[rawDay];
-        });
-      });
-    });
-    return map;
-  }
-
-  const prevWaterMap = supplement.prev ? buildDateMap(supplement.prev.water || {}, supplement.prev.startDate) : {};
-  const nextWaterMap = supplement.next ? buildDateMap(supplement.next.water || {}, supplement.next.startDate) : {};
-  const prevElecMap = supplement.prev ? buildDateMap(supplement.prev.electrical || {}, supplement.prev.startDate) : {};
-  const nextElecMap = supplement.next ? buildDateMap(supplement.next.electrical || {}, supplement.next.startDate) : {};
-  const prevMechMap = supplement.prev ? buildDateMap(supplement.prev.mechanical || {}, supplement.prev.startDate) : {};
-  const nextMechMap = supplement.next ? buildDateMap(supplement.next.mechanical || {}, supplement.next.startDate) : {};
-  const prevEquipMap = supplement.prev ? buildEquipDateMap(supplement.prev.equipment || {}, supplement.prev.startDate) : {};
-  const nextEquipMap = supplement.next ? buildEquipDateMap(supplement.next.equipment || {}, supplement.next.startDate) : {};
-
-  const isEmptyField = (v) => v === null || v === undefined || v === "";
-
-  for (let w = 1; w <= 5; w++) {
-    // ===== water (DAYS = mon/tue/wed/thu/nextMon) =====
-    DAYS.forEach((dk) => {
-      const offsetDays = (w - 1) * 7 + dayOffsetMap[dk];
-      const d = new Date(base);
-      d.setDate(base.getDate() + offsetDays);
-      const iso = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-      const dateMonth = iso.slice(0, 7);
-      if (dateMonth === targetMonth) return;
-
-      let srcDay = null;
-      if (supplement.prevMonth && dateMonth === supplement.prevMonth) srcDay = prevWaterMap[iso];
-      else if (supplement.nextMonth && dateMonth === supplement.nextMonth) srcDay = nextWaterMap[iso];
-      if (!srcDay || typeof srcDay !== "object") return;
-
-      if (!weeklyData.weeks[w]) weeklyData.weeks[w] = emptyWeek();
-      if (!weeklyData.weeks[w][dk]) weeklyData.weeks[w][dk] = emptyDay();
-      const target = weeklyData.weeks[w][dk];
-      let touched = false;
-      Object.keys(srcDay).forEach((k) => {
-        if (k === "week" || k === "day" || k === "updatedAt") return;
-        if (k === "bikou" && isISOTimestamp(srcDay[k])) return;
-        if (isEmptyField(target[k])) { target[k] = srcDay[k]; touched = true; }
-      });
-      if (touched) stats.water++;
-    });
-
-    // ===== electrical/mechanical/equipment (EQUIP_DAYS = mon/tue/wed/thu/fri) =====
-    EQUIP_DAYS.forEach((dk) => {
-      const offsetDays = (w - 1) * 7 + dayOffsetMap[dk];
-      const d = new Date(base);
-      d.setDate(base.getDate() + offsetDays);
-      const iso = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-      const dateMonth = iso.slice(0, 7);
-      if (dateMonth === targetMonth) return;
-
-      // electrical
-      let srcElec = null;
-      if (supplement.prevMonth && dateMonth === supplement.prevMonth) srcElec = prevElecMap[iso];
-      else if (supplement.nextMonth && dateMonth === supplement.nextMonth) srcElec = nextElecMap[iso];
-      if (srcElec && typeof srcElec === "object") {
-        if (!weeklyData.electrical[w]) weeklyData.electrical[w] = emptyElecWeek();
-        if (!weeklyData.electrical[w][dk]) weeklyData.electrical[w][dk] = emptyElecDay();
-        const tElec = weeklyData.electrical[w][dk];
-        let touched = false;
-        Object.keys(srcElec).forEach((k) => {
-          if (k === "week" || k === "day" || k === "updatedAt") return;
-          if (isEmptyField(tElec[k])) { tElec[k] = srcElec[k]; touched = true; }
-        });
-        if (touched) stats.electrical++;
-      }
-
-      // mechanical
-      let srcMech = null;
-      if (supplement.prevMonth && dateMonth === supplement.prevMonth) srcMech = prevMechMap[iso];
-      else if (supplement.nextMonth && dateMonth === supplement.nextMonth) srcMech = nextMechMap[iso];
-      if (srcMech && typeof srcMech === "object") {
-        if (!weeklyData.mechanical[w]) weeklyData.mechanical[w] = emptyMechWeek();
-        if (!weeklyData.mechanical[w][dk]) weeklyData.mechanical[w][dk] = emptyMechDay();
-        const tMech = weeklyData.mechanical[w][dk];
-        let touched = false;
-        Object.keys(srcMech).forEach((k) => {
-          if (k === "week" || k === "day" || k === "updatedAt") return;
-          if (isEmptyField(tMech[k])) { tMech[k] = srcMech[k]; touched = true; }
-        });
-        if (touched) stats.mechanical++;
-      }
-
-      // equipment
-      let srcEquip = null;
-      if (supplement.prevMonth && dateMonth === supplement.prevMonth) srcEquip = prevEquipMap[iso];
-      else if (supplement.nextMonth && dateMonth === supplement.nextMonth) srcEquip = nextEquipMap[iso];
-      if (srcEquip && typeof srcEquip === "object") {
-        if (!weeklyData.equipment[w]) weeklyData.equipment[w] = emptyEquipWeek();
-        let touched = false;
-        Object.keys(srcEquip).forEach((equipKey) => {
-          if (!weeklyData.equipment[w][equipKey]) {
-            weeklyData.equipment[w][equipKey] = {};
-            EQUIP_DAYS.forEach((dx) => { weeklyData.equipment[w][equipKey][dx] = null; });
-          }
-          if (isEmptyField(weeklyData.equipment[w][equipKey][dk])) {
-            weeklyData.equipment[w][equipKey][dk] = srcEquip[equipKey];
-            touched = true;
-          }
-        });
-        if (touched) stats.equipment++;
-      }
-    });
-  }
-  return stats;
 }
 
 // バックグラウンドでサーバーから取得
@@ -3713,19 +3434,6 @@ async function syncFromServer() {
       totalSummary.electrical_days += s.electrical_days;
       totalSummary.mechanical_days += s.mechanical_days;
       totalSummary.merged = true;
-
-      // Phase 35-1: 跨ぎ週があれば隣月も fetch して memory 上でマージ (localStorage には書かない)
-      try {
-        // mergeServerData が変更している可能性に備え、現在の対象月で再確認
-        if (normalizeMonthValue(requestedMonth) === normalizeMonthValue(weeklyData.targetMonth)) {
-          const supplement = await fetchCrossMonthSupplement(requestedMonth, weeklyData.startDate);
-          if (supplement && (supplement.prev || supplement.next)) {
-            applyCrossMonthSupplement(supplement, requestedMonth, weeklyData.startDate);
-          }
-        }
-      } catch (e) {
-        console.warn("[Phase 35-1] cross-month supplement failed:", e && e.message);
-      }
 
       updateDayTabs();
       if (currentSheet === "water") loadDataToForm();
@@ -5475,7 +5183,6 @@ function fillEquipSheet(wb, yyyy, mm) {
   var BLOCK_HEIGHT = 18;
 
   // 対象月に関連する週を収集
-  // Phase 35-1: 対象月内に1日以上ある週を関連週とする (跨ぎ週の隣月日は fillEquipSheetData 側で許可)
   const relevantWeeks = [];
   for (var w = 1; w <= 5; w++) {
     var hasTargetDay = false;
@@ -5530,25 +5237,21 @@ function fillEquipSheetData(ws, w, yyyy, mm, rowOffset) {
   rowOffset = rowOffset || 0;
   const holidaySet = getHolidaySetFromCache();
 
-  // その週の月〜金のうち対象月内 + 隣接月 (Phase 35-1 跨ぎ週 supplement) にある日付（祝日は除く）
+  // その週の月〜金のうち対象月内にある日付のみ（祝日は除く）
   var weekDates = [];
   var weekDayKeys = [];
   ["mon", "tue", "wed", "thu", "fri"].forEach(function(dk) {
     var dt = getActualDate(w, dk);
-    if (dt && _phase35_1_dateInScope(dt, yyyy, mm) && !holidaySet.has(dateToStr(dt))) {
+    if (dt && dt.getFullYear() === yyyy && (dt.getMonth() + 1) === mm && !holidaySet.has(dateToStr(dt))) {
       weekDates.push(dt);
       weekDayKeys.push(dk);
     }
   });
-  // A3/F3 ヘッダーは「対象月内の最初/最後の日」のみ（既存仕様維持）
-  var targetMonthDates = weekDates.filter(function(dt) {
-    return dt.getFullYear() === yyyy && (dt.getMonth() + 1) === mm;
-  });
 
   // A3(+offset)=対象月内の最初の日, F3(+offset)=対象月内の最後の日
-  if (targetMonthDates.length > 0) {
-    var firstDay = targetMonthDates[0];
-    var lastDay = targetMonthDates[targetMonthDates.length - 1];
+  if (weekDates.length > 0) {
+    var firstDay = weekDates[0];
+    var lastDay = weekDates[weekDates.length - 1];
     var reiwaStart = "令和" + (firstDay.getFullYear() - 2018) + "年" + (firstDay.getMonth() + 1) + "月" + firstDay.getDate() + "日";
     var cellA3 = ws.getCell(3 + rowOffset, 1);
     cellA3.value = reiwaStart;
@@ -5652,18 +5355,18 @@ function fillElecSheet(wb, yyyy, mm) {
     var elecWeek = weeklyData.electrical[w];
 
     // 日付行（Row2）に各曜日の日付を入れる
-    // Phase 35-1: 跨ぎ週の隣月日 (例: 2026-05 W1 の 4/27) も日付ヘッダー表示を許可
+    // 対象月内なら祝日でも日付ヘッダーは表示する（点検データだけ祝日なら空にする）
     var elecDayKeys = ["mon", "tue", "wed", "thu", "fri"];
     for (var edi = 0; edi < elecDayKeys.length; edi++) {
       var edayKey = elecDayKeys[edi];
       var dateObj = getActualDate(w, edayKey);
       var ecol = dayColElec[edayKey];
-      var inScope = _phase35_1_dateInScope(dateObj, yyyy, mm);
-      if (inScope) {
-        // 対象月内 or 隣接月 (supplement) なら祝日でも日付を表示
+      var isTarget = dateObj && dateObj.getFullYear() === yyyy && (dateObj.getMonth() + 1) === mm;
+      if (isTarget) {
+        // 対象月内なら祝日でも日付を表示
         setCell(ws, 2 + offset, ecol, toExcelDate(dateObj));
       } else {
-        // 範囲外は空に
+        // 対象月外は空に
         ws.getCell(2 + offset, ecol).value = null;
       }
     }
@@ -5673,13 +5376,13 @@ function fillElecSheet(wb, yyyy, mm) {
     var dayKeys = ["mon", "tue", "wed", "thu", "fri"];
     for (var di = 0; di < dayKeys.length; di++) {
       var dayKey = dayKeys[di];
-      // Phase 35-1: 対象月内 or 隣接月 supplement の範囲チェック + 祝日チェック
+      // 対象月+祝日チェック
       var dateObj2 = getActualDate(w, dayKey);
       var col = dayColElec[dayKey];
-      var inScope2 = _phase35_1_dateInScope(dateObj2, yyyy, mm);
+      var inTarget = dateObj2 && dateObj2.getFullYear() === yyyy && (dateObj2.getMonth() + 1) === mm;
       var isHoliday2 = dateObj2 && holidaySet.has(dateToStr(dateObj2));
-      if (!inScope2 || isHoliday2) {
-        // 範囲外 or 祝日 はすべてのフィールドをnullに
+      if (!inTarget || isHoliday2) {
+        // 対象月外 or 祝日 はすべてのフィールドをnullに
         for (var fieldKey in elecRowMap) {
           var row = elecRowMap[fieldKey] + offset;
           ws.getCell(row, col).value = null;
@@ -5716,10 +5419,9 @@ function fillElecSheet(wb, yyyy, mm) {
         var waterDataKey = APP_KEY_MAP[wqDayKey];    // "nextMon" などの水質タブキー
         var wqDateObj = getActualDate(w, waterDataKey); // 日付計算は水質タブのキーで行う
         var wqCol = dayColElec[wqDayKey];            // 書き込み先列は電気タブの列マッピング
-        // Phase 35-1: 跨ぎ週の隣月日も許可
-        var wqInScope = _phase35_1_dateInScope(wqDateObj, yyyy, mm);
+        var wqInTarget = wqDateObj && wqDateObj.getFullYear() === yyyy && (wqDateObj.getMonth() + 1) === mm;
         var wqIsHoliday = wqDateObj && holidaySet.has(dateToStr(wqDateObj));
-        if (!wqInScope || wqIsHoliday) {
+        if (!wqInTarget || wqIsHoliday) {
           ws.getCell(17 + offset, wqCol).value = null;
           ws.getCell(25 + offset, wqCol).value = null;
           ws.getCell(29 + offset, wqCol).value = null;
@@ -5856,10 +5558,10 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
         var mdayKey = mechDayLabels[mdi];
         var mdateObj = getActualDate(w, mdayKey);
         var mcol = mechDayKeysMap[mdayKey];
-        // Phase 35-1: 対象月 + 隣接月 (跨ぎ週 supplement) の日付ヘッダーを許可
-        var inScopeM = _phase35_1_dateInScope(mdateObj, yyyy, mm);
+        var inTargetM = mdateObj && mdateObj.getFullYear() === yyyy && (mdateObj.getMonth() + 1) === mm;
         var isHolidayM = mdateObj && holidaySet.has(dateToStr(mdateObj));
-        if (inScopeM) {
+        if (inTargetM) {
+          // 対象月内なら祝日でも日付ヘッダーを表示
           setCell(ws, dateRow, mcol, toExcelDate(mdateObj));
           // 点検者は祝日でなければ書き込み、祝日は空
           var wKey = APP_KEY_MAP[mdayKey];
@@ -5869,7 +5571,7 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
             ws.getCell(inspRow, mcol).value = null;
           }
         } else {
-          // 範囲外は空に
+          // 対象月外は空に
           ws.getCell(dateRow, mcol).value = null;
           ws.getCell(inspRow, mcol).value = null;
         }
@@ -5881,12 +5583,12 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
     var dayKeys = ["mon", "tue", "wed", "thu", "fri"];
     for (var di = 0; di < dayKeys.length; di++) {
       var dayKey = dayKeys[di];
-      // Phase 35-1: 対象月内 or 隣接月 supplement の範囲チェック + 祝日チェック
+      // 対象月+祝日チェック
       var mdateCheck = getActualDate(w, dayKey);
       var col = dayColMech[dayKey];
-      var inScopeM2 = _phase35_1_dateInScope(mdateCheck, yyyy, mm);
+      var inTargetM2 = mdateCheck && mdateCheck.getFullYear() === yyyy && (mdateCheck.getMonth() + 1) === mm;
       var isHolidayM2 = mdateCheck && holidaySet.has(dateToStr(mdateCheck));
-      if (!inScopeM2 || isHolidayM2) {
+      if (!inTargetM2 || isHolidayM2) {
         // 対象月外 or 祝日 はデータをすべてnullに
         for (var fieldKey in mechRowMap1) {
           ws.getCell(mechRowMap1[fieldKey] + offset, col).value = null;
