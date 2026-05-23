@@ -1840,6 +1840,12 @@ function currentYearMonth() {
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
 }
 
+// Phase 35-1-bugfix-2: cross-month supplement store (date キー、in-memory のみ)
+// 構造: { water: { "YYYY-MM-DD": {field: value, ...}, ... }, equipment: {}, electrical: {}, mechanical: {} }
+// 用途: 跨ぎセル (= currentMonth と実日付の月が異なるセル) の表示用 data を別ストアに保持
+// 重要: 本ストアの内容は saveSheetToServer の source に**含めない**。weeklyData の純粋性を保つ
+var _crossMonthSupplement = { water: {}, equipment: {}, electrical: {}, mechanical: {} };
+
 function estimateStartDate(ym) {
   if (!ym) return "";
   const [y, m] = ym.split("-").map(Number);
@@ -1881,6 +1887,28 @@ function getActualDate(weekIdx, dayKey) {
 function getMonthStr(date) {
   if (!date) return "";
   return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0");
+}
+
+// Phase 35-1-bugfix-2: 跨ぎセル判定 (weeklyData.targetMonth と実日付の月を比較)
+function isCrossMonthCell(weekIdx, dayKey) {
+  if (!weeklyData.targetMonth) return false;
+  var date = getActualDate(weekIdx, dayKey);
+  if (!date) return false;
+  return getMonthStr(date) !== weeklyData.targetMonth;
+}
+
+// Phase 35-1-bugfix-2: water 表示用 cell データ取得 (cross-month は supplement、そうでなければ weeklyData)
+// 不変条件 I-4: 合成は immutable、weeklyData には書き戻さない
+function getDisplayWaterCell(weekIdx, dayKey) {
+  if (isCrossMonthCell(weekIdx, dayKey)) {
+    var date = getActualDate(weekIdx, dayKey);
+    if (!date) return null;
+    var dateStr = dateToStr(date);
+    return _crossMonthSupplement.water[dateStr] || null;
+  }
+  // 当月セル: weeklyData から取得
+  if (!weeklyData.weeks[weekIdx]) return null;
+  return weeklyData.weeks[weekIdx][dayKey] || null;
 }
 
 // 週のデータを月ごとに分割する（電気設備・機械設備用）
@@ -2440,6 +2468,11 @@ function advanceToNextField(currentEl) {
 // ===== フォーム <-> データ =====
 
 function saveFormToData() {
+  // Phase 35-1-bugfix-2: 跨ぎセルは weeklyData に書かない (不変条件 I-1/I-3)
+  if (isCrossMonthCell(currentWeek, currentDay)) {
+    console.debug("[CrossMonth] saveFormToData skipped (cross-month cell):", currentWeek, currentDay);
+    return;
+  }
   const day = weeklyData.weeks[currentWeek][currentDay];
   document.querySelectorAll("[data-field]").forEach(el => {
     const key = el.dataset.field;
@@ -2464,7 +2497,8 @@ function saveFormToData() {
 }
 
 function loadDataToForm() {
-  const day = weeklyData.weeks[currentWeek][currentDay];
+  // Phase 35-1-bugfix-2: 跨ぎセルは supplement、当月セルは weeklyData (不変条件 I-4)
+  const day = getDisplayWaterCell(currentWeek, currentDay) || {};
   document.querySelectorAll("[data-field]").forEach(el => {
     const key = el.dataset.field;
     const v = day[key];
@@ -3412,6 +3446,70 @@ function mergeServerData(serverData, expectedMonth) {
   return summary;
 }
 
+// Phase 35-1-bugfix-2: cross-month supplement fetcher (water のみ、Step 1 スコープ)
+// 前月・翌月の GAS data を取得し、currentMonth に含まれる日付のみ supplement に投入
+// 例: targetMonth="2026-05" のとき、2026-04 の data から「実日付が 2026-05 のセル」を抽出して supplement.water に詰める
+async function fetchCrossMonthSupplementWater(targetMonth) {
+  // 既存 supplement を完全リセット (前回月切替時のデータが残らないように)
+  _crossMonthSupplement.water = {};
+
+  if (!targetMonth) return;
+  var ym = targetMonth.split("-");
+  var year = parseInt(ym[0], 10);
+  var month = parseInt(ym[1], 10);
+  if (isNaN(year) || isNaN(month)) return;
+
+  var prevMonth = month === 1 ? (year - 1) + "-12" : year + "-" + String(month - 1).padStart(2, "0");
+  var nextMonth = month === 12 ? (year + 1) + "-01" : year + "-" + String(month + 1).padStart(2, "0");
+
+  var sourceMonths = [prevMonth, nextMonth];
+  for (var smi = 0; smi < sourceMonths.length; smi++) {
+    var sourceMonth = sourceMonths[smi];
+    try {
+      var data = await loadFromServer(sourceMonth);
+      if (!data || !data.water || typeof data.water !== "object") continue;
+
+      var sourceStartDate = estimateStartDate(sourceMonth);
+      if (!sourceStartDate) continue;
+      var sourceBase = new Date(sourceStartDate + "T00:00:00");
+      if (isNaN(sourceBase.getTime())) continue;
+
+      var dayOffsetMap = { mon: 0, tue: 1, wed: 2, thu: 3, fri: 4, nextMon: 4 };
+
+      Object.keys(data.water).forEach(function(w) {
+        var wData = data.water[w];
+        if (!wData || typeof wData !== "object") return;
+        Object.keys(wData).forEach(function(d) {
+          var dayCode = DAY_JP_TO_CODE[d] || d;
+          if (!(dayCode in dayOffsetMap)) return;
+          var weekNum = parseInt(w, 10);
+          if (isNaN(weekNum)) return;
+          var offsetDays = (weekNum - 1) * 7 + dayOffsetMap[dayCode];
+          var date = new Date(sourceBase);
+          date.setDate(sourceBase.getDate() + offsetDays);
+          // 実日付が targetMonth に含まれるセルのみ supplement に格納
+          if (getMonthStr(date) === targetMonth) {
+            var src = wData[d];
+            if (src && typeof src === "object") {
+              // 予約フィールドを除いてコピー (mergeServerData L3309 と同じポリシー)
+              var clean = {};
+              Object.keys(src).forEach(function(k) {
+                if (k === 'week' || k === 'day' || k === 'updatedAt') return;
+                if (k === 'bikou' && isISOTimestamp(src[k])) return;
+                clean[k] = src[k];
+              });
+              _crossMonthSupplement.water[dateToStr(date)] = clean;
+            }
+          }
+        });
+      });
+    } catch(e) {
+      console.warn("[CrossMonth] supplement fetch failed for " + sourceMonth + ":", e);
+    }
+  }
+  console.debug("[CrossMonth] supplement.water keys:", Object.keys(_crossMonthSupplement.water));
+}
+
 // バックグラウンドでサーバーから取得
 async function syncFromServer() {
   try {
@@ -3434,6 +3532,13 @@ async function syncFromServer() {
       totalSummary.electrical_days += s.electrical_days;
       totalSummary.mechanical_days += s.mechanical_days;
       totalSummary.merged = true;
+
+      // Phase 35-1-bugfix-2: 前月・翌月の cross-month supplement を取得 (water のみ、Step 1 スコープ)
+      try {
+        await fetchCrossMonthSupplementWater(requestedMonth);
+      } catch (e) {
+        console.warn("[CrossMonth] fetchCrossMonthSupplementWater error:", e);
+      }
 
       updateDayTabs();
       if (currentSheet === "water") loadDataToForm();
@@ -3638,6 +3743,11 @@ function bindEvents() {
   // 入力中にタブの✓を即時反映
   document.querySelectorAll("[data-field]").forEach(el => {
     el.addEventListener("input", () => {
+      // Phase 35-1-bugfix-2: 跨ぎセルは silent skip (不変条件 I-1/I-3)
+      if (isCrossMonthCell(currentWeek, currentDay)) {
+        console.debug("[CrossMonth] input skipped (cross-month cell):", currentWeek, currentDay, el.dataset.field);
+        return;
+      }
       const day = weeklyData.weeks[currentWeek][currentDay];
       const key = el.dataset.field;
       if (el.type === "number") {
@@ -3655,6 +3765,11 @@ function bindEvents() {
   // 日常水質フォーム内のトグルボタン（外観・臭気等）にクリックハンドラを設定
   document.querySelectorAll('.form-wrap .toggle-btn[data-field][data-options]').forEach(btn => {
     btn.addEventListener("click", () => {
+      // Phase 35-1-bugfix-2: 跨ぎセルは silent skip (不変条件 I-1/I-3)
+      if (isCrossMonthCell(currentWeek, currentDay)) {
+        console.debug("[CrossMonth] toggle skipped (cross-month cell):", currentWeek, currentDay, btn.dataset.field);
+        return;
+      }
       const opts = JSON.parse(btn.dataset.options);
       const cur = btn.dataset.val || "";
       const idx = opts.indexOf(cur);
