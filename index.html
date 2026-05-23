@@ -3297,7 +3297,9 @@ function mergeServerData(serverData, expectedMonth) {
       const wData = serverData.water[w];
       if (wData && typeof wData === "object") {
         Object.keys(wData).forEach(d => {
-          const dayCode = DAY_JP_TO_CODE[d] || d;
+          let dayCode = DAY_JP_TO_CODE[d] || d;
+          // Phase 32-b-1: fri→nextMon 再マップ (kamitono Phase 32 case 2 逐語)
+          if (dayCode === "fri") dayCode = "nextMon";
           if (weeklyData.weeks[w][dayCode]) {
             const target = weeklyData.weeks[w][dayCode];
             const src = wData[d];
