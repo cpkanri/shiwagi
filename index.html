@@ -3362,6 +3362,12 @@ function mergeServerData(serverData, expectedMonth) {
                 if (k === 'week' || k === 'day' || k === 'updatedAt') return;
                 // Phase 18-b: bikou は ISO タイムスタンプならスキップ
                 if (k === 'bikou' && isISOTimestamp(src[k])) return;
+                // Phase 23-B-2 (kamitono fe178b9 / kake 1a89628 逐語移植):
+                // 終沈3キーは水質管理報告タブの直書き専用フィールドで日次タブに対応行が
+                // 無いため、サーバから null/空が返るとローカル正値が消失する。
+                // サーバー値が空ならローカルを保持する防御
+                if ((k === 'tempFinal' || k === 'transFinal' || k === 'phFinal') &&
+                    (src[k] === null || src[k] === undefined || src[k] === '')) return;
                 target[k] = src[k];
               });
             }
