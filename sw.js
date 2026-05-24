@@ -1,9 +1,10 @@
 // 柴木浄化センター 週報 Service Worker
-const CACHE_NAME = 'shiwagi-v59';
+const CACHE_NAME = 'shiwagi-v60';
 const ASSETS = [
   './',
   './index.html',
   './template.js',
+  './excel-write-map.js',
   './manifest.json',
   './shibaki_icon_180.png',
   './shibaki_icon_192.png',
