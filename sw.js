@@ -1,5 +1,5 @@
 // 柴木浄化センター 週報 Service Worker
-const CACHE_NAME = 'shiwagi-v61';
+const CACHE_NAME = 'shiwagi-v62';
 const ASSETS = [
   './',
   './index.html',

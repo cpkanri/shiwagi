@@ -5908,6 +5908,40 @@ function fillQualityReportSheet(wb, yyyy, mm) {
   const ws = wb.getWorksheet(5); // 水質管理報告
   if (!ws) return;
 
+  // Phase 38-b4+ Step 2: setCell col 動的化 (window.EXCEL_WRITE_MAP 参照、fallback 付き)
+  // 対応関数: fillQualityReportSheet (block 1: 16 keys, block 2: 8 keys)
+  const MM = window.EXCEL_WRITE_MAP || {};
+  const _col = (key, fallback) => {
+    const e = MM[key];
+    return (e && e.monthly && typeof e.monthly.col === 'number') ? e.monthly.col : fallback;
+  };
+  // --- block 1 (dataRow1 = 7 + d、16 keys) ---
+  const COL_TEMP_IN          = _col('tempIn',           3);
+  const COL_TEMP_DITCH       = _col('tempDitch',        4);
+  const COL_TEMP_FINAL       = _col('tempFinal',        5);
+  const COL_TEMP_OUT         = _col('tempOut',          6);
+  const COL_APPEARANCE_IN    = _col('appearanceIn',     7);
+  const COL_APPEARANCE_DITCH = _col('appearanceDitch',  8);
+  const COL_APPEARANCE_FINAL = _col('appearanceFinal',  9);
+  const COL_APPEARANCE_OUT   = _col('appearanceOut',   10);
+  const COL_ODOR_IN          = _col('odorIn',          11);
+  const COL_ODOR_DITCH       = _col('odorDitch',       12);
+  const COL_ODOR_FINAL       = _col('odorFinal',       13);
+  const COL_ODOR_OUT         = _col('odorOut',         14);
+  const COL_PH_IN            = _col('phIn',            15);
+  const COL_PH_DITCH         = _col('phDitch',         16);
+  const COL_PH_FINAL         = _col('phFinal',         17);
+  const COL_PH_OUT           = _col('phOut',           18);
+  // --- block 2 (dataRow2 = 49 + d、8 keys) ---
+  const COL_TRANS_IN    = _col('transIn',    3);
+  const COL_TRANS_FINAL = _col('transFinal', 4);
+  const COL_TRANS_OUT   = _col('transOut',   5);
+  const COL_MLSS        = _col('mlss',       6);
+  const COL_MLDO        = _col('mldo',       7);
+  const COL_SV30        = _col('sv30',       8);
+  const COL_CHLORINE    = _col('chlorine',   9);
+  const COL_BIKOU       = _col('bikou',     10);
+
   const reiwa = yyyy - 2018;
   const monthLabel = "令和" + reiwa + "年" + mm + "月分";
   setCell(ws, 1, 16, monthLabel); // P1
@@ -5945,42 +5979,42 @@ function fillQualityReportSheet(wb, yyyy, mm) {
     if (!dayData) continue;
 
     // 1/2: 水温 (C=流入, D=ディッチ, E=終沈, F=放流)
-    setCell(ws, dataRow1, 3, dayData.tempIn);
-    setCell(ws, dataRow1, 4, dayData.tempDitch);
-    setCell(ws, dataRow1, 5, dayData.tempFinal);
-    setCell(ws, dataRow1, 6, dayData.tempOut);
+    setCell(ws, dataRow1, COL_TEMP_IN, dayData.tempIn);
+    setCell(ws, dataRow1, COL_TEMP_DITCH, dayData.tempDitch);
+    setCell(ws, dataRow1, COL_TEMP_FINAL, dayData.tempFinal);
+    setCell(ws, dataRow1, COL_TEMP_OUT, dayData.tempOut);
 
     // 外観 (G=流入, H=ディッチ, I=終沈, J=放流)
-    setCell(ws, dataRow1, 7, dayData.appearanceIn);
-    setCell(ws, dataRow1, 8, dayData.appearanceDitch);
-    setCell(ws, dataRow1, 9, dayData.appearanceFinal);
-    setCell(ws, dataRow1, 10, dayData.appearanceOut);
+    setCell(ws, dataRow1, COL_APPEARANCE_IN, dayData.appearanceIn);
+    setCell(ws, dataRow1, COL_APPEARANCE_DITCH, dayData.appearanceDitch);
+    setCell(ws, dataRow1, COL_APPEARANCE_FINAL, dayData.appearanceFinal);
+    setCell(ws, dataRow1, COL_APPEARANCE_OUT, dayData.appearanceOut);
 
     // 臭気 (K=流入, L=ディッチ, M=終沈, N=放流)
-    setCell(ws, dataRow1, 11, dayData.odorIn);
-    setCell(ws, dataRow1, 12, dayData.odorDitch);
-    setCell(ws, dataRow1, 13, dayData.odorFinal);
-    setCell(ws, dataRow1, 14, dayData.odorOut);
+    setCell(ws, dataRow1, COL_ODOR_IN, dayData.odorIn);
+    setCell(ws, dataRow1, COL_ODOR_DITCH, dayData.odorDitch);
+    setCell(ws, dataRow1, COL_ODOR_FINAL, dayData.odorFinal);
+    setCell(ws, dataRow1, COL_ODOR_OUT, dayData.odorOut);
 
     // PH (O=流入, P=ディッチ, Q=終沈, R=放流)
-    setCell(ws, dataRow1, 15, dayData.phIn);
-    setCell(ws, dataRow1, 16, dayData.phDitch);
-    setCell(ws, dataRow1, 17, dayData.phFinal);
-    setCell(ws, dataRow1, 18, dayData.phOut);
+    setCell(ws, dataRow1, COL_PH_IN, dayData.phIn);
+    setCell(ws, dataRow1, COL_PH_DITCH, dayData.phDitch);
+    setCell(ws, dataRow1, COL_PH_FINAL, dayData.phFinal);
+    setCell(ws, dataRow1, COL_PH_OUT, dayData.phOut);
 
     // 2/2: 透視度 (C=流入, D=終沈, E=放流)
-    setCell(ws, dataRow2, 3, dayData.transIn);
-    setCell(ws, dataRow2, 4, dayData.transFinal);
-    setCell(ws, dataRow2, 5, dayData.transOut);
+    setCell(ws, dataRow2, COL_TRANS_IN, dayData.transIn);
+    setCell(ws, dataRow2, COL_TRANS_FINAL, dayData.transFinal);
+    setCell(ws, dataRow2, COL_TRANS_OUT, dayData.transOut);
 
     // MLSS (F), MLDO (G), SV30 (H), 残留塩素 (I)
-    setCell(ws, dataRow2, 6, dayData.mlss);
-    setCell(ws, dataRow2, 7, dayData.mldo);
-    setCell(ws, dataRow2, 8, dayData.sv30);
-    setCell(ws, dataRow2, 9, dayData.chlorine);
+    setCell(ws, dataRow2, COL_MLSS, dayData.mlss);
+    setCell(ws, dataRow2, COL_MLDO, dayData.mldo);
+    setCell(ws, dataRow2, COL_SV30, dayData.sv30);
+    setCell(ws, dataRow2, COL_CHLORINE, dayData.chlorine);
 
     // 備考 (J)
-    setCell(ws, dataRow2, 10, dayData.bikou);
+    setCell(ws, dataRow2, COL_BIKOU, dayData.bikou);
   }
 
   // ===== Phase 23-A: 集計式書込 (MAX/AVG/MIN) =====
