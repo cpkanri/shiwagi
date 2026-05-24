@@ -5985,6 +5985,47 @@ function fillOperationReportSheet(wb, yyyy, mm) {
       if (!isNaN(nJ)) cumJ[pd] = nJ;
     }
   }
+  // Phase 23-A 補追3 (再設計): 前月最終 reading day を cumH/cumJ に day -N として挿入
+  // distributeDaily が cross-month span 全体 (前月末 reading day .. 当月初 reading day) を均等按分
+  // 例: 前月末=3/30, 当月初=4/5 → offset=-1, span=6, daily=(4/5 H - 3/30 H)/6
+  // 例: 前月末=3/31, 当月初=4/1 → offset=0, span=1, daily=raw delta
+  // 前月データ無し: 挿入 skip → 当月 1 つ目 reading day 以前空欄維持 (補追 と同じ fallback)
+  try {
+    var firstMondayDate23 = (typeof getActualDate === 'function') ? getActualDate(1, "mon") : null;
+    if (firstMondayDate23) {
+      var prevLast23 = getPrevMonthLastDayData(weeklyData.targetMonth, firstMondayDate23, holidaySet);
+      if (prevLast23 && prevLast23.date instanceof Date && prevLast23.data) {
+        // prev month length 計算: weeklyData.targetMonth から前月を導出し、その月の日数を取る
+        var ym23 = weeklyData.targetMonth.split("-");
+        var y23 = parseInt(ym23[0], 10);
+        var m23 = parseInt(ym23[1], 10);
+        var prevY23 = (m23 === 1) ? (y23 - 1) : y23;
+        var prevM23 = (m23 === 1) ? 12 : (m23 - 1);
+        var prevMonthLen23 = new Date(prevY23, prevM23, 0).getDate();  // 前月の日数
+        var prevDayOffset23 = prevLast23.date.getDate() - prevMonthLen23;  // 0 or -N (N >= 1)
+
+        var rs23 = prevLast23.data.returnSludge;
+        var es23 = prevLast23.data.excessSludge;
+        if (rs23 != null && rs23 !== "" && rs23 !== "-") {
+          var nrs23 = Number(rs23);
+          if (!isNaN(nrs23)) cumH[prevDayOffset23] = nrs23;
+        }
+        if (es23 != null && es23 !== "" && es23 !== "-") {
+          var nes23 = Number(es23);
+          if (!isNaN(nes23)) cumJ[prevDayOffset23] = nes23;
+        }
+        console.debug("[Phase 23-A sup3] prev month last reading inserted:",
+          "date=" + prevLast23.date.toISOString().slice(0,10),
+          "offset=" + prevDayOffset23,
+          "returnSludge=" + rs23, "excessSludge=" + es23);
+      } else {
+        console.debug("[Phase 23-A sup3] no prev month data, first reading day stays empty (fallback)");
+      }
+    }
+  } catch (e23) {
+    console.warn("[Phase 23-A sup3] prev insert error:", e23);
+  }
+
   var dailyI = distributeDaily(cumH);
   var dailyK = distributeDaily(cumJ);
 
@@ -6034,56 +6075,10 @@ function fillOperationReportSheet(wb, yyyy, mm) {
     // L=放流流量: Phase 13a 削除 (別データから入力するため空欄)
   }
 
-  // === Phase 23-A 補追3: 月初按分書込 ===
-  // 前月最終日の累積値と当月最初の reading 値の差を日数で按分し、
-  // 行 6 〜 当月最初の reading 行まで I/K 列の空セルにのみ書込む。
-  // 既存の月内差分ロジック (distributeDaily) の結果は上書きしない。
-  try {
-    var firstMondayDate3 = (typeof getActualDate === 'function') ? getActualDate(1, "mon") : null;
-    var prevLast3 = firstMondayDate3
-      ? getPrevMonthLastDayData(weeklyData.targetMonth, firstMondayDate3, holidaySet)
-      : null;
-
-    if (prevLast3 && prevLast3.date instanceof Date && prevLast3.data
-        && prevLast3.data.returnSludge != null && prevLast3.data.returnSludge !== "" && prevLast3.data.returnSludge !== "-"
-        && prevLast3.data.excessSludge != null && prevLast3.data.excessSludge !== "" && prevLast3.data.excessSludge !== "-") {
-
-      var prevReturnNum = Number(prevLast3.data.returnSludge);
-      var prevExcessNum = Number(prevLast3.data.excessSludge);
-
-      if (!isNaN(prevReturnNum) && !isNaN(prevExcessNum)) {
-        // 当月最初の reading day を検出 (返送・余剰どちらも入力ありが条件)
-        var firstReadingDay = null;
-        for (var fd = 1; fd <= daysInMonth; fd++) {
-          if (cumH[fd] != null && cumJ[fd] != null) { firstReadingDay = fd; break; }
-        }
-
-        if (firstReadingDay != null) {
-          var firstReadingDate = new Date(yyyy, mm - 1, firstReadingDay);
-          var msPerDay = 24 * 60 * 60 * 1000;
-          var daysDiff = Math.round((firstReadingDate.getTime() - prevLast3.date.getTime()) / msPerDay);
-
-          if (daysDiff > 0) {
-            var dailyReturn = (cumH[firstReadingDay] - prevReturnNum) / daysDiff;
-            var dailyExcess = (cumJ[firstReadingDay] - prevExcessNum) / daysDiff;
-
-            // 行 6 (=1日) 〜 当月最初の reading 行まで、空セルにのみ書込
-            for (var md = 1; md <= firstReadingDay; md++) {
-              var mRow = 5 + md;
-              var iCell3 = ws.getCell(mRow, 9);
-              var kCell3 = ws.getCell(mRow, 11);
-              if (iCell3.value == null || iCell3.value === "") iCell3.value = dailyReturn;
-              if (kCell3.value == null || kCell3.value === "") kCell3.value = dailyExcess;
-            }
-          }
-        }
-      }
-    }
-  } catch (e3) {
-    console.warn("Phase 23-A 補追3 月初按分書込でエラー:", e3);
-    // エラー時は I6/K6 空欄のまま (現状維持)
-  }
-  // === Phase 23-A 補追3 END ===
+  // === Phase 23-A 補追3 旧実装 (msPerDay 経由の別計算ブロック) は削除 ===
+  // 新実装: cumH/cumJ への prev day 挿入 + distributeDaily 一本化に置き換え (上記参照)
+  // 旧コードは「distributeDaily 結果と分離した別経路」だったため、
+  // 新方式で distributeDaily が cross-month span を直接処理することで簡素化
 
   // ===== Phase 13a / Phase 21-D 補追: 集計行(R37=最大、R38=平均、R39=最小、R40=合計) =====
   // 4 式すべて集計する列: E (固形塩素), I (返送汚泥差分), K (余剰汚泥差分)
