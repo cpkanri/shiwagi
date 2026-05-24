@@ -3330,6 +3330,11 @@ function mergeServerData(serverData, expectedMonth) {
   const summary = { water_days: 0, equipment_weeks: 0, electrical_days: 0, mechanical_days: 0, merged: false };
   if (!serverData) return summary;
 
+  // Phase 38-b4+ Step 1: hardcoded → 動的化 (window.NULL_SKIP_KEYS_DIRECT 参照、fallback 付き)
+  var _NULL_SKIP_KEYS = (window.NULL_SKIP_KEYS_DIRECT && window.NULL_SKIP_KEYS_DIRECT.length)
+    ? window.NULL_SKIP_KEYS_DIRECT
+    : ['tempFinal', 'transFinal', 'phFinal'];  // fallback (excel-write-map.js 読込失敗時)
+
   // Phase 14: 月キー流入防止 / Phase 19-E': 比較は両辺 YYYY-MM 正規化で寛容化
   // (1) 同期開始時の対象月と現在の対象月が違う(同期中にユーザーが月切替) → abort
   if (expectedMonth && normalizeMonthValue(expectedMonth) !== normalizeMonthValue(weeklyData.targetMonth)) {
@@ -3366,7 +3371,7 @@ function mergeServerData(serverData, expectedMonth) {
                 // 終沈3キーは水質管理報告タブの直書き専用フィールドで日次タブに対応行が
                 // 無いため、サーバから null/空が返るとローカル正値が消失する。
                 // サーバー値が空ならローカルを保持する防御
-                if ((k === 'tempFinal' || k === 'transFinal' || k === 'phFinal') &&
+                if (_NULL_SKIP_KEYS.indexOf(k) >= 0 &&
                     (src[k] === null || src[k] === undefined || src[k] === '')) return;
                 target[k] = src[k];
               });
