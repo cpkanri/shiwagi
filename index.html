@@ -4997,6 +4997,71 @@ function getPrevMonthLastDayData(targetMonth, firstMonday, holidaySet) {
   return null;
 }
 
+// Phase 23-A 補追3 補追: 前月の最新 reading day (曜日不問) を返す
+// fillOperationReportSheet (補追3) 用。fillWaterSheet が使う getPrevMonthLastDayData とは別概念。
+// 判定基準 (B-1): returnSludge AND excessSludge の両方が非空 (null/""/"-" 以外) であること
+function getPrevMonthLatestReadingDay(targetMonth) {
+  if (!targetMonth) return null;
+  var ym = targetMonth.split("-");
+  var year = parseInt(ym[0], 10);
+  var month = parseInt(ym[1], 10);
+  if (isNaN(year) || isNaN(month)) return null;
+  var prevMonth = month === 1 ? (year - 1) + "-12" : year + "-" + String(month - 1).padStart(2, "0");
+
+  var rawPrev = null;
+  try { rawPrev = localStorage.getItem("shiwagi_weekly_" + prevMonth); } catch(e) { return null; }
+  if (!rawPrev) return null;
+  var prevWeekly;
+  try { prevWeekly = JSON.parse(rawPrev); } catch(e) { return null; }
+  if (!prevWeekly || !prevWeekly.weeks || !prevWeekly.startDate) return null;
+
+  var prevBase = new Date(prevWeekly.startDate + "T00:00:00");
+  if (isNaN(prevBase.getTime())) return null;
+
+  var dayOffsetMap = { mon: 0, tue: 1, wed: 2, thu: 3, nextMon: 4 };
+  var dayKeys = ["mon", "tue", "wed", "thu", "nextMon"];
+  var latest = null;  // { date, data }
+
+  for (var wk = 1; wk <= 5; wk++) {
+    var wkData = prevWeekly.weeks[wk];
+    if (!wkData) continue;
+    for (var dki = 0; dki < dayKeys.length; dki++) {
+      var dk = dayKeys[dki];
+      var dd = wkData[dk];
+      if (!dd) continue;
+
+      // 判定基準 B-1: returnSludge AND excessSludge 両方非空
+      var rs = dd.returnSludge;
+      var es = dd.excessSludge;
+      if (rs == null || rs === "" || rs === "-") continue;
+      if (es == null || es === "" || es === "-") continue;
+
+      var offsetDays = (wk - 1) * 7 + dayOffsetMap[dk];
+      var d = new Date(prevBase);
+      d.setDate(prevBase.getDate() + offsetDays);
+
+      // 物理日付フィルタ: 実日付が prevMonth に含まれること (W5 nextMon = 翌月跨ぎ除外)
+      var dYM = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+      if (dYM !== prevMonth) continue;
+
+      if (!latest || d > latest.date) {
+        latest = { date: d, data: dd };
+      }
+    }
+  }
+
+  if (latest) {
+    console.debug("[Phase 23-A sup3 hotfix] prev latest reading day:",
+      "date=" + (latest.date.getFullYear() + "-" + String(latest.date.getMonth() + 1).padStart(2, "0") + "-" + String(latest.date.getDate()).padStart(2, "0")),
+      "returnSludge=" + latest.data.returnSludge,
+      "excessSludge=" + latest.data.excessSludge);
+  } else {
+    console.debug("[Phase 23-A sup3 hotfix] no prev latest reading day found for " + prevMonth);
+  }
+
+  return latest;
+}
+
 // ===== 日常水質シート =====
 function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
   const ws = wb.getWorksheet(1); // 日常水質
@@ -5991,36 +6056,35 @@ function fillOperationReportSheet(wb, yyyy, mm) {
   // 例: 前月末=3/31, 当月初=4/1 → offset=0, span=1, daily=raw delta
   // 前月データ無し: 挿入 skip → 当月 1 つ目 reading day 以前空欄維持 (補追 と同じ fallback)
   try {
-    var firstMondayDate23 = (typeof getActualDate === 'function') ? getActualDate(1, "mon") : null;
-    if (firstMondayDate23) {
-      var prevLast23 = getPrevMonthLastDayData(weeklyData.targetMonth, firstMondayDate23, holidaySet);
-      if (prevLast23 && prevLast23.date instanceof Date && prevLast23.data) {
-        // prev month length 計算: weeklyData.targetMonth から前月を導出し、その月の日数を取る
-        var ym23 = weeklyData.targetMonth.split("-");
-        var y23 = parseInt(ym23[0], 10);
-        var m23 = parseInt(ym23[1], 10);
-        var prevY23 = (m23 === 1) ? (y23 - 1) : y23;
-        var prevM23 = (m23 === 1) ? 12 : (m23 - 1);
-        var prevMonthLen23 = new Date(prevY23, prevM23, 0).getDate();  // 前月の日数
-        var prevDayOffset23 = prevLast23.date.getDate() - prevMonthLen23;  // 0 or -N (N >= 1)
+    // Phase 23-A 補追3 補追 (hotfix): firstMonday 起点逆方向探索の getPrevMonthLastDayData ではなく
+    // 「前月の最新 reading day (曜日不問)」を返す getPrevMonthLatestReadingDay を使用
+    var prevLast23 = getPrevMonthLatestReadingDay(weeklyData.targetMonth);
+    if (prevLast23 && prevLast23.date instanceof Date && prevLast23.data) {
+      // prev month length 計算: weeklyData.targetMonth から前月を導出し、その月の日数を取る
+      var ym23 = weeklyData.targetMonth.split("-");
+      var y23 = parseInt(ym23[0], 10);
+      var m23 = parseInt(ym23[1], 10);
+      var prevY23 = (m23 === 1) ? (y23 - 1) : y23;
+      var prevM23 = (m23 === 1) ? 12 : (m23 - 1);
+      var prevMonthLen23 = new Date(prevY23, prevM23, 0).getDate();  // 前月の日数
+      var prevDayOffset23 = prevLast23.date.getDate() - prevMonthLen23;  // 0 or -N (N >= 1)
 
-        var rs23 = prevLast23.data.returnSludge;
-        var es23 = prevLast23.data.excessSludge;
-        if (rs23 != null && rs23 !== "" && rs23 !== "-") {
-          var nrs23 = Number(rs23);
-          if (!isNaN(nrs23)) cumH[prevDayOffset23] = nrs23;
-        }
-        if (es23 != null && es23 !== "" && es23 !== "-") {
-          var nes23 = Number(es23);
-          if (!isNaN(nes23)) cumJ[prevDayOffset23] = nes23;
-        }
-        console.debug("[Phase 23-A sup3] prev month last reading inserted:",
-          "date=" + prevLast23.date.toISOString().slice(0,10),
-          "offset=" + prevDayOffset23,
-          "returnSludge=" + rs23, "excessSludge=" + es23);
-      } else {
-        console.debug("[Phase 23-A sup3] no prev month data, first reading day stays empty (fallback)");
+      var rs23 = prevLast23.data.returnSludge;
+      var es23 = prevLast23.data.excessSludge;
+      if (rs23 != null && rs23 !== "" && rs23 !== "-") {
+        var nrs23 = Number(rs23);
+        if (!isNaN(nrs23)) cumH[prevDayOffset23] = nrs23;
       }
+      if (es23 != null && es23 !== "" && es23 !== "-") {
+        var nes23 = Number(es23);
+        if (!isNaN(nes23)) cumJ[prevDayOffset23] = nes23;
+      }
+      console.debug("[Phase 23-A sup3] prev month last reading inserted:",
+        "date=" + prevLast23.date.toISOString().slice(0,10),
+        "offset=" + prevDayOffset23,
+        "returnSludge=" + rs23, "excessSludge=" + es23);
+    } else {
+      console.debug("[Phase 23-A sup3] no prev month data, first reading day stays empty (fallback)");
     }
   } catch (e23) {
     console.warn("[Phase 23-A sup3] prev insert error:", e23);
