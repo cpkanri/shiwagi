@@ -922,6 +922,18 @@ header > .conn-status { display: none; }
   white-space: nowrap;
 }
 
+/* Phase 35-1-bugfix-2 Step 2: cross-month セル read-only 視覚化 */
+.cross-month-readonly input,
+.cross-month-readonly textarea,
+.cross-month-readonly select {
+  background-color: #f5f5f5 !important;
+}
+.cross-month-readonly input[type="text"]:focus,
+.cross-month-readonly input[type="number"]:focus,
+.cross-month-readonly textarea:focus {
+  outline: 1px dashed #bbb !important;
+}
+
 </style>
 </head>
 <body>
@@ -2519,6 +2531,8 @@ function loadDataToForm() {
       day.inspector = last;
     }
   }
+  // Phase 35-1-bugfix-2 Step 2: cross-month セルの場合 form を灰色 + readonly 化
+  updateWaterFormReadonlyState(currentWeek, currentDay);
 }
 
 // ===== タブ更新 =====
@@ -3449,6 +3463,51 @@ function mergeServerData(serverData, expectedMonth) {
   try { migrateOldFieldNames(weeklyData); } catch (e) { console.warn("migrate after merge error:", e); }
   localStorage.setItem(storageKey(), JSON.stringify(weeklyData));
   return summary;
+}
+
+// Phase 35-1-bugfix-2 Step 2: water フォームの readonly 状態を cross-month 判定に応じて更新
+// 呼出元: loadDataToForm (曜日切替時, 月切替時, 同期完了時)
+// container 特定: L1024 の `<div class="form-wrap">` が water タブ専用フォーム (equip/elec/mech は id="equipTable" 等の別 element)
+function updateWaterFormReadonlyState(weekIdx, dayKey) {
+  var isReadonly = isCrossMonthCell(weekIdx, dayKey);
+
+  // .form-wrap が water タブのフォーム container (HTML L1024 で唯一の出現)
+  var waterContainer = document.querySelector(".form-wrap");
+  if (!waterContainer) {
+    console.warn("[CrossMonth] water form container (.form-wrap) not found, UI update skipped");
+    return;
+  }
+
+  // class toggle (CSS が子要素を一括灰色化)
+  if (isReadonly) {
+    waterContainer.classList.add("cross-month-readonly");
+  } else {
+    waterContainer.classList.remove("cross-month-readonly");
+  }
+
+  // input / textarea に readonly 属性付与/解除
+  var fields = waterContainer.querySelectorAll("input, textarea");
+  fields.forEach(function(field) {
+    if (field.type === "hidden") return;
+    if (isReadonly) {
+      field.setAttribute("readonly", "readonly");
+    } else {
+      field.removeAttribute("readonly");
+    }
+  });
+
+  // select / checkbox / toggle button は readonly が無いので disabled で代替
+  // 注意: .toggle-btn は水質タブで [data-field] のトグル (外観・臭気等) として使用される
+  var disableables = waterContainer.querySelectorAll('select, input[type="checkbox"], input[type="radio"], .toggle-btn');
+  disableables.forEach(function(el) {
+    if (isReadonly) {
+      el.setAttribute("disabled", "disabled");
+    } else {
+      el.removeAttribute("disabled");
+    }
+  });
+
+  console.debug("[CrossMonth] water form readonly state:", isReadonly, "week=" + weekIdx, "dayKey=" + dayKey);
 }
 
 // Phase 35-1-bugfix-2 Step 1.1: cross-month supplement fetcher (water のみ)
