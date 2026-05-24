@@ -3144,6 +3144,11 @@ async function saveSheetToServer(sheetType) {
         var date = getActualDate(weekIdx, dayKey);
         if (!date) return;
         var monthStr = getMonthStr(date);
+        // Phase 35-1-bugfix-2 Step 1.1: cross-month セルは save しない (他月の GAS 行 wipe 防止)
+        if (monthStr !== weeklyData.targetMonth) {
+          console.debug("[CrossMonth] save skipped (cross-month cell):", "week=" + weekIdx, "dayKey=" + dayKey, "month=" + monthStr);
+          return;
+        }
         if (!monthGroups[monthStr]) monthGroups[monthStr] = {};
         // Phase 15: 内部キー 'nextMon' は GAS 側では 'fri' として保存されるためキー変換
         var gasKey = (dayKey === "nextMon") ? "fri" : dayKey;
@@ -3446,11 +3451,10 @@ function mergeServerData(serverData, expectedMonth) {
   return summary;
 }
 
-// Phase 35-1-bugfix-2: cross-month supplement fetcher (water のみ、Step 1 スコープ)
-// 前月・翌月の GAS data を取得し、currentMonth に含まれる日付のみ supplement に投入
-// 例: targetMonth="2026-05" のとき、2026-04 の data から「実日付が 2026-05 のセル」を抽出して supplement.water に詰める
+// Phase 35-1-bugfix-2 Step 1.1: cross-month supplement fetcher (water のみ)
+// filter 修正: date が target 月の表示範囲内 (startDate..startDate+32d) かつ date.month != targetMonth
+// 例: targetMonth="2026-05", source="2026-04" → 4/27-4/30 が 2026-05 W1 の cross-month セル → supplement に格納
 async function fetchCrossMonthSupplementWater(targetMonth) {
-  // 既存 supplement を完全リセット (前回月切替時のデータが残らないように)
   _crossMonthSupplement.water = {};
 
   if (!targetMonth) return;
@@ -3459,15 +3463,30 @@ async function fetchCrossMonthSupplementWater(targetMonth) {
   var month = parseInt(ym[1], 10);
   if (isNaN(year) || isNaN(month)) return;
 
+  // Target 月の表示範囲計算 (W1 mon = startDate, W5 nextMon = startDate + 32 days)
+  var targetStartDateStr = estimateStartDate(targetMonth);
+  if (!targetStartDateStr) return;
+  var targetStart = new Date(targetStartDateStr + "T00:00:00");
+  if (isNaN(targetStart.getTime())) return;
+  var targetMaxDate = new Date(targetStart);
+  targetMaxDate.setDate(targetStart.getDate() + 32);
+
   var prevMonth = month === 1 ? (year - 1) + "-12" : year + "-" + String(month - 1).padStart(2, "0");
   var nextMonth = month === 12 ? (year + 1) + "-01" : year + "-" + String(month + 1).padStart(2, "0");
+
+  console.log("[CrossMonth] fetch start: target=" + targetMonth +
+    ", range=" + targetStartDateStr + "..+32d, sources=[" + prevMonth + "," + nextMonth + "]");
 
   var sourceMonths = [prevMonth, nextMonth];
   for (var smi = 0; smi < sourceMonths.length; smi++) {
     var sourceMonth = sourceMonths[smi];
+    var addedFromSource = 0;
     try {
       var data = await loadFromServer(sourceMonth);
-      if (!data || !data.water || typeof data.water !== "object") continue;
+      if (!data || !data.water || typeof data.water !== "object") {
+        console.log("[CrossMonth] source=" + sourceMonth + ": no data.water");
+        continue;
+      }
 
       var sourceStartDate = estimateStartDate(sourceMonth);
       if (!sourceStartDate) continue;
@@ -3487,27 +3506,29 @@ async function fetchCrossMonthSupplementWater(targetMonth) {
           var offsetDays = (weekNum - 1) * 7 + dayOffsetMap[dayCode];
           var date = new Date(sourceBase);
           date.setDate(sourceBase.getDate() + offsetDays);
-          // 実日付が targetMonth に含まれるセルのみ supplement に格納
-          if (getMonthStr(date) === targetMonth) {
-            var src = wData[d];
-            if (src && typeof src === "object") {
-              // 予約フィールドを除いてコピー (mergeServerData L3309 と同じポリシー)
-              var clean = {};
-              Object.keys(src).forEach(function(k) {
-                if (k === 'week' || k === 'day' || k === 'updatedAt') return;
-                if (k === 'bikou' && isISOTimestamp(src[k])) return;
-                clean[k] = src[k];
-              });
-              _crossMonthSupplement.water[dateToStr(date)] = clean;
-            }
+          // 範囲チェック: target 月の表示範囲 (startDate..startDate+32d) 外なら skip
+          if (date < targetStart || date > targetMaxDate) return;
+          // target 月自身のセル (own month) は supplement に入れない (weeklyData が canonical)
+          if (getMonthStr(date) === targetMonth) return;
+          var src = wData[d];
+          if (src && typeof src === "object") {
+            var clean = {};
+            Object.keys(src).forEach(function(k) {
+              if (k === 'week' || k === 'day' || k === 'updatedAt') return;
+              if (k === 'bikou' && isISOTimestamp(src[k])) return;
+              clean[k] = src[k];
+            });
+            _crossMonthSupplement.water[dateToStr(date)] = clean;
+            addedFromSource++;
           }
         });
       });
+      console.log("[CrossMonth] source=" + sourceMonth + ": added " + addedFromSource + " records");
     } catch(e) {
       console.warn("[CrossMonth] supplement fetch failed for " + sourceMonth + ":", e);
     }
   }
-  console.debug("[CrossMonth] supplement.water keys:", Object.keys(_crossMonthSupplement.water));
+  console.log("[CrossMonth] supplement.water keys:", Object.keys(_crossMonthSupplement.water));
 }
 
 // バックグラウンドでサーバーから取得
