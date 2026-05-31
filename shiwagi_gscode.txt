@@ -391,6 +391,35 @@ function getAllData(month) {
   return result;
 }
 
+// Phase 25-c-γ: N+1 根絶用ヘルパー。updates=[{r:絶対行, v:書込列配列}] を
+// 行番号昇順にソートし、「連続行 かつ 同一幅」のものを1レンジに束ねて
+// setValues で一括書込する（kamitono 25-c-β flushRowUpdates と同手法）。
+// startCol は書込開始列（1始まり）。非連続行・幅違いは別レンジになり、
+// gap/スキップ行には一切触れない。
+function flushRowUpdates(sheet, updates, startCol) {
+  if (!updates || updates.length === 0) return;
+  updates.sort(function(a, b) { return a.r - b.r; });
+  var i = 0;
+  while (i < updates.length) {
+    var runStart = i;
+    var width = updates[i].v.length;
+    while (i + 1 < updates.length &&
+           updates[i + 1].r === updates[i].r + 1 &&
+           updates[i + 1].v.length === width) {
+      i++;
+    }
+    var block = [];
+    for (var k = runStart; k <= i; k++) block.push(updates[k].v);
+    sheet.getRange(updates[runStart].r, startCol, block.length, width).setValues(block);
+    i++;
+  }
+}
+
+// Phase 25-c-γ: N+1 根絶版。getDataRange はループ外で1回のみ、{day:絶対行} 索引マップで
+// 更新/新規を分離し、更新は flushRowUpdates、新規は setValues 一括追加。
+// 書込まれるセル・値・型・列順は per-cell setValue 時と厳密に同一（リファクタのみ）:
+//   更新は col4(data) 常時 + col5(startDate) は startDate が真値のときのみ（既存挙動）。
+//   新規は 5列 [month, week, day, data, startDate] を追加。重複キーは先勝ち。
 function saveWeek(body) {
   var month = body.month;
   var week = String(body.week);
@@ -400,19 +429,33 @@ function saveWeek(body) {
   if (!ws) return { status: 'error', message: 'Sheet not found' };
   if (ws.getLastRow() === 0) ws.appendRow(['month', 'week', 'day', 'data', 'startDate']);
   var dayKeys = Object.keys(days);
-  dayKeys.forEach(function(dayKey) {
-    var found = false;
-    var data = ws.getDataRange().getValues();
-    for (var i = 1; i < data.length; i++) {
-      if (normalizeMonth(data[i][0]) === month && String(data[i][1]) === week && String(data[i][2]) === dayKey) {
-        ws.getRange(i + 1, 4).setValue(JSON.stringify(days[dayKey]));
-        if (startDate) ws.getRange(i + 1, 5).setValue(startDate);
-        found = true;
-        break;
-      }
+  if (dayKeys.length === 0) return { status: 'ok', saved: 0 };
+
+  var data = ws.getDataRange().getValues();
+  var rowByDay = {};
+  for (var i = 1; i < data.length; i++) {
+    if (normalizeMonth(data[i][0]) === month && String(data[i][1]) === week) {
+      var dk = String(data[i][2]);
+      if (rowByDay[dk] === undefined) rowByDay[dk] = i + 1; // 先勝ち
     }
-    if (!found) ws.appendRow([month, week, dayKey, JSON.stringify(days[dayKey]), startDate]);
+  }
+
+  var updates = [];
+  var appends = [];
+  dayKeys.forEach(function(dayKey) {
+    var json = JSON.stringify(days[dayKey]);
+    if (rowByDay[dayKey] !== undefined) {
+      // startDate 真値時のみ col5 も更新（既存の per-cell 挙動を厳密維持）
+      updates.push({ r: rowByDay[dayKey], v: startDate ? [json, startDate] : [json] });
+    } else {
+      appends.push([month, week, dayKey, json, startDate]);
+    }
   });
+
+  flushRowUpdates(ws, updates, 4);
+  if (appends.length > 0) {
+    ws.getRange(ws.getLastRow() + 1, 1, appends.length, 5).setValues(appends);
+  }
   return { status: 'ok', saved: dayKeys.length };
 }
 
@@ -428,71 +471,117 @@ function saveAll(body) {
   return { status: 'ok', saved: count };
 }
 
+// Phase 25-c-γ: N+1 根絶版（per-week 行）。getDataRange 1回 + {week:絶対行} 索引マップ。
+// 更新は col3(data) のみ、新規は 3列 [month, String(week), data]。重複キー先勝ち。
 function saveEquipment(body) {
   var month = body.month;
   var equipment = body.equipment || {};
   var ws = getSheet('機器運転時間');
   if (!ws) return { status: 'error', message: 'Sheet not found' };
   if (ws.getLastRow() === 0) ws.appendRow(['month', 'week', 'data']);
-  var count = 0;
-  Object.keys(equipment).forEach(function(week) {
-    var found = false;
-    var data = ws.getDataRange().getValues();
-    for (var i = 1; i < data.length; i++) {
-      if (normalizeMonth(data[i][0]) === month && String(data[i][1]) === String(week)) {
-        ws.getRange(i + 1, 3).setValue(JSON.stringify(equipment[week]));
-        found = true;
-        break;
-      }
+  var weekKeys = Object.keys(equipment);
+  if (weekKeys.length === 0) return { status: 'ok', saved: 0 };
+
+  var data = ws.getDataRange().getValues();
+  var rowByWeek = {};
+  for (var i = 1; i < data.length; i++) {
+    if (normalizeMonth(data[i][0]) === month) {
+      var wk = String(data[i][1]);
+      if (rowByWeek[wk] === undefined) rowByWeek[wk] = i + 1; // 先勝ち
     }
-    if (!found) ws.appendRow([month, String(week), JSON.stringify(equipment[week])]);
-    count++;
+  }
+
+  var updates = [];
+  var appends = [];
+  weekKeys.forEach(function(week) {
+    var json = JSON.stringify(equipment[week]);
+    var wk = String(week);
+    if (rowByWeek[wk] !== undefined) {
+      updates.push({ r: rowByWeek[wk], v: [json] });
+    } else {
+      appends.push([month, wk, json]);
+    }
   });
-  return { status: 'ok', saved: count };
+
+  flushRowUpdates(ws, updates, 3);
+  if (appends.length > 0) {
+    ws.getRange(ws.getLastRow() + 1, 1, appends.length, 3).setValues(appends);
+  }
+  return { status: 'ok', saved: weekKeys.length };
 }
 
+// Phase 25-c-γ: N+1 根絶版（per-week 行）。saveEquipment と同手法。
 function saveElectrical(body) {
   var month = body.month;
   var electrical = body.electrical || {};
   var ws = getSheet('日常電気設備');
   if (!ws) return { status: 'error', message: 'Sheet not found' };
   if (ws.getLastRow() === 0) ws.appendRow(['month', 'week', 'data']);
-  var count = 0;
-  Object.keys(electrical).forEach(function(week) {
-    var found = false;
-    var data = ws.getDataRange().getValues();
-    for (var i = 1; i < data.length; i++) {
-      if (normalizeMonth(data[i][0]) === month && String(data[i][1]) === String(week)) {
-        ws.getRange(i + 1, 3).setValue(JSON.stringify(electrical[week]));
-        found = true;
-        break;
-      }
+  var weekKeys = Object.keys(electrical);
+  if (weekKeys.length === 0) return { status: 'ok', saved: 0 };
+
+  var data = ws.getDataRange().getValues();
+  var rowByWeek = {};
+  for (var i = 1; i < data.length; i++) {
+    if (normalizeMonth(data[i][0]) === month) {
+      var wk = String(data[i][1]);
+      if (rowByWeek[wk] === undefined) rowByWeek[wk] = i + 1; // 先勝ち
     }
-    if (!found) ws.appendRow([month, String(week), JSON.stringify(electrical[week])]);
-    count++;
+  }
+
+  var updates = [];
+  var appends = [];
+  weekKeys.forEach(function(week) {
+    var json = JSON.stringify(electrical[week]);
+    var wk = String(week);
+    if (rowByWeek[wk] !== undefined) {
+      updates.push({ r: rowByWeek[wk], v: [json] });
+    } else {
+      appends.push([month, wk, json]);
+    }
   });
-  return { status: 'ok', saved: count };
+
+  flushRowUpdates(ws, updates, 3);
+  if (appends.length > 0) {
+    ws.getRange(ws.getLastRow() + 1, 1, appends.length, 3).setValues(appends);
+  }
+  return { status: 'ok', saved: weekKeys.length };
 }
 
+// Phase 25-c-γ: N+1 根絶版（per-week 行）。saveEquipment と同手法。
 function saveMechanical(body) {
   var month = body.month;
   var mechanical = body.mechanical || {};
   var ws = getSheet('日常機械設備');
   if (!ws) return { status: 'error', message: 'Sheet not found' };
   if (ws.getLastRow() === 0) ws.appendRow(['month', 'week', 'data']);
-  var count = 0;
-  Object.keys(mechanical).forEach(function(week) {
-    var found = false;
-    var data = ws.getDataRange().getValues();
-    for (var i = 1; i < data.length; i++) {
-      if (normalizeMonth(data[i][0]) === month && String(data[i][1]) === String(week)) {
-        ws.getRange(i + 1, 3).setValue(JSON.stringify(mechanical[week]));
-        found = true;
-        break;
-      }
+  var weekKeys = Object.keys(mechanical);
+  if (weekKeys.length === 0) return { status: 'ok', saved: 0 };
+
+  var data = ws.getDataRange().getValues();
+  var rowByWeek = {};
+  for (var i = 1; i < data.length; i++) {
+    if (normalizeMonth(data[i][0]) === month) {
+      var wk = String(data[i][1]);
+      if (rowByWeek[wk] === undefined) rowByWeek[wk] = i + 1; // 先勝ち
     }
-    if (!found) ws.appendRow([month, String(week), JSON.stringify(mechanical[week])]);
-    count++;
+  }
+
+  var updates = [];
+  var appends = [];
+  weekKeys.forEach(function(week) {
+    var json = JSON.stringify(mechanical[week]);
+    var wk = String(week);
+    if (rowByWeek[wk] !== undefined) {
+      updates.push({ r: rowByWeek[wk], v: [json] });
+    } else {
+      appends.push([month, wk, json]);
+    }
   });
-  return { status: 'ok', saved: count };
+
+  flushRowUpdates(ws, updates, 3);
+  if (appends.length > 0) {
+    ws.getRange(ws.getLastRow() + 1, 1, appends.length, 3).setValues(appends);
+  }
+  return { status: 'ok', saved: weekKeys.length };
 }
