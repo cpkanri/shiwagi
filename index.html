@@ -3196,7 +3196,7 @@ async function saveSheetToServer(sheetType) {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
           body: JSON.stringify(withTokenBody(payload))
-        }, 15000);
+        }, 90000);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         await res.json();
       }
@@ -3216,7 +3216,7 @@ async function saveSheetToServer(sheetType) {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
           body: JSON.stringify(withTokenBody(payload))
-        }, 15000);
+        }, 90000);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         await res.json();
       }
@@ -3237,7 +3237,7 @@ async function saveSheetToServer(sheetType) {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
           body: JSON.stringify(withTokenBody(payload))
-        }, 15000);
+        }, 90000);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         await res.json();
       }
@@ -3258,7 +3258,7 @@ async function saveSheetToServer(sheetType) {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
           body: JSON.stringify(withTokenBody(payload))
-        }, 15000);
+        }, 90000);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         await res.json();
       }
