@@ -420,55 +420,67 @@ function flushRowUpdates(sheet, updates, startCol) {
 // 書込まれるセル・値・型・列順は per-cell setValue 時と厳密に同一（リファクタのみ）:
 //   更新は col4(data) 常時 + col5(startDate) は startDate が真値のときのみ（既存挙動）。
 //   新規は 5列 [month, week, day, data, startDate] を追加。重複キーは先勝ち。
-function saveWeek(body) {
+// Phase 25-d: 水質 全週1パスのコア。旧 saveAll の「週ごと saveWeek 反復」
+// (= getSheet 接続 / getDataRange 再読 が週数分反復する週単位の残差) を解消し、
+// 接続・getDataRange・索引マップを各1回に集約する。書込まれるセル・値・型・列順・
+// 並び(挿入/追記順, sort なし)は週ごと反復版と完全一致（週×日キーは一意）。
+//   更新は col4(data) 常時 + col5(startDate) は startDate が真値のときのみ（既存挙動）。
+//   新規は 5列 [month, week, day, data, startDate] を追加。重複キーは先勝ち。
+function saveWaterWeeks(body) {
   var month = body.month;
-  var week = String(body.week);
   var startDate = body.startDate || '';
-  var days = body.days || {};
+  var weeks = body.weeks || {};
   var ws = getSheet('日常水質');
   if (!ws) return { status: 'error', message: 'Sheet not found' };
+  var weekKeys = Object.keys(weeks);
+  if (weekKeys.length === 0) return { status: 'ok', saved: 0 };
   if (ws.getLastRow() === 0) ws.appendRow(['month', 'week', 'day', 'data', 'startDate']);
-  var dayKeys = Object.keys(days);
-  if (dayKeys.length === 0) return { status: 'ok', saved: 0 };
 
+  // getDataRange は全週で1回。索引マップ 'week|day' → 絶対行（当月のみ・先勝ち）
   var data = ws.getDataRange().getValues();
-  var rowByDay = {};
+  var rowByKey = {};
   for (var i = 1; i < data.length; i++) {
-    if (normalizeMonth(data[i][0]) === month && String(data[i][1]) === week) {
-      var dk = String(data[i][2]);
-      if (rowByDay[dk] === undefined) rowByDay[dk] = i + 1; // 先勝ち
+    if (normalizeMonth(data[i][0]) === month) {
+      var k0 = String(data[i][1]) + '|' + String(data[i][2]);
+      if (rowByKey[k0] === undefined) rowByKey[k0] = i + 1; // 先勝ち
     }
   }
 
+  var count = 0;
   var updates = [];
   var appends = [];
-  dayKeys.forEach(function(dayKey) {
-    var json = JSON.stringify(days[dayKey]);
-    if (rowByDay[dayKey] !== undefined) {
-      // startDate 真値時のみ col5 も更新（既存の per-cell 挙動を厳密維持）
-      updates.push({ r: rowByDay[dayKey], v: startDate ? [json, startDate] : [json] });
-    } else {
-      appends.push([month, week, dayKey, json, startDate]);
-    }
+  weekKeys.forEach(function(weekRaw) {
+    var week = String(weekRaw);
+    var days = weeks[weekRaw] || {};
+    Object.keys(days).forEach(function(dayKey) {
+      var json = JSON.stringify(days[dayKey]);
+      var key = week + '|' + dayKey;
+      if (rowByKey[key] !== undefined) {
+        updates.push({ r: rowByKey[key], v: startDate ? [json, startDate] : [json] });
+      } else {
+        appends.push([month, week, dayKey, json, startDate]);
+      }
+      count++;
+    });
   });
 
   flushRowUpdates(ws, updates, 4);
   if (appends.length > 0) {
     ws.getRange(ws.getLastRow() + 1, 1, appends.length, 5).setValues(appends);
   }
-  return { status: 'ok', saved: dayKeys.length };
+  return { status: 'ok', saved: count };
 }
 
+// saveWeek action 用：単一週を全週形 {[week]:days} に包んで saveWaterWeeks へ委譲（後方互換・戻り値保持）
+function saveWeek(body) {
+  var weeks = {};
+  weeks[String(body.week)] = body.days || {};
+  return saveWaterWeeks({ month: body.month, startDate: body.startDate, weeks: weeks });
+}
+
+// saveAll action 用：全週を1パスで処理
 function saveAll(body) {
-  var month = body.month;
-  var startDate = body.startDate || '';
-  var weeks = body.weeks || {};
-  var count = 0;
-  Object.keys(weeks).forEach(function(week) {
-    var result = saveWeek({ month: month, week: week, startDate: startDate, days: weeks[week] });
-    count += (result.saved || 0);
-  });
-  return { status: 'ok', saved: count };
+  return saveWaterWeeks(body);
 }
 
 // Phase 25-c-γ: N+1 根絶版（per-week 行）。getDataRange 1回 + {week:絶対行} 索引マップ。
