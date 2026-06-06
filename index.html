@@ -4822,6 +4822,9 @@ async function exportExcel() {
     // ===== シート2: 機器運転時間（最後に実行：シート複製が他シートの処理に影響しないため） =====
     fillEquipSheet(wb, yyyy, mm);
 
+    // ===== 空週ブロック非出力 (横展開①): 全4シートのデータ無し週を row.hidden =====
+    hideEmptyWeekBlocks(wb, yyyy, mm);
+
     // ===== シート順の最終調整 =====
     // 期待順: 日常水質 → 機器運転時間 → 日常機械設備 → 日常電気設備 → 水質管理報告 → 運転管理月報 → 祝日リスト
     try {
@@ -4863,6 +4866,35 @@ async function exportExcel() {
     // Phase 29-b: ExcelJS 書出バッファから <v>NaN</v> 等の不正キャッシュ値を除去
     // （Excel「修復されたレコード: セル情報」の発生を防ぐ）
     btnExcelLabel.textContent = "ファイル最終処理中...";
+    // ===== フォント統一 (2026-06-06 横展開, kake 0327be1): 全シート・全セルを ＭＳ Ｐ明朝 に統一 =====
+    // 機器運転時間シート等のゴシック混在を解消。name のみ上書きし size/bold/color は保持。テンプレ既存の
+    // 明朝セルを動的検出（全/半角取り違え防止）、検出不可時のみ「ＭＳ Ｐ明朝」へフォールバック。
+    try {
+      let minchoName = null;
+      wb.eachSheet((sheet) => {
+        if (minchoName) return;
+        sheet.eachRow({ includeEmpty: false }, (row) => {
+          if (minchoName) return;
+          row.eachCell({ includeEmpty: false }, (cell) => {
+            if (!minchoName && cell.font && cell.font.name && cell.font.name.indexOf('明朝') >= 0) {
+              minchoName = cell.font.name;
+            }
+          });
+        });
+      });
+      if (!minchoName) minchoName = 'ＭＳ Ｐ明朝';
+      wb.eachSheet((sheet) => {
+        sheet.eachRow({ includeEmpty: false }, (row) => {
+          row.eachCell({ includeEmpty: false }, (cell) => {
+            const f = cell.font || {};
+            if (f.name !== minchoName) {
+              cell.font = Object.assign({}, f, { name: minchoName });
+            }
+          });
+        });
+      });
+    } catch (e) { console.error("フォント統一:", e); }
+
     let buf = await wb.xlsx.writeBuffer();
     buf = await sanitizeXlsxBuffer(buf);
     const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
@@ -5142,6 +5174,93 @@ function getPrevMonthLatestReadingDay(targetMonth) {
 }
 
 // ===== 日常水質シート =====
+// ===== 空週ブロック非出力 (2026-06-06 横展開, kake ec6a9bb 修正A) =====
+// その週の全曜日でデータが1つも無い週ブロックを row.hidden=true で出力に出さない。
+// 物理削除はしない（テンプレ固定位置・集計数式・他週ブロックがずれて壊れるため）。
+// 対象4シート: 日常水質(stride44)/機器運転時間(動的18)/日常機械設備(stride124)/日常電気設備(stride38)。
+function hideRowRange(ws, start, end) {
+  for (var r = start; r <= end; r++) ws.getRow(r).hidden = true;
+}
+function dayInTargetMonthW(w, dk, yyyy, mm) {
+  var dt = getActualDate(w, dk);
+  return !!(dt && dt.getFullYear() === yyyy && (dt.getMonth() + 1) === mm);
+}
+// 日常水質: 維持管理週報(積算)＋測定結果の両セクションを dayHasMeasurement で網羅判定（月フィルタ無し=書けば必ず出る）。
+function waterWeekEmpty(w) {
+  var wk = weeklyData.weeks[w];
+  if (!wk) return true;
+  var days = ["mon", "tue", "wed", "thu", "nextMon"];
+  for (var i = 0; i < days.length; i++) { if (dayHasMeasurement(wk[days[i]])) return false; }
+  return true;
+}
+// 機器運転時間: 対象月内の平日に機器運転データが1つも無ければ空。
+function equipWeekEmpty(w, yyyy, mm) {
+  var ew = weeklyData.equipment[w];
+  if (!ew) return true;
+  for (var i = 0; i < EQUIP_DAYS.length; i++) {
+    var dk = EQUIP_DAYS[i];
+    if (!dayInTargetMonthW(w, dk, yyyy, mm)) continue;
+    for (var j = 0; j < EQUIP_KEYS.length; j++) {
+      var colObj = ew[EQUIP_KEYS[j]]; var v = colObj && colObj[dk];
+      if (v !== null && v !== undefined && v !== "") return false;
+    }
+  }
+  return true;
+}
+// 日常電気設備: 電気点検データ＋日常水質由来の積算(返送/余剰/放流, 電気シートへ転記)も含めて判定。
+function elecWeekEmpty(w, yyyy, mm) {
+  var ed = weeklyData.electrical[w];
+  var days = ["mon", "tue", "wed", "thu", "fri"];
+  for (var i = 0; i < days.length; i++) {
+    var dk = days[i];
+    if (!dayInTargetMonthW(w, dk, yyyy, mm)) continue;
+    var day = ed && ed[dk];
+    if (day) { for (var j = 0; j < ALL_ELEC_KEYS.length; j++) { var v = day[ALL_ELEC_KEYS[j]]; if (v !== null && v !== undefined && v !== "") return false; } }
+  }
+  var wk = weeklyData.weeks[w];
+  var wdays = ["mon", "tue", "wed", "thu", "nextMon"];
+  var cumKeys = ["returnSludge", "excessSludge", "discharge"];
+  for (var k = 0; k < wdays.length; k++) {
+    var wday = wk && wk[wdays[k]];
+    if (wday) { for (var c = 0; c < cumKeys.length; c++) { var cv = wday[cumKeys[c]]; if (cv !== null && cv !== undefined && cv !== "") return false; } }
+  }
+  return true;
+}
+// 日常機械設備: 対象月内の平日に機械点検データが1つも無ければ空。
+function mechWeekEmpty(w, yyyy, mm) {
+  var mw = weeklyData.mechanical[w];
+  if (!mw) return true;
+  var days = ["mon", "tue", "wed", "thu", "fri"];
+  for (var i = 0; i < days.length; i++) {
+    var dk = days[i];
+    if (!dayInTargetMonthW(w, dk, yyyy, mm)) continue;
+    var day = mw[dk];
+    if (day) { for (var j = 0; j < ALL_MECH_KEYS.length; j++) { var v = day[ALL_MECH_KEYS[j]]; if (v !== null && v !== undefined && v !== "") return false; } }
+  }
+  return true;
+}
+function hideEmptyWeekBlocks(wb, yyyy, mm) {
+  try {
+    var wsW = wb.getWorksheet(1); // 日常水質 stride44
+    if (wsW) for (var w1 = 1; w1 <= 5; w1++) { if (waterWeekEmpty(w1)) { var sW = (w1 - 1) * 44 + 1; hideRowRange(wsW, sW, sW + 43); } }
+    var wsM = wb.getWorksheet(3); // 日常機械設備 stride124
+    if (wsM) for (var w3 = 1; w3 <= 5; w3++) { if (mechWeekEmpty(w3, yyyy, mm)) { var sM = (w3 - 1) * 124 + 1; hideRowRange(wsM, sM, sM + 123); } }
+    var wsE = wb.getWorksheet(4); // 日常電気設備 stride38
+    if (wsE) for (var w4 = 1; w4 <= 5; w4++) { if (elecWeekEmpty(w4, yyyy, mm)) { var sE = (w4 - 1) * 38 + 1; hideRowRange(wsE, sE, sE + 37); } }
+    // 機器運転時間: relevantWeeks を fillEquipSheet と同一手順で再算出し連続ブロック(18行)単位で判定
+    var wsEq = wb.getWorksheet(2);
+    if (wsEq) {
+      var relevantWeeks = [];
+      for (var w2 = 1; w2 <= 5; w2++) {
+        var hasTargetDay = false;
+        EQUIP_DAYS.forEach(function(dk) { var dt = getActualDate(w2, dk); if (dt && dt.getFullYear() === yyyy && (dt.getMonth() + 1) === mm) hasTargetDay = true; });
+        if (hasTargetDay) relevantWeeks.push(w2);
+      }
+      relevantWeeks.forEach(function(w, i) { if (equipWeekEmpty(w, yyyy, mm)) { var sEq = i * 18 + 1; hideRowRange(wsEq, sEq, sEq + 17); } });
+    }
+  } catch (e) { console.warn("空週非表示失敗:", e); }
+}
+
 function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
   const ws = wb.getWorksheet(1); // 日常水質
   if (!ws) return;
