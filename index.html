@@ -3199,11 +3199,17 @@ async function fetchWithTimeout(url, options, timeoutMs) {
   }
 }
 
+// 横展開②(2026-06-06): 柴木は積算3キーすべて祝日ブランク。B1(出力空欄)は既存(fillWaterSheet/fillElecSheet)、
+// 本件は B2(保存strip)のみ追加。
+const SHIWAGI_HOLIDAY_BLANK_KEYS = ['returnSludge', 'excessSludge', 'discharge'];
+
 // 1シート全週を送信（全同期用・月またぎ対応）
 async function saveSheetToServer(sheetType) {
   var WEEK_LIST = [1, 2, 3, 4, 5];
 
   if (sheetType === "water") {
+    // 横展開② B2: 祝日の積算3キーを保存ペイロードから除外するための祝日集合（キャッシュ空なら従来挙動）
+    var holSet = (typeof getHolidaySetFromCache === 'function') ? getHolidaySetFromCache() : null;
     for (var w = 0; w < WEEK_LIST.length; w++) {
       var weekIdx = WEEK_LIST[w];
       var days = weeklyData.weeks[weekIdx];
@@ -3223,11 +3229,18 @@ async function saveSheetToServer(sheetType) {
         var gasKey = (dayKey === "nextMon") ? "fri" : dayKey;
         // Phase 18-b: 送信前に bikou を sanitize（ISO タイムスタンプの再循環を断つ）
         var srcDay = days[dayKey];
+        var sendDay;
         if (srcDay && typeof srcDay === 'object' && 'bikou' in srcDay) {
-          monthGroups[monthStr][gasKey] = Object.assign({}, srcDay, { bikou: sanitizeBikou(srcDay.bikou) });
+          sendDay = Object.assign({}, srcDay, { bikou: sanitizeBikou(srcDay.bikou) });
         } else {
-          monthGroups[monthStr][gasKey] = srcDay;
+          sendDay = srcDay;
         }
+        // 横展開② B2: 祝日は積算3キー(返送/余剰/放流)を除外。srcDay(=live weeklyData)を壊さぬよう複製してから delete。
+        if (holSet && date && srcDay && typeof srcDay === 'object' && holSet.has(dateToStr(date))) {
+          sendDay = Object.assign({}, sendDay);
+          SHIWAGI_HOLIDAY_BLANK_KEYS.forEach(function(k){ delete sendDay[k]; });
+        }
+        monthGroups[monthStr][gasKey] = sendDay;
       });
       var monthKeys = Object.keys(monthGroups);
       for (var i = 0; i < monthKeys.length; i++) {
