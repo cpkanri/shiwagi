@@ -5068,6 +5068,60 @@ function setFormula(ws, row, col, formula) {
   ws.getCell(row, col).value = { formula: f };
 }
 
+// ===== Excel出力用: 日付ベース水質セルリゾルバ (2026-06-11 跨ぎ週出力修正) =====
+// 当月セル: weeklyData (canonical) / 跨ぎセル: _crossMonthSupplement.water → 当該月 localStorage の順。
+// Phase 35-1-bugfix-2 不変条件は維持: 全パス読み取り専用、weeklyData への書き戻しは行わない。
+function _cleanWaterRecordForExport(src) {
+  if (!src || typeof src !== "object") return null;
+  var clean = {};
+  Object.keys(src).forEach(function(k) {
+    if (k === "week" || k === "day" || k === "updatedAt") return;
+    if (k === "bikou" && isISOTimestamp(src[k])) return;
+    clean[k] = src[k];
+  });
+  return clean;
+}
+
+// 指定月の localStorage (shiwagi_weekly_<month>) から実日付 date に該当する水質セルを逆引き（読み取り専用）
+function _getWaterCellFromMonthStorage(monthStr, date) {
+  if (!monthStr || !date) return null;
+  var raw = null;
+  try { raw = localStorage.getItem("shiwagi_weekly_" + monthStr); } catch (e) { return null; }
+  if (!raw) return null;
+  var stored;
+  try { stored = JSON.parse(raw); } catch (e) { return null; }
+  if (!stored || !stored.weeks || !stored.startDate) return null;
+  var base = new Date(stored.startDate + "T00:00:00");
+  if (isNaN(base.getTime())) return null;
+  var diffDays = Math.round((date.getTime() - base.getTime()) / 86400000);
+  if (diffDays < 0) return null;
+  var wk = Math.floor(diffDays / 7) + 1;
+  if (wk < 1 || wk > 5) return null;
+  var dow = diffDays % 7;
+  var dayKey = (dow === 0) ? "mon" : (dow === 1) ? "tue" : (dow === 2) ? "wed"
+             : (dow === 3) ? "thu" : (dow === 4) ? "nextMon" : null;
+  if (!dayKey) return null; // dow 5/6 = 土日
+  var wkData = stored.weeks[wk];
+  if (!wkData || !wkData[dayKey]) return null;
+  return _cleanWaterRecordForExport(wkData[dayKey]);
+}
+
+// Excel出力用 水質セル解決（getDisplayWaterCell の出力版 + localStorage フォールバック）
+function getExportWaterCell(weekIdx, dayKey) {
+  var date = getActualDate(weekIdx, dayKey);
+  if (!date) return null;
+  if (weeklyData.targetMonth && getMonthStr(date) !== weeklyData.targetMonth) {
+    // 跨ぎセル: supplement (syncFromServer 時にサーバーから取得) を優先
+    var sup = _crossMonthSupplement.water[dateToStr(date)];
+    if (sup) return sup;
+    // オフライン・未同期フォールバック: 実日付の属する月の localStorage から逆引き
+    return _getWaterCellFromMonthStorage(getMonthStr(date), date);
+  }
+  // 当月セル: weeklyData が canonical
+  var wk = weeklyData.weeks[weekIdx];
+  return (wk && wk[dayKey]) || null;
+}
+
 // ===== 前月最終点検日のデータを取得するヘルパー =====
 // 対象月の第1週月曜の「前の点検日」（平日・非祝日）のデータを前月のlocalStorageから探して返す
 function getPrevMonthLastDayData(targetMonth, firstMonday, holidaySet) {
@@ -5200,10 +5254,8 @@ function dayInTargetMonthW(w, dk, yyyy, mm) {
 }
 // 日常水質: 維持管理週報(積算)＋測定結果の両セクションを dayHasMeasurement で網羅判定（月フィルタ無し=書けば必ず出る）。
 function waterWeekEmpty(w) {
-  var wk = weeklyData.weeks[w];
-  if (!wk) return true;
   var days = ["mon", "tue", "wed", "thu", "nextMon"];
-  for (var i = 0; i < days.length; i++) { if (dayHasMeasurement(wk[days[i]])) return false; }
+  for (var i = 0; i < days.length; i++) { if (dayHasMeasurement(getExportWaterCell(w, days[i]))) return false; }
   return true;
 }
 // 機器運転時間: 対象月内の平日に機器運転データが1つも無ければ空。
@@ -5292,8 +5344,11 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
 
   // ===== 第1週のI列: 前月最終日のデータを書き込む =====
   // （第2週以降のI列はテンプレート数式 =N3, =N47 等で自動計算される）
+  // 跨ぎ週修正: 第1週月曜のデータが（跨ぎ含め）解決できる場合は週ループが I 列を書くため、
+  // prevLast フォールバックは月曜データ不在時のみ実行（前月末値と月曜値の混在防止）。
   var firstMondayDate = getActualDate(1, "mon");
-  if (firstMondayDate) {
+  var monW1Resolved = firstMondayDate ? getExportWaterCell(1, "mon") : null;
+  if (firstMondayDate && !monW1Resolved) {
     var prevLast = getPrevMonthLastDayData(weeklyData.targetMonth, firstMondayDate, holidaySet);
     if (prevLast) {
       setCell(ws, 3, 9, toExcelDate(prevLast.date));
@@ -5307,13 +5362,12 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
       for (var rI = 3; rI <= 9; rI++) ws.getCell(rI, 9).value = null;
     }
   } else {
+    // 月曜データあり（または日付不能）: 一旦クリアし、週ループが日付+データを書く
     for (var rIx = 3; rIx <= 9; rIx++) ws.getCell(rIx, 9).value = null;
   }
 
   for (var w = 1; w <= 5; w++) {
     var offset = weekOffsets[w];
-    var weekData = weeklyData.weeks[w];
-    if (!weekData) continue;
 
     // 年度表示（Row1列N）
     setCell(ws, 1 + offset, 14, reiwaYear);
@@ -5345,8 +5399,9 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
       var idKey = waterDayKeys2[idi];
       var idDate = getActualDate(w, idKey);
       var isHolidayInsp = idDate && holidaySet.has(dateToStr(idDate));
-      if (!isHolidayInsp && weekData[idKey] && weekData[idKey].inspector) {
-        setCell(ws, 12 + offset, inspColMap[idKey], weekData[idKey].inspector);
+      var idData = getExportWaterCell(w, idKey);
+      if (!isHolidayInsp && idData && idData.inspector) {
+        setCell(ws, 12 + offset, inspColMap[idKey], idData.inspector);
       } else {
         ws.getCell(12 + offset, inspColMap[idKey]).value = null;
       }
@@ -5355,7 +5410,7 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
     var dayKeys = ["mon", "tue", "wed", "thu", "nextMon"];
     for (var di = 0; di < dayKeys.length; di++) {
       var dayKey = dayKeys[di];
-      var dayData = weekData[dayKey];
+      var dayData = getExportWaterCell(w, dayKey);
       // 祝日チェック
       var dayDate = getActualDate(w, dayKey);
       var isHoliday = dayDate && holidaySet.has(dateToStr(dayDate));
@@ -5428,29 +5483,24 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
 
     // ===== N列(14): 積算値Row4-9のみ「次週の最初の点検日」のデータを転記 =====
     // (測定場所テーブルRow13以降のN列は金曜データが既に書き込まれているので対象外)
-    var nextWeekDataN = weeklyData.weeks[w + 1];
-    if (nextWeekDataN) {
+    if (w + 1 <= 5) {
       var nextKeysN = ["mon", "tue", "wed", "thu", "nextMon"];
-      var targetNextKey = null;
+      var targetNextData = null;
       for (var nki2 = 0; nki2 < nextKeysN.length; nki2++) {
         var nk2 = nextKeysN[nki2];
         var nk2Date = getActualDate(w + 1, nk2);
         var nk2IsHoliday = nk2Date && holidaySet.has(dateToStr(nk2Date));
-        if (!nk2IsHoliday && nextWeekDataN[nk2]) {
-          targetNextKey = nk2;
-          break;
-        }
+        if (nk2IsHoliday) continue;
+        var nk2Data = getExportWaterCell(w + 1, nk2);
+        if (nk2Data) { targetNextData = nk2Data; break; }
       }
-      if (targetNextKey) {
-        var nextDayData = nextWeekDataN[targetNextKey];
-        if (nextDayData) {
-          setCell(ws, 4 + offset, 14, nextDayData.power200v);
-          setCell(ws, 5 + offset, 14, nextDayData.power100v);
-          setCell(ws, 6 + offset, 14, nextDayData.diesel);
-          setCell(ws, 7 + offset, 14, nextDayData.returnSludge);
-          setCell(ws, 8 + offset, 14, nextDayData.excessSludge);
-          setCell(ws, 9 + offset, 14, nextDayData.discharge);
-        }
+      if (targetNextData) {
+        setCell(ws, 4 + offset, 14, targetNextData.power200v);
+        setCell(ws, 5 + offset, 14, targetNextData.power100v);
+        setCell(ws, 6 + offset, 14, targetNextData.diesel);
+        setCell(ws, 7 + offset, 14, targetNextData.returnSludge);
+        setCell(ws, 8 + offset, 14, targetNextData.excessSludge);
+        setCell(ws, 9 + offset, 14, targetNextData.discharge);
       } else {
         for (var rN = 4; rN <= 9; rN++) ws.getCell(rN + offset, 14).value = null;
       }
