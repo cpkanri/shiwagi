@@ -3295,12 +3295,21 @@ async function fetchWithTimeout(url, options, timeoutMs) {
 const SHIWAGI_HOLIDAY_BLANK_KEYS = ['returnSludge', 'excessSludge', 'discharge'];
 
 // 1シート全週を送信（全同期用・月またぎ対応）
-async function saveSheetToServer(sheetType) {
+// 保存高速化 (2026-06-12): 週ごと直列5POST → タブごと全週一括1POST（月跨ぎ月は月ごとに1POST）。
+// 週ループ内の per-day ロジック（Phase 35-1 跨ぎセルスキップ / Phase 15 nextMon→fri 変換 /
+// Phase 18-b bikou sanitize / 横展開②B2 祝日積算3キー除外 / equip・elec・mech の月分割）は従来と同一で、
+// 「集約してから送る」だけの変更。GAS 側は Phase 25-c-γ／実装⑤で全ハンドラが複数週ペイロード対応済みのため
+// 既存アクション（water=saveAll, 他=saveEquipment/saveElectrical/saveMechanical）をそのまま使用。
+// 旧 saveWeek／週単位ペイロードも GAS 側でそのまま処理される（旧SWキャッシュ後方互換）。
+// ペイロード構築(_buildSavePayloads)と送信を分離（検証ハーネスから構築のみ呼べる構造）。
+function _buildSavePayloads(sheetType) {
   var WEEK_LIST = [1, 2, 3, 4, 5];
+  var payloads = [];
 
   if (sheetType === "water") {
     // 横展開② B2: 祝日の積算3キーを保存ペイロードから除外するための祝日集合（キャッシュ空なら従来挙動）
     var holSet = (typeof getHolidaySetFromCache === 'function') ? getHolidaySetFromCache() : null;
+    var waterAgg = {}; // { month: { week: { gasKey: sendDay } } }
     for (var w = 0; w < WEEK_LIST.length; w++) {
       var weekIdx = WEEK_LIST[w];
       var days = weeklyData.weeks[weekIdx];
@@ -3335,84 +3344,72 @@ async function saveSheetToServer(sheetType) {
       });
       var monthKeys = Object.keys(monthGroups);
       for (var i = 0; i < monthKeys.length; i++) {
-        var payload = {
-          action: 'saveWeek',
-          month: monthKeys[i],
-          week: weekIdx,
-          startDate: weeklyData.startDate,
-          days: monthGroups[monthKeys[i]]
-        };
-        var res = await fetchWithTimeout(GAS_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify(withTokenBody(payload))
-        }, 90000);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        await res.json();
+        if (!waterAgg[monthKeys[i]]) waterAgg[monthKeys[i]] = {};
+        waterAgg[monthKeys[i]][weekIdx] = monthGroups[monthKeys[i]];
       }
     }
+    Object.keys(waterAgg).forEach(function(m) {
+      // GAS 実装⑤の saveAll（saveWaterWeeks 全週1パス）へ全週を1ペイロードで送る
+      payloads.push({ action: 'saveAll', month: m, startDate: weeklyData.startDate, weeks: waterAgg[m] });
+    });
   } else if (sheetType === "equip") {
+    var equipAgg = {}; // { month: { week: equipData } }
     for (var w = 0; w < WEEK_LIST.length; w++) {
       var weekIdx = WEEK_LIST[w];
       var equipMonths = splitEquipWeekByMonth(weekIdx, weeklyData.equipment[weekIdx]);
       var monthKeys = Object.keys(equipMonths);
       for (var i = 0; i < monthKeys.length; i++) {
-        var payload = {
-          action: 'saveEquipment',
-          month: monthKeys[i],
-          equipment: { [weekIdx]: equipMonths[monthKeys[i]] }
-        };
-        var res = await fetchWithTimeout(GAS_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify(withTokenBody(payload))
-        }, 90000);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        await res.json();
+        if (!equipAgg[monthKeys[i]]) equipAgg[monthKeys[i]] = {};
+        equipAgg[monthKeys[i]][weekIdx] = equipMonths[monthKeys[i]];
       }
     }
+    Object.keys(equipAgg).forEach(function(m) {
+      payloads.push({ action: 'saveEquipment', month: m, equipment: equipAgg[m] });
+    });
   } else if (sheetType === "elec") {
+    var elecAgg = {}; // { month: { week: elecData } }
     for (var w = 0; w < WEEK_LIST.length; w++) {
       var weekIdx = WEEK_LIST[w];
       var elecMonths = splitWeekByMonth(weekIdx, ["mon","tue","wed","thu","fri"], weeklyData.electrical[weekIdx]);
       var monthKeys = Object.keys(elecMonths);
       for (var i = 0; i < monthKeys.length; i++) {
-        var payload = {
-          action: 'saveElectrical',
-          month: monthKeys[i],
-          week: weekIdx,
-          electrical: { [weekIdx]: elecMonths[monthKeys[i]] }
-        };
-        var res = await fetchWithTimeout(GAS_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify(withTokenBody(payload))
-        }, 90000);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        await res.json();
+        if (!elecAgg[monthKeys[i]]) elecAgg[monthKeys[i]] = {};
+        elecAgg[monthKeys[i]][weekIdx] = elecMonths[monthKeys[i]];
       }
     }
+    Object.keys(elecAgg).forEach(function(m) {
+      payloads.push({ action: 'saveElectrical', month: m, electrical: elecAgg[m] });
+    });
   } else if (sheetType === "mech") {
+    var mechAgg = {}; // { month: { week: mechData } }
     for (var w = 0; w < WEEK_LIST.length; w++) {
       var weekIdx = WEEK_LIST[w];
       var mechMonths = splitWeekByMonth(weekIdx, ["mon","tue","wed","thu","fri"], weeklyData.mechanical[weekIdx]);
       var monthKeys = Object.keys(mechMonths);
       for (var i = 0; i < monthKeys.length; i++) {
-        var payload = {
-          action: 'saveMechanical',
-          month: monthKeys[i],
-          week: weekIdx,
-          mechanical: { [weekIdx]: mechMonths[monthKeys[i]] }
-        };
-        var res = await fetchWithTimeout(GAS_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify(withTokenBody(payload))
-        }, 90000);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        await res.json();
+        if (!mechAgg[monthKeys[i]]) mechAgg[monthKeys[i]] = {};
+        mechAgg[monthKeys[i]][weekIdx] = mechMonths[monthKeys[i]];
       }
     }
+    Object.keys(mechAgg).forEach(function(m) {
+      payloads.push({ action: 'saveMechanical', month: m, mechanical: mechAgg[m] });
+    });
+  }
+  return payloads;
+}
+
+async function saveSheetToServer(sheetType) {
+  var payloads = _buildSavePayloads(sheetType);
+  // 通常月=タブあたり1リクエスト。跨ぎ月のみ月ごとに複数（同一シートへの並列書込は GAS 側で
+  // 競合し得るため、タブ内の複数月は従来どおり直列）。タブ間の並列は uploadAllTabs が担う。
+  for (var p = 0; p < payloads.length; p++) {
+    var res = await fetchWithTimeout(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(withTokenBody(payloads[p]))
+    }, 90000);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    await res.json();
   }
   return { status: 'ok' };
 }
