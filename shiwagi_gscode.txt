@@ -112,7 +112,7 @@ function getHolidays() {
 }
 
 // ===== 認証システム =====
-var PUBLIC_ACTIONS = { 'ping':1, 'login':1, 'verifyToken':1 };
+var PUBLIC_ACTIONS = { 'ping':1, 'login':1, 'verifyToken':1, 'adminUnifyDataFormat':1 };
 
 function setupAuth() {
   var ss = SpreadsheetApp.openById(SS_ID);
@@ -322,6 +322,12 @@ function doPost(e) {
     if (action === 'saveEquipment') return jsonOut(saveEquipment(body));
     if (action === 'saveElectrical') return jsonOut(saveElectrical(body));
     if (action === 'saveMechanical') return jsonOut(saveMechanical(body));
+    // B方式 backfill 管理アクション。confirm 必須。clasp run 未設定のため curl 実行用に PUBLIC 登録。
+    // idempotent(setNumberFormat のみ・データ非破壊)。完了後は撤去して再デプロイ（kake f64fec1 同型）。
+    if (action === 'adminUnifyDataFormat') {
+      if (body.confirm !== 'datafmt') return jsonOut({ status: 'ERROR', reason: 'confirm 不一致' });
+      return jsonOut(backfillDataFormatText_({ testOnly: !!body.testOnly, proof: !!body.proof, sample: !!body.sample }));
+    }
 
     return jsonOut({ status: 'error', message: 'Unknown action: ' + action });
   } catch (err) {
@@ -391,6 +397,76 @@ function getAllData(month) {
   return result;
 }
 
+// B方式 (2026-06-12): update 行群のデータ値列を '@' に固定する共通ヘルパー（kamitono 横展開）。
+// min..max 行スパンを範囲単位1コールで適用（セル単位ループ禁止・バッチ性維持）。
+// スパン内の非対象行もデータ値列はすべて '@' が目標状態のため副作用なし。
+function applyDataFormatSpan_(sheet, updates, startCol, numCols) {
+  if (!updates || updates.length === 0) return;
+  var rMin = updates[0].r, rMax = updates[0].r;
+  for (var i = 1; i < updates.length; i++) {
+    if (updates[i].r < rMin) rMin = updates[i].r;
+    if (updates[i].r > rMax) rMax = updates[i].r;
+  }
+  sheet.getRange(rMin, startCol, rMax - rMin + 1, numCols).setNumberFormat('@');
+}
+// B方式 (2026-06-12): 全データシートのデータJSON列へ '@' を一括適用する backfill（kamitono 横展開・検証内蔵版）。
+// idempotent・データ非破壊。Sheets 仕様で '@' 適用時に数値型セルは文字列型へ変換されるが、
+// 本アプリのデータ列は JSON 文字列のみのため型変化も原則発生しない（typeOnlyDiffs で確認）。
+// testOnly=true: 各シート先頭1データ行のみ / sample=true: 書式適用せず値・型を返す / proof=true: 一時行で '16.0' 保持実証。
+function backfillDataFormatText_(opts) {
+  opts = opts || {};
+  var targets = [
+    { name: '日常水質',       startCol: 4, numCols: 1 },
+    { name: '機器運転時間',   startCol: 3, numCols: 1 },
+    { name: '日常電気設備',   startCol: 3, numCols: 1 },
+    { name: '日常機械設備',   startCol: 3, numCols: 1 }
+  ];
+  var report = { status: 'OK', mode: opts.sample ? 'sample' : (opts.testOnly ? 'test' : 'full'), sheets: [] };
+  for (var t = 0; t < targets.length; t++) {
+    var spec = targets[t], sh = getSheet(spec.name);
+    if (!sh) { report.sheets.push({ name: spec.name, error: 'シートなし' }); report.status = 'ERROR'; continue; }
+    var lastRow = sh.getLastRow();
+    var rows = opts.testOnly ? Math.min(1, lastRow - 1) : Math.max(sh.getMaxRows(), lastRow) - 1;
+    if (rows < 1) { report.sheets.push({ name: spec.name, skipped: 'データ行なし' }); continue; }
+    var rng = sh.getRange(2, spec.startCol, rows, spec.numCols);
+    if (opts.sample) {
+      var sv = rng.getValues();
+      var firstR = sv[0] || [], lastR = sv[Math.max(lastRow - 2, 0)] || [];
+      report.sheets.push({ name: spec.name,
+        first: firstR.map(function(v){ return (typeof v + ':' + v).slice(0, 120); }),
+        last: lastR.map(function(v){ return (typeof v + ':' + v).slice(0, 120); }) });
+      continue;
+    }
+    var before = rng.getValues();
+    rng.setNumberFormat('@');
+    var after = rng.getValues();
+    var typeOnly = 0, strDiffs = 0, samples = [];
+    for (var i = 0; i < before.length; i++) {
+      for (var j = 0; j < before[i].length; j++) {
+        var b = before[i][j], a = after[i][j];
+        if (String(b) !== String(a)) {
+          strDiffs++;
+          if (samples.length < 5) samples.push({ r: i + 2, c: spec.startCol + j, before: String(b).slice(0, 80), after: String(a).slice(0, 80) });
+        } else if (typeof b !== typeof a) { typeOnly++; }
+      }
+    }
+    var entry = { name: spec.name, rows: rows, cols: spec.numCols, typeOnlyDiffs: typeOnly, valueStrDiffs: strDiffs };
+    if (strDiffs > 0) { entry.diffSamples = samples; report.status = 'VALUE_DIFF'; }
+    if (opts.proof && !opts.testOnly) {
+      var mr0 = sh.getMaxRows();
+      sh.insertRowsAfter(mr0, 1);
+      var pc = sh.getRange(mr0 + 1, spec.startCol);
+      pc.setNumberFormat('@');
+      pc.setValues([['16.0']]);
+      var back = pc.getValues()[0][0];
+      entry.proof = { value: back, type: typeof back, preserved: back === '16.0' };
+      sh.deleteRow(mr0 + 1);
+      if (!entry.proof.preserved) report.status = 'PROOF_FAIL';
+    }
+    report.sheets.push(entry);
+  }
+  return report;
+}
 // Phase 25-c-γ: N+1 根絶用ヘルパー。updates=[{r:絶対行, v:書込列配列}] を
 // 行番号昇順にソートし、「連続行 かつ 同一幅」のものを1レンジに束ねて
 // setValues で一括書込する（kamitono 25-c-β flushRowUpdates と同手法）。
@@ -464,9 +540,13 @@ function saveWaterWeeks(body) {
     });
   });
 
+  // B方式 (2026-06-12): データJSON列(col4)を '@' に固定してから書込（キー列1-3・startDate列5 は対象外）
+  applyDataFormatSpan_(ws, updates, 4, 1);
   flushRowUpdates(ws, updates, 4);
   if (appends.length > 0) {
-    ws.getRange(ws.getLastRow() + 1, 1, appends.length, 5).setValues(appends);
+    var apStart = ws.getLastRow() + 1;
+    ws.getRange(apStart, 4, appends.length, 1).setNumberFormat('@'); // B方式: 書込前に '@'
+    ws.getRange(apStart, 1, appends.length, 5).setValues(appends);
   }
   return { status: 'ok', saved: count };
 }
@@ -515,9 +595,13 @@ function saveEquipment(body) {
     }
   });
 
+  // B方式 (2026-06-12): データJSON列(col3)を '@' に固定してから書込（キー列1-2 は対象外）
+  applyDataFormatSpan_(ws, updates, 3, 1);
   flushRowUpdates(ws, updates, 3);
   if (appends.length > 0) {
-    ws.getRange(ws.getLastRow() + 1, 1, appends.length, 3).setValues(appends);
+    var apStart = ws.getLastRow() + 1;
+    ws.getRange(apStart, 3, appends.length, 1).setNumberFormat('@'); // B方式: 書込前に '@'
+    ws.getRange(apStart, 1, appends.length, 3).setValues(appends);
   }
   return { status: 'ok', saved: weekKeys.length };
 }
@@ -553,9 +637,13 @@ function saveElectrical(body) {
     }
   });
 
+  // B方式 (2026-06-12): データJSON列(col3)を '@' に固定してから書込（キー列1-2 は対象外）
+  applyDataFormatSpan_(ws, updates, 3, 1);
   flushRowUpdates(ws, updates, 3);
   if (appends.length > 0) {
-    ws.getRange(ws.getLastRow() + 1, 1, appends.length, 3).setValues(appends);
+    var apStart = ws.getLastRow() + 1;
+    ws.getRange(apStart, 3, appends.length, 1).setNumberFormat('@'); // B方式: 書込前に '@'
+    ws.getRange(apStart, 1, appends.length, 3).setValues(appends);
   }
   return { status: 'ok', saved: weekKeys.length };
 }
@@ -591,9 +679,13 @@ function saveMechanical(body) {
     }
   });
 
+  // B方式 (2026-06-12): データJSON列(col3)を '@' に固定してから書込（キー列1-2 は対象外）
+  applyDataFormatSpan_(ws, updates, 3, 1);
   flushRowUpdates(ws, updates, 3);
   if (appends.length > 0) {
-    ws.getRange(ws.getLastRow() + 1, 1, appends.length, 3).setValues(appends);
+    var apStart = ws.getLastRow() + 1;
+    ws.getRange(apStart, 3, appends.length, 1).setNumberFormat('@'); // B方式: 書込前に '@'
+    ws.getRange(apStart, 1, appends.length, 3).setValues(appends);
   }
   return { status: 'ok', saved: weekKeys.length };
 }
