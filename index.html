@@ -46,16 +46,16 @@ header h1 {
 }
 .header-controls {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;   /* 対象年月ボタンの行に下端を揃える */
 }
 .header-controls label {
   font-size: 12px;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  flex: 1;
+  flex: 0 1 auto;          /* ヘッダーv2: 全幅化を止めてコンパクトに（筒賀・吉和準拠） */
   min-width: 130px;
 }
 .header-controls label span { opacity: 0.85; }
@@ -654,41 +654,26 @@ header h1 {
 .login-error.visible { display: block; }
 body.login-active { overflow: hidden; }
 
-/* ヘッダー内 ユーザー情報＆ログアウト */
-.user-info {
-  display: none;
+/* ===== ヘッダーv2 (2026-06-13): user-info を対象年月の行の右端へ（5アプリ統一） =====
+   狭幅時は flex-wrap により対象年月の下へ折り返す（メディアクエリ非依存）。
+   旧 .logout-btn は 5アプリ統一の .btn-logout へ改名 */
+.header-controls .user-info {
+  margin-left: auto;       /* 右端へ寄せる */
+  display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-size: 13px;
-  margin-top: 6px;
+  margin-bottom: 5px;      /* 📅ボタンと垂直中心が揃うよう微調整 */
 }
-.user-info .user-name { font-weight: 600; }
-.user-info .logout-btn {
-  padding: 4px 10px;
-  background: rgba(255,255,255,0.15);
+.btn-logout {
+  background: rgba(255,255,255,0.2);
   color: white;
   border: 1px solid rgba(255,255,255,0.3);
-  border-radius: 6px;
-  font-size: 12px;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
   cursor: pointer;
   font-family: inherit;
-}
-.user-info .logout-btn:hover { background: rgba(255,255,255,0.25); }
-
-/* ヘッダー上部: タイトルとユーザー情報を横並び */
-.header-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.header-top h1 {
-  margin: 0;
-  font-size: 18px;
-  flex: 1 1 auto;
-  min-width: 200px;
 }
 /* インライン接続状態 */
 .conn-status-inline {
@@ -759,17 +744,10 @@ body.login-active { overflow: hidden; }
 header > .conn-status { display: none; }
 /* スマホ対応 */
 /* Phase 11-F-CSS-2: 4 ボタン構成のため 2 列 × 2 行で折り返す。Excel ボタンの span は不要 */
+/* ヘッダーv2: header-top/user-info の縦並びルールは flex-wrap 折返しへ移行し削除 */
 @media (max-width: 480px) {
   .header-actions {
     grid-template-columns: 1fr 1fr;
-  }
-  .header-top {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .user-info {
-    width: 100%;
-    justify-content: flex-end;
   }
 }
 
@@ -962,23 +940,22 @@ input[type="number"] {
 
 <!-- ヘッダー -->
 <header>
-  <div class="header-top">
-    <h1>柴木浄化センター 週報入力</h1>
-    <div class="user-info" id="userInfo">
-      <div class="conn-status-inline" id="connStatus">
-        <span class="conn-dot" id="connDot"></span>
-        <span id="connLabel">接続確認中...</span>
-      </div>
-      <span class="user-name" id="userName"></span>
-      <button type="button" class="logout-btn" id="btnLogout">ログアウト</button>
-    </div>
-  </div>
+  <!-- ヘッダーv2 (2026-06-13): user-info を対象年月の行の右端へ（1行分コンパクト化・5アプリ統一） -->
+  <h1>柴木浄化センター 週報入力</h1>
   <div class="header-controls">
     <label>
       <span>対象年月</span>
       <input type="month" id="targetMonth" style="display:none">
       <button type="button" id="btnTargetMonth" class="btn-header-action">📅 ----</button>
     </label>
+    <div class="user-info" id="userInfo" style="display:none;">
+      <div class="conn-status-inline" id="connStatus">
+        <span class="conn-dot" id="connDot"></span>
+        <span id="connLabel">接続確認中...</span>
+      </div>
+      <span class="user-name" id="userName"></span>
+      <button type="button" class="btn-logout" id="btnLogout">ログアウト</button>
+    </div>
   </div>
   <!-- Phase 17 ヘッダー B デザイン: 2 グループ統一 -->
   <div class="header-btn-area">
