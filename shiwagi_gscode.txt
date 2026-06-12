@@ -112,7 +112,7 @@ function getHolidays() {
 }
 
 // ===== 認証システム =====
-var PUBLIC_ACTIONS = { 'ping':1, 'login':1, 'verifyToken':1, 'adminUnifyDataFormat':1 };
+var PUBLIC_ACTIONS = { 'ping':1, 'login':1, 'verifyToken':1 };
 
 function setupAuth() {
   var ss = SpreadsheetApp.openById(SS_ID);
@@ -322,12 +322,6 @@ function doPost(e) {
     if (action === 'saveEquipment') return jsonOut(saveEquipment(body));
     if (action === 'saveElectrical') return jsonOut(saveElectrical(body));
     if (action === 'saveMechanical') return jsonOut(saveMechanical(body));
-    // B方式 backfill 管理アクション。confirm 必須。clasp run 未設定のため curl 実行用に PUBLIC 登録。
-    // idempotent(setNumberFormat のみ・データ非破壊)。完了後は撤去して再デプロイ（kake f64fec1 同型）。
-    if (action === 'adminUnifyDataFormat') {
-      if (body.confirm !== 'datafmt') return jsonOut({ status: 'ERROR', reason: 'confirm 不一致' });
-      return jsonOut(backfillDataFormatText_({ testOnly: !!body.testOnly, proof: !!body.proof, sample: !!body.sample }));
-    }
 
     return jsonOut({ status: 'error', message: 'Unknown action: ' + action });
   } catch (err) {
