@@ -5476,10 +5476,22 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
       // 残留塩素, 塩素投入量
       setCell(ws, 33 + offset, wqCol, dayData.chlorine);
       setCell(ws, 34 + offset, wqCol, dayData.chlorineDose);
+      // 塩素投入量: 点検日(実測あり・非祝日)で未入力なら 0 を値で書く（=投入なし 0kg、kamitono v85 横展開）。
+      // 祝日列は上の isHoliday 分岐で全 null 化済みでここへは到達しない。0/数値の入力日は上の setCell が書込済み。
+      var _chlorWq = dayData.chlorineDose;
+      if (dayHasMeasurement(dayData) && (_chlorWq === null || _chlorWq === undefined || _chlorWq === "")) {
+        ws.getCell(34 + offset, wqCol).value = 0;
+      }
 
       // 備考
       // 備考はRow35、1列目にまとめて（最初の曜日のみ）
     }
+
+    // 塩素投入量行 O列(15): 全空週はテンプレ =AVERAGE(J:N) が #DIV/0! になるため IFERROR で空欄化
+    // （kamitono v85 Step 2 横展開。0 がある週は従来どおり平均値を表示）
+    ws.getCell(34 + offset, 15).value = {
+      formula: 'IFERROR(AVERAGE(J' + (34 + offset) + ':N' + (34 + offset) + '),"")'
+    };
 
     // ===== N列(14): 積算値Row4-9のみ「次週の最初の点検日」のデータを転記 =====
     // (測定場所テーブルRow13以降のN列は金曜データが既に書き込まれているので対象外)
@@ -6414,6 +6426,12 @@ function fillOperationReportSheet(wb, yyyy, mm) {
 
     // E=固形塩素使用量
     setCell(ws, row, 5, dayData.chlorineDose);
+    // 点検日(実測あり)で未入力なら 0 を値で書く（=投入なし 0kg、kamitono v85 横展開）。
+    // 祝日行は上の continue で到達しない。0/数値の入力日は上の setCell が書込済み。
+    var _chlorRep = dayData.chlorineDose;
+    if (dayHasMeasurement(dayData) && (_chlorRep === null || _chlorRep === undefined || _chlorRep === "")) {
+      ws.getCell(row, 5).value = 0;
+    }
 
     // H=返送汚泥流量(累積) ※ I は均等按分で先行書込み済
     var curH = (dayData.returnSludge != null && dayData.returnSludge !== "" && dayData.returnSludge !== "-") ? Number(dayData.returnSludge) : null;
