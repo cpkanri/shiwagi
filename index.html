@@ -2128,8 +2128,9 @@ function saveEquipFormToData() {
     if (el.value === "") {
       week[key][day] = null;
     } else {
-      const num = Number(el.value);
-      week[key][day] = isNaN(num) ? el.value : num;
+      // 2026-06-12: 小数点以下0保持のため Number() 変換を廃止し raw 文字列で保存（"16.0"→16 防止）。
+      // Excel 書込時は setCell が数値解釈可能な文字列を Number で書く（計算互換）。
+      week[key][day] = el.value;
     }
   });
 }
@@ -2228,10 +2229,8 @@ function saveElecFormToData() {
     if (el.tagName === "INPUT") {
       if (el.value === "") {
         week[day][key] = null;
-      } else if (el.type === "number") {
-        const num = Number(el.value);
-        week[day][key] = isNaN(num) ? el.value : num;
       } else {
+        // 2026-06-12: 小数点以下0保持のため number 型の Number() 変換を廃止し raw 文字列で保存。
         week[day][key] = el.value;
       }
     } else {
@@ -2352,17 +2351,12 @@ function saveMechFormToData() {
       if (el.value === "") {
         week[day][key] = null;
       } else if (el.dataset.elecMechNumeric === '1') {
-        // Phase 12: 「-」は文字列のまま、それ以外は数値化トライ
+        // Phase 12: 「-」は文字列のまま。2026-06-12: 数値化トライを廃止し raw 文字列で保存（小数点以下0保持）。
         const v = el.value.trim();
-        if (v === '-') {
-          week[day][key] = '-';
-        } else {
-          const num = Number(v);
-          week[day][key] = isNaN(num) ? v : num;
-        }
+        week[day][key] = v === '-' ? '-' : v;
       } else if (el.type === "number") {
-        const num = Number(el.value);
-        week[day][key] = isNaN(num) ? el.value : num;
+        // 2026-06-12: 小数点以下0保持のため Number() 変換を廃止し raw 文字列で保存。
+        week[day][key] = el.value;
       } else {
         week[day][key] = el.value;
       }
@@ -2556,12 +2550,11 @@ function saveFormToData() {
       // トグルボタン: data-val から値を取得
       day[key] = el.dataset.val || null;
     } else if (el.type === "number") {
-      // 数値型は Number に変換（空文字は null）
+      // 2026-06-12: 小数点以下0保持のため Number() 変換を廃止し raw 文字列で保存（空文字は null）。
       if (el.value === "") {
         day[key] = null;
       } else {
-        const num = Number(el.value);
-        day[key] = isNaN(num) ? el.value : num;
+        day[key] = el.value;
       }
     } else if (key === "bikou") {
       // Phase 18-b: bikou に ISO タイムスタンプが入っていれば空に
@@ -4635,7 +4628,8 @@ function attachUndoToTableInputs() {
 document.getElementById("btnUndo").addEventListener("click", function() {
   if (undoStack.length === 0) return;
   var entry = undoStack.pop();
-  var val = entry.oldValue === "" ? null : (isNaN(Number(entry.oldValue)) ? entry.oldValue : Number(entry.oldValue));
+  // 2026-06-12: Undo 復元もデータモデルへの保存経路のため Number() 変換を廃止（小数点以下0保持）。
+  var val = entry.oldValue === "" ? null : entry.oldValue;
 
   if (entry.sheet === "water") {
     weeklyData.weeks[entry.week][entry.day][entry.field] = val;
@@ -5056,6 +5050,15 @@ function setCell(ws, row, col, val) {
   const num = Number(val);
   if (!isNaN(num) && val !== "" && typeof val !== "boolean") {
     cell.value = num;
+    // 2026-06-12: 小数点以下0保持 — 小数部付き文字列("16.0"等)は、書込先が General のときのみ
+    // 小数桁数に応じた numFmt を付与（テンプレ書式設定済みセルはテンプレ優先で変更しない）。
+    // ExcelJS の共有 style 破壊防止のため新 style オブジェクト割当で行う。
+    if (typeof val === "string") {
+      const decM = val.trim().match(/\.(\d+)$/);
+      if (decM && (!cell.numFmt || cell.numFmt === "General")) {
+        cell.style = Object.assign({}, cell.style, { numFmt: "0." + "0".repeat(decM[1].length) });
+      }
+    }
   } else {
     cell.value = formatHyphenForOutput(val);
   }
