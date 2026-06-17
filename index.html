@@ -5612,15 +5612,16 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
       }
     }
 
-    // 測定者行（Row12のJ-N列）= 各曜日のinspectorを設定（祝日はスキップ）
+    // 測定者行（Row12のJ-N列）= 各曜日のinspectorを設定
     // J(10)=月, K(11)=火, L(12)=水, M(13)=木, N(14)=金
+    // 修正(2026-06-17 横展開 kake): 判定を祝日リストから dayHasMeasurement(実測=inspector/bikou以外が非空)へ
+    // 統一。月単位点検者が祝日・未点検日にも inspector を格納しうるため、実測のある日のみ出力（祝日は
+    // 実測が無いため自動的に空欄、加えて非祝日の未点検日も空欄になる）。
     var inspColMap = { mon: 10, tue: 11, wed: 12, thu: 13, nextMon: 14 };
     for (var idi = 0; idi < waterDayKeys2.length; idi++) {
       var idKey = waterDayKeys2[idi];
-      var idDate = getActualDate(w, idKey);
-      var isHolidayInsp = idDate && holidaySet.has(dateToStr(idDate));
       var idData = getExportWaterCell(w, idKey);
-      if (!isHolidayInsp && idData && idData.inspector) {
+      if (idData && idData.inspector && dayHasMeasurement(idData)) {
         setCell(ws, 12 + offset, inspColMap[idKey], idData.inspector);
       } else {
         ws.getCell(12 + offset, inspColMap[idKey]).value = null;
