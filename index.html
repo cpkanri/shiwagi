@@ -239,51 +239,46 @@ header h1 {
 .actions {
   display: flex;
   gap: 8px;
-  padding: 12px;
-  flex-wrap: wrap;
+  padding: 10px 14px;
   position: sticky;
   bottom: 0;
   z-index: 50;
-  background: rgba(240,242,245,0.92);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: rgba(255,255,255,0.97);
+  border-top: 1px solid #e0e0e0;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 .actions button {
   flex: 1;
-  min-width: 90px;
-  padding: 14px 8px;
+  padding: 12px 4px;
   border: none;
   border-radius: 8px;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
   transition: transform 0.05s, box-shadow 0.15s;
-  min-height: 52px;
 }
 .actions button:active { transform: scale(0.97); }
 .btn-copy {
-  background: #e8f0fe;
-  color: #1c4ba8;
+  background: #e8f0f7;
+  color: #1a4f8a;
 }
 .btn-clear {
-  background: #fdecea;
-  color: #b3261e;
+  background: #eceff1;
+  color: #546e7a;
+  border: 1px solid #cfd8dc;
 }
 .btn-undo {
-  background: #fff;
-  color: #555;
-  border: 1px solid #ccc !important;
-  font-size: 14px;
-  flex: 0 0 auto !important;
-  min-width: 70px !important;
+  background: #fff3e0;
+  color: #e65100;
+  border: 1px solid #ffb74d;
 }
 .btn-undo:disabled { opacity: 0.4; }
 .btn-save {
-  background: linear-gradient(135deg, #0d4f34, #1a7a56);
+  background: #1a4f8a;
   color: #fff;
-  flex: 2;
-  box-shadow: 0 2px 6px rgba(13,79,52,0.25);
+  box-shadow: 0 2px 6px rgba(26,79,138,0.25);
 }
 
 /* ===== トースト ===== */
@@ -1232,8 +1227,8 @@ input[type="number"] {
 <!-- 操作ボタン -->
 <div class="actions">
   <button type="button" class="btn-copy" id="btnCopy">前日コピー</button>
+  <button type="button" class="btn-undo" id="btnUndo" disabled>↶ 元に戻す</button>
   <button type="button" class="btn-clear" id="btnClear">入力クリア</button>
-  <button type="button" class="btn-undo" id="btnUndo" disabled>↩ 戻す</button>
   <button type="button" class="btn-serverclear" id="btnServerClear">サーバークリア</button>
   <button type="button" class="btn-save" id="btnSave">保存</button>
 </div>
