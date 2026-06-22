@@ -327,6 +327,7 @@ function doPost(e) {
     if (action === 'saveEquipment') return jsonOut(saveEquipment(body));
     if (action === 'saveElectrical') return jsonOut(saveElectrical(body));
     if (action === 'saveMechanical') return jsonOut(saveMechanical(body));
+    if (action === 'clearDay') return jsonOut(clearDay(body));
 
     return jsonOut({ status: 'error', message: 'Unknown action: ' + action });
   } catch (err) {
@@ -692,6 +693,60 @@ function saveMechanical(body) {
     ws.getRange(apStart, 1, appends.length, 3).setValues(appends);
   }
   return { status: 'ok', saved: weekKeys.length };
+}
+
+// ===== 暦統一 C-1: サーバークリア clearDay（1日単位・要トークン・shiwagi JSON手術版） =====
+// 契約 {action:'clearDay', token, tab, month, week, day} / tab∈water|equipment|electrical|mechanical / day∈mon..fri
+function clearDay(data) {
+  var month = normalizeMonth(data.month);
+  var week  = String(data.week);
+  var day   = String(data.day); // 'mon'..'fri'
+  var tab   = data.tab;
+  if (!data.month || !data.week || !day || !tab) return { status: 'error', message: 'パラメータ不足' };
+
+  if (tab === 'water') {
+    var ws = getSheet('日常水質');
+    if (!ws) return { status: 'error', message: 'Sheet not found' };
+    var vals = ws.getDataRange().getValues();
+    for (var i = 1; i < vals.length; i++) {
+      if (normalizeMonth(vals[i][0]) === month && String(vals[i][1]) === week && String(vals[i][2]) === day) {
+        ws.getRange(i + 1, 4).setNumberFormat('@');
+        ws.getRange(i + 1, 4).setValue(''); // データJSON列(col4)のみ空に。startDate(col5)は保持。
+        return { status: 'ok', message: '日常水質 ' + day + ' クリア', cleared: 1 };
+      }
+    }
+    return { status: 'ok', message: '日常水質 対象行なし（既に未点検）', cleared: 0 };
+  }
+
+  // equipment/electrical/mechanical: 週行(col3)のJSONを部分削除して書き戻す
+  var CFG = {
+    equipment:  { name: '機器運転時間', kind: 'equip' },
+    electrical: { name: '日常電気設備', kind: 'day' },
+    mechanical: { name: '日常機械設備', kind: 'day' }
+  };
+  var cfg = CFG[tab];
+  if (!cfg) return { status: 'error', message: '不明なtab:' + tab };
+  var ws2 = getSheet(cfg.name);
+  if (!ws2) return { status: 'error', message: 'Sheet not found' };
+  var vals2 = ws2.getDataRange().getValues();
+  for (var j = 1; j < vals2.length; j++) {
+    if (normalizeMonth(vals2[j][0]) === month && String(vals2[j][1]) === week) {
+      var raw = vals2[j][2];
+      var obj;
+      try { obj = raw ? JSON.parse(raw) : {}; } catch (e) { obj = {}; }
+      if (cfg.kind === 'equip') {
+        // {equipKey:{day:値}} → 全equipKeyの当該dayをnull（clearColumnローカル挙動と一致）
+        Object.keys(obj).forEach(function (k) { if (obj[k] && typeof obj[k] === 'object') obj[k][day] = null; });
+      } else {
+        // {day:{field:値}} → 当該dayを削除（再読込時 ensureWeeklyStructure が空日を再生成）
+        if (day in obj) delete obj[day];
+      }
+      ws2.getRange(j + 1, 3).setNumberFormat('@');
+      ws2.getRange(j + 1, 3).setValue(JSON.stringify(obj));
+      return { status: 'ok', message: cfg.name + ' ' + day + ' クリア', cleared: 1 };
+    }
+  }
+  return { status: 'ok', message: cfg.name + ' 対象週行なし（既に未保存）', cleared: 0 };
 }
 
 // ===== month キー診断（Phase 1：読取り専用。書込みなし）=====

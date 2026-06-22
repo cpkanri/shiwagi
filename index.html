@@ -494,6 +494,15 @@ header h1 {
 }
 .col-clear-btn.visible { display: inline-block; }
 .col-clear-btn:active { background: #ef9a9a; }
+/* 暦統一 C-1: 列サーバークリア(赤⌫)・下部サーバークリアボタン（上殿同値） */
+.col-clearserver-btn {
+  display: none; margin-left: 2px; padding: 0 5px; border: none; border-radius: 4px;
+  background: #c0392b; color: #fff; font-size: 11px; line-height: 1.6; cursor: pointer; vertical-align: middle;
+}
+.col-clearserver-btn.visible { display: inline-block; }
+.col-clearserver-btn:active { background: #a93226; }
+.btn-serverclear { background: #ffebee; color: #c62828; white-space: nowrap; font-size: 12px; letter-spacing: -0.02em; padding-left: 4px; padding-right: 4px; }
+.btn-serverclear:active { background: #ffdbdf; }
 
 /* コピー済み表示 */
 .equip-table input.copied,
@@ -1223,8 +1232,9 @@ input[type="number"] {
 <!-- 操作ボタン -->
 <div class="actions">
   <button type="button" class="btn-copy" id="btnCopy">前日コピー</button>
-  <button type="button" class="btn-clear" id="btnClear">クリア</button>
+  <button type="button" class="btn-clear" id="btnClear">入力クリア</button>
   <button type="button" class="btn-undo" id="btnUndo" disabled>↩ 戻す</button>
+  <button type="button" class="btn-serverclear" id="btnServerClear">サーバークリア</button>
   <button type="button" class="btn-save" id="btnSave">保存</button>
 </div>
 
@@ -4379,9 +4389,9 @@ function bindEvents() {
 
   // 全クリア（現在の日のみ）
   // 列クリア共通関数
-  function clearColumn(tableType, targetDay) {
+  function clearColumn(tableType, targetDay, skipConfirm) {
     const dayLabel = DAY_LABELS[targetDay] || targetDay;
-    if (!confirm("第" + currentWeek + "週 " + dayLabel + " のデータをクリアしますか？")) return;
+    if (!skipConfirm && !confirm("第" + currentWeek + "週 " + dayLabel + " のデータをクリアしますか？")) return;
     if (tableType === "equip") {
       EQUIP_KEYS.forEach(k => { weeklyData.equipment[currentWeek][k][targetDay] = null; });
       loadEquipDataToForm();
@@ -4429,6 +4439,81 @@ function bindEvents() {
       // テーブル形式タブ: ×ボタンをトグル表示
       const anyVisible = document.querySelector(".col-clear-btn.visible");
       if (anyVisible) { hideClearButtons(); } else { showClearButtons(); }
+    }
+  });
+
+  // ===== 暦統一 C-1: サーバークリア（GAS clearDay を呼ぶ・1日単位） =====
+  const GRID_DAY_LABEL = { mon: "月", tue: "火", wed: "水", thu: "木", fri: "金" };
+  function clientTabToGas(t) { return ({ water: 'water', equip: 'equipment', elec: 'electrical', mech: 'mechanical' })[t] || t; }
+  function gasDayKey(dk) { return dk === 'nextMon' ? 'fri' : dk; }
+
+  async function serverClearDay(gasTab, week, gasDay) {
+    const payload = { action: 'clearDay', tab: gasTab, month: weeklyData.targetMonth, week: week, day: gasDay };
+    const res = await fetchWithTimeout(GAS_URL, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(withTokenBody(payload))
+    }, 30000);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    let result; try { result = JSON.parse(text); } catch (pe) { throw new Error('JSONパース失敗'); }
+    if (result && result.authRequired) { handleAuthFailure(); throw new Error('認証が切れました'); }
+    if (result && result.error) throw new Error(result.error);
+    return result;
+  }
+
+  // グリッド列のサーバークリア（赤⌫）
+  async function serverClearColumn(tableType, targetDay) {
+    const dayLabel = GRID_DAY_LABEL[targetDay] || targetDay;
+    if (!confirm("第" + currentWeek + "週 " + dayLabel + " を【サーバーからも消去】します。よろしいですか？")) return;
+    clearColumn(tableType, targetDay, true); // 端末を先に空に（確認スキップ）
+    try {
+      await serverClearDay(clientTabToGas(tableType), currentWeek, targetDay); // グリッドは fri 直
+      saveToStorage();
+      showToast("第" + currentWeek + "週 " + dayLabel + " をサーバーから消去しました");
+    } catch (e) {
+      showToast("サーバー消去失敗: " + (e.message || e) + "（端末は消去済み）", "warn");
+    }
+    hideServerClearButtons();
+  }
+
+  // 列サーバーボタン（⌫・赤）を各 × の隣に生成
+  document.querySelectorAll(".col-clear-btn").forEach(function (x) {
+    if (x.nextElementSibling && x.nextElementSibling.classList && x.nextElementSibling.classList.contains("col-clearserver-btn")) return;
+    var s = document.createElement("button");
+    s.type = "button"; s.className = "col-clearserver-btn";
+    s.dataset.clearDay = x.dataset.clearDay; s.dataset.clearTable = x.dataset.clearTable;
+    s.textContent = "⌫"; s.title = "サーバーから消去";
+    x.parentNode.insertBefore(s, x.nextSibling);
+    s.addEventListener("click", function (e) { e.stopPropagation(); serverClearColumn(s.dataset.clearTable, s.dataset.clearDay); });
+  });
+
+  let serverClearBtnTimer = null;
+  function showServerClearButtons() {
+    document.querySelectorAll(".col-clearserver-btn").forEach(b => b.classList.add("visible"));
+    if (serverClearBtnTimer) clearTimeout(serverClearBtnTimer);
+    serverClearBtnTimer = setTimeout(hideServerClearButtons, 4000);
+  }
+  function hideServerClearButtons() {
+    document.querySelectorAll(".col-clearserver-btn").forEach(b => b.classList.remove("visible"));
+    if (serverClearBtnTimer) { clearTimeout(serverClearBtnTimer); serverClearBtnTimer = null; }
+  }
+
+  // 下部「サーバークリア」ボタン（水質=現在日／グリッド=列⌫トグル）
+  document.getElementById("btnServerClear").addEventListener("click", async () => {
+    if (currentSheet === "water") {
+      const label = "第" + currentWeek + "週 " + DAY_LABELS[currentDay] + " の日常水質";
+      if (!confirm(label + " を【サーバーからも消去】します。よろしいですか？")) return;
+      weeklyData.weeks[currentWeek][currentDay] = emptyDay();
+      loadDataToForm(); saveToStorage(); updateDayTabs();
+      try {
+        await serverClearDay("water", currentWeek, gasDayKey(currentDay)); // nextMon→fri
+        showToast(label + " をサーバーから消去しました");
+      } catch (e) {
+        showToast("サーバー消去失敗: " + (e.message || e) + "（端末は消去済み）", "warn");
+      }
+    } else {
+      const anyVisible = document.querySelector(".col-clearserver-btn.visible");
+      if (anyVisible) hideServerClearButtons(); else showServerClearButtons();
     }
   });
 
