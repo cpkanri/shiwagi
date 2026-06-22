@@ -158,6 +158,15 @@ header h1 {
   opacity: 0.7;
   margin-top: 2px;
 }
+/* 暦統一 Part A: 祝日/年末年始/盆 を薄灰表示(非権威・入力ブロックしない) */
+.day-tabs button.day-holiday {
+  background: #f2f2f2;
+  color: #8a8a8a;
+}
+.day-tabs button.day-holiday.active {
+  background: #0d4f34;
+  color: #fff;
+}
 
 /* ===== 入力フォーム ===== */
 .form-wrap {
@@ -1215,6 +1224,9 @@ input[type="number"] {
 
 <!-- トースト -->
 <div class="toast" id="toast"></div>
+
+<!-- 暦統一 Part A: 祝日グレーアウト表示専用(非権威)。点検有無の真は dayHasMeasurement。 -->
+<script src="./holidays.js?v=20260622-1"></script>
 
 <script>
 // ===== GAS URL =====
@@ -2687,6 +2699,9 @@ function updateDayTabs() {
     const dateSpan = btn.querySelector(".day-date");
     if (check) check.textContent = isDayFilled(currentWeek, d) ? "✓" : "";
     if (dateSpan) dateSpan.textContent = computeDate(currentWeek, d) || "";
+    // 暦統一 Part A: 祝日/年末年始/盆 を薄灰表示(非権威・入力は従来どおり可)。
+    var _holObj = getActualDate(currentWeek, d);
+    btn.classList.toggle("day-holiday", !!(window.Holidays && _holObj && Holidays.isGrayoutDay(_holObj)));
     var pct = btn.querySelector(".pct");
     if (!pct) { pct = document.createElement("span"); pct.className = "pct"; btn.appendChild(pct); }
     var p = getWaterDayPercent(currentWeek, d);
