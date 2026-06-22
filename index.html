@@ -158,14 +158,22 @@ header h1 {
   opacity: 0.7;
   margin-top: 2px;
 }
-/* 暦統一 Part A: 祝日/年末年始/盆 を薄灰表示(非権威・入力ブロックしない) */
-.day-tabs button.day-holiday {
-  background: #f2f2f2;
-  color: #8a8a8a;
+/* 暦統一 A-2: 祝日/年末年始/盆 を「薄ピンク＋祝日名・赤系」で表示(非権威・入力ブロックしない)。上殿と同配色。 */
+/* 日タブ(日常水質) */
+.day-tabs button.grayout:not(.active) { background: #fdecea; }
+.day-tabs button.grayout:not(.active) .day-date { color: #c0392b; }
+.day-tabs button[data-holiday]::after {
+  content: attr(data-holiday);
+  display: block; font-size: 10px; line-height: 1.2; color: #c0392b; white-space: nowrap;
 }
-.day-tabs button.day-holiday.active {
-  background: #0d4f34;
-  color: #fff;
+.day-tabs button.active[data-holiday]::after { color: #ffd9d4; } /* active(緑)時の可読性 */
+/* グリッド列ヘッダ(機器運転時間/電気設備/機械設備) */
+.equip-table thead th.grayout { background: #fdecea; }
+.equip-table thead th.grayout .col-date { color: #c0392b; font-weight: 600; }
+.equip-table thead th[data-holiday]::after {
+  content: attr(data-holiday);
+  display: block; font-size: 10px; line-height: 1.1; color: #c0392b;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
 /* ===== 入力フォーム ===== */
@@ -2214,6 +2222,17 @@ function updateColDateHeaders(tableId) {
     const dk = span.dataset.hday;
     const d = getActualDate(currentWeek, dk);
     span.textContent = d ? (d.getMonth() + 1) + "/" + d.getDate() : "";
+    // 暦統一 A-2: 祝日/年末年始/盆 を薄ピンク＋祝日名で表示(非権威・表示のみ)。上殿と同方式・全グリッド共通。
+    const th = span.closest("th");
+    if (th) {
+      const _isHol = !!(d && window.Holidays && Holidays.isGrayoutDay(d));
+      th.classList.toggle("grayout", _isHol);
+      if (_isHol && Holidays.holidayName) {
+        th.setAttribute("data-holiday", Holidays.holidayName(d) || "");
+      } else {
+        th.removeAttribute("data-holiday");
+      }
+    }
   });
 }
 
@@ -2710,9 +2729,15 @@ function updateDayTabs() {
     const dateSpan = btn.querySelector(".day-date");
     if (check) check.textContent = isDayFilled(currentWeek, d) ? "✓" : "";
     if (dateSpan) dateSpan.textContent = computeDate(currentWeek, d) || "";
-    // 暦統一 Part A: 祝日/年末年始/盆 を薄灰表示(非権威・入力は従来どおり可)。
+    // 暦統一 A-2: 祝日/年末年始/盆 を薄ピンク＋祝日名で表示(非権威・入力は従来どおり可)。上殿と同方式。
     var _holObj = getActualDate(currentWeek, d);
-    btn.classList.toggle("day-holiday", !!(window.Holidays && _holObj && Holidays.isGrayoutDay(_holObj)));
+    var _isHol = !!(window.Holidays && _holObj && Holidays.isGrayoutDay(_holObj));
+    btn.classList.toggle("grayout", _isHol);
+    if (_isHol && window.Holidays && Holidays.holidayName) {
+      btn.setAttribute("data-holiday", Holidays.holidayName(_holObj) || "");
+    } else {
+      btn.removeAttribute("data-holiday");
+    }
     var pct = btn.querySelector(".pct");
     if (!pct) { pct = document.createElement("span"); pct.className = "pct"; btn.appendChild(pct); }
     var p = getWaterDayPercent(currentWeek, d);
