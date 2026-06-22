@@ -1338,6 +1338,17 @@ function getHolidaySetFromCache() {
   if (arr) for (const h of arr) set.add(h.date);
   return set;
 }
+// 暦統一 Part B: Excel出力/保存の祝日判定を local holidays.js へ移行。
+//   ・述語 = Holidays.isNationalHoliday（国民の祝日+振替+国民の休日）。サーバー祝日リストと同カテゴリ。
+//   ・年末年始/お盆は含めない（=従来Excelのブランク方針を維持）。画面(Part A)の isGrayoutDay とは意図的に非対称。
+//   ・消費側は holidaySet.has('YYYY-MM-DD') のみ → Set 実体ではなく duck-type を返す（範囲計算不要）。
+function getHolidaySetLocal() {
+  return {
+    has: function (s) {
+      return !!(window.Holidays && Holidays.isNationalHoliday(s));
+    }
+  };
+}
 function dateToStr(d) {
   if (!d) return '';
   const y = d.getFullYear();
@@ -3307,7 +3318,7 @@ function _buildSavePayloads(sheetType) {
 
   if (sheetType === "water") {
     // 横展開② B2: 祝日の積算3キーを保存ペイロードから除外するための祝日集合（キャッシュ空なら従来挙動）
-    var holSet = (typeof getHolidaySetFromCache === 'function') ? getHolidaySetFromCache() : null;
+    var holSet = getHolidaySetLocal(); // 暦統一 Part B: local holidays.js(isNationalHoliday) へ移行
     var waterAgg = {}; // { month: { week: { gasKey: sendDay } } }
     for (var w = 0; w < WEEK_LIST.length; w++) {
       var weekIdx = WEEK_LIST[w];
@@ -5258,7 +5269,7 @@ function getMechEmptyValue(fieldKey, value) {
 function writeMechEmptyCell(ws, row, col, fieldKey, val, date) {
   if (date) {
     try {
-      var hs = getHolidaySetFromCache();
+      var hs = getHolidaySetLocal();
       if (hs && hs.has(dateToStr(date))) {
         ws.getCell(row, col).value = null;
         return;
@@ -5575,7 +5586,7 @@ function fillWaterSheet(wb, yyyy, mm, reiwaYear, monthLabel) {
   const weekOffsets = { 1: 0, 2: 44, 3: 88, 4: 132, 5: 176 };
 
   // 祝日リスト取得（キャッシュから）
-  const holidaySet = getHolidaySetFromCache();
+  const holidaySet = getHolidaySetLocal();
 
   // ===== 第1週のI列: 前月最終日のデータを書き込む =====
   // （第2週以降のI列はテンプレート数式 =N3, =N47 等で自動計算される）
@@ -6004,7 +6015,7 @@ function fillEquipSheet(wb, yyyy, mm) {
 // 1週分の機器運転時間データ書き込み（rowOffsetで縦位置を指定）
 function fillEquipSheetData(ws, w, yyyy, mm, rowOffset) {
   rowOffset = rowOffset || 0;
-  const holidaySet = getHolidaySetFromCache();
+  const holidaySet = getHolidaySetLocal();
 
   // その週の月〜金のうち対象月内にある日付のみ（祝日は除く）
   var weekDates = [];
@@ -6117,7 +6128,7 @@ function fillElecSheet(wb, yyyy, mm) {
     alarmStatus: 38,     // 通報装置
   };
 
-  const holidaySet = getHolidaySetFromCache();
+  const holidaySet = getHolidaySetLocal();
 
   for (var w = 1; w <= 5; w++) {
     var offset = weekOffsets[w];
@@ -6308,7 +6319,7 @@ function fillMechSheet(wb, yyyy, mm, monthLabel) {
   // H1に月表示を設定
   setCell(ws, 1, 8, monthLabel);
 
-  const holidaySet = getHolidaySetFromCache();
+  const holidaySet = getHolidaySetLocal();
 
   for (var w = 1; w <= 5; w++) {
     var offset = weekOffsets[w];
@@ -6449,7 +6460,7 @@ function fillQualityReportSheet(wb, yyyy, mm) {
 
   var daysInMonth = new Date(yyyy, mm, 0).getDate();
   var dayNames = ["日","月","火","水","木","金","土"];
-  const holidaySet = getHolidaySetFromCache();
+  const holidaySet = getHolidaySetLocal();
 
   // 全週全日のデータを日付でマッピング
   var dateMap = buildDateMap();
@@ -6573,7 +6584,7 @@ function fillOperationReportSheet(wb, yyyy, mm) {
   var daysInMonth = new Date(yyyy, mm, 0).getDate();
   var dayNames = ["日","月","火","水","木","金","土"];
   var dateMap = buildDateMap();
-  const holidaySet = getHolidaySetFromCache();
+  const holidaySet = getHolidaySetLocal();
 
   // Phase 23-A 補追: H(返送累計)/J(余剰累計) の reading 値を当月日毎に収集 → 均等按分
   // 仕様: 前月読み値は引き込まない / 1 つ目の reading day は I/K 空欄維持
