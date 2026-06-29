@@ -2422,7 +2422,7 @@ function buildMechTable() {
       MECH_DAYS.forEach(d => {
         if (f.type === "number") {
           // Phase 12: 「-」と全角ハイフン入力を許容するため type="text" + 正規化バリデーション
-          html += '<td><input type="text" inputmode="decimal" data-elec-mech-numeric="1" placeholder="-" data-mech="' + f.key + '" data-mday="' + d + '"></td>';
+          html += '<td><input type="text" inputmode="decimal" step="' + (f.step || '1') + '" data-elec-mech-numeric="1" placeholder="-" data-mech="' + f.key + '" data-mday="' + d + '"></td>';
         } else {
           html += '<td><button type="button" class="toggle-btn" data-mech="' + f.key + '" data-mday="' + d + '" data-options=\'' + JSON.stringify(f.options) + '\'></button></td>';
         }
